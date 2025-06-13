@@ -95,6 +95,14 @@
                     Traiter les données
                 </button>
             </div>
+
+            <div class="mt-4 text-center">
+    <form action="{{ url_for('reset_data') }}" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir réinitialiser toutes les données ?');">
+        <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash-alt"></i> Réinitialiser toutes les données
+        </button>
+    </form>
+</div>
         </form>
     </div>
 

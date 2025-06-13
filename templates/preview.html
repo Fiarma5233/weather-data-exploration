@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h2><i class="fas fa-table me-2"></i>Aperçu des Données</h2>
+        </div>
+        
+        <div class="card-body">
+            <!-- Informations résumées -->
+            <div class="alert alert-info mb-4">
+                <h4><i class="fas fa-info-circle me-2"></i>Résumé</h4>
+                <p><strong>Mode d'affichage :</strong> {{ preview_type }}</p>
+                <p><strong>Dimensions :</strong> {{ dataset_shape }}</p>
+                <p><strong>Nombre de stations :</strong> {{ stations_count }}</p>
+            </div>
+
+            <!-- Tableau des données -->
+            <div class="table-responsive">
+                {% if preview_table %}
+                    {{ preview_table|safe }}
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Aucune donnée à afficher
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card-footer bg-light">
+            <div class="d-flex justify-content-between">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Retour
+                </a>
+                <div>
+                    <a href="{{ url_for('visualizations_options') }}" class="btn btn-success">
+                        <i class="fas fa-chart-line me-1"></i> Visualiser
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styles optimisés */
+    .table {
+        width: 100%;
+        font-size: 0.9rem;
+    }
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+    }
+    .table td {
+        vertical-align: middle;
+    }
+    .card {
+        border-radius: 8px;
+    }
+    .alert-info {
+        background-color: #f0f7ff;
+        border-color: #cce5ff;
+    }
+</style>
+{% endblock %}

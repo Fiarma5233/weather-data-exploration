@@ -6124,19 +6124,583 @@
 #     app.run(debug=True)
 
 # #Alors donnes toutes les corrections necessaires sans me demander de completer quoi que ce soit par moi-meme
+# import os
+# import pandas as pd
+# from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+# import plotly.graph_objects as go
+# import plotly.express as px
+# import json
+# import matplotlib.pyplot as plt
+# import io
+# import base64
+# import numpy as np
+# import traceback
+# from werkzeug.utils import secure_filename
+
+
+# # Importations des fonctions de traitement
+# from data_processing import (
+#     create_datetime,
+#     interpolation,
+#     _load_and_prepare_gps_data,
+#     gestion_doublons,
+#     calculate_daily_summary_table,
+#     generer_graphique_par_variable_et_periode,
+#     generer_graphique_comparatif,
+#     generate_multi_variable_station_plot,
+#     generate_variable_summary_plots_for_web,
+#     #preprocess_station_data , # Changé depuis apply_station_specific_preprocessing
+#     apply_station_specific_preprocessing
+# )
+
+# from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTENSIONS, STATIONS_BY_BASSIN
+# #
+# #from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTENSIONS, STATIONS_BY_BASSIN
+
+# app = Flask(__name__)
+# app.secret_key = 'votre_cle_secrete_ici'
+# app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
+# app.config['UPLOAD_FOLDER'] = 'uploads'
+
+
+
+# @app.context_processor
+# def inject_globals():
+#     return {
+#         'METADATA_VARIABLES': METADATA_VARIABLES,
+#         'PALETTE_DEFAUT': PALETTE_DEFAUT,
+#         'STATIONS_BY_BASSIN': STATIONS_BY_BASSIN
+#     }
+# # Variables globales
+# GLOBAL_PROCESSED_DATA_DF = pd.DataFrame()
+# GLOBAL_GPS_DATA_DF = pd.DataFrame()
+
+# # Chargement des données GPS
+# with app.app_context():
+#     GLOBAL_GPS_DATA_DF = _load_and_prepare_gps_data()
+
+# def allowed_file(filename):
+#     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# @app.route('/')
+# def index():
+#     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+#     return render_template('index.html', 
+#                          bassins=sorted(STATIONS_BY_BASSIN.keys()),
+#                          stations_by_bassin=STATIONS_BY_BASSIN)
+
+# @app.route('/upload', methods=['POST'])
+# def upload_file():
+#     global GLOBAL_PROCESSED_DATA_DF
+
+#     if not request.files:
+#         flash('Aucun fichier reçu', 'error')
+#         return redirect(url_for('index'))
+
+#     # Récupération des fichiers et des stations
+#     uploaded_files = request.files.getlist('file[]')
+#     stations = [request.form.get(f'station_{i}') for i in range(len(uploaded_files)) 
+#                if request.form.get(f'station_{i}')]
+
+#     if len(uploaded_files) != len(stations):
+#         flash('Nombre de fichiers et de stations incompatible', 'error')
+#         return redirect(url_for('index'))
+
+#     df_current_batch_raw_merged = pd.DataFrame()
+
+#     for file, station in zip(uploaded_files, stations):
+#         if file and allowed_file(file.filename):
+#             try:
+#                 # Sauvegarde temporaire du fichier
+#                 filename = secure_filename(file.filename)
+#                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#                 file.save(filepath)
+
+#                 # Lecture du fichier
+#                 if filename.endswith('.csv'):
+#                     df_temp = pd.read_csv(filepath)
+#                 else:
+#                     df_temp = pd.read_excel(filepath)
+
+#                 # Prétraitement
+#                 df_temp['Station'] = station
+#                 df_temp = apply_station_specific_preprocessing(df_temp, station)
+#                 df_current_batch_raw_merged = pd.concat([df_current_batch_raw_merged, df_temp], ignore_index=True)
+
+#                 # Suppression du fichier temporaire
+#                 os.remove(filepath)
+
+#             except Exception as e:
+#                 flash(f"Erreur traitement {file.filename}: {str(e)}", 'error')
+#                 continue
+
+#     if df_current_batch_raw_merged.empty:
+#         flash('Aucune donnée valide traitée', 'error')
+#         return redirect(url_for('index'))
+
+#     # Traitement des données
+#     try:
+#         df_with_datetime = create_datetime(df_current_batch_raw_merged)
+#         df_cleaned = gestion_doublons(df_with_datetime)
+#         df_processed = df_cleaned.set_index('Datetime').sort_index()
+
+#         # Mise à jour des données globales
+#         if GLOBAL_PROCESSED_DATA_DF.empty:
+#             GLOBAL_PROCESSED_DATA_DF = df_processed
+#         else:
+#             stations_to_update = df_processed['Station'].unique()
+#             GLOBAL_PROCESSED_DATA_DF = GLOBAL_PROCESSED_DATA_DF[~GLOBAL_PROCESSED_DATA_DF['Station'].isin(stations_to_update)]
+#             GLOBAL_PROCESSED_DATA_DF = pd.concat([GLOBAL_PROCESSED_DATA_DF, df_processed]).sort_index()
+
+#         # Interpolation
+#         GLOBAL_PROCESSED_DATA_DF = interpolation(GLOBAL_PROCESSED_DATA_DF, DATA_LIMITS, GLOBAL_GPS_DATA_DF)
+#         flash('Fichiers traités avec succès', 'success')
+
+#     except Exception as e:
+#         flash(f'Erreur traitement données: {str(e)}', 'error')
+#         return redirect(url_for('index'))
+
+#     return redirect(url_for('visualizations_options'))
+
+# @app.route('/visualizations_options')
+# # def visualizations_options():
+# #     if GLOBAL_PROCESSED_DATA_DF.empty:
+# #         flash('Veuillez uploader des fichiers d\'abord', 'error')
+# #         return redirect(url_for('index'))
+
+# #     excluded_cols = ['Station', 'Is_Daylight', 'Daylight_Duration', 'Year', 'Month', 'Day', 'Hour', 'Minute', 'Date']
+# #     available_variables = [col for col in GLOBAL_PROCESSED_DATA_DF.columns 
+# #                          if pd.api.types.is_numeric_dtype(GLOBAL_PROCESSED_DATA_DF[col]) and col not in excluded_cols]
+
+# #     daily_stats_df = calculate_daily_summary_table(GLOBAL_PROCESSED_DATA_DF)
+# #     daily_stats_html = daily_stats_df.to_html(classes='table table-striped', index=False)
+
+# #     return render_template('visualizations_options.html',
+# #                          stations=sorted(GLOBAL_PROCESSED_DATA_DF['Station'].unique()),
+# #                          variables=sorted(available_variables),
+# #                          daily_stats_table=daily_stats_html)
+
+
+# @app.route('/visualizations_options')
+# def visualizations_options():
+#     if GLOBAL_PROCESSED_DATA_DF.empty:
+#         flash('Veuillez uploader des fichiers d\'abord', 'error')
+#         return redirect(url_for('index'))
+
+#     excluded_cols = ['Station', 'Is_Daylight', 'Daylight_Duration', 
+#                    'Year', 'Month', 'Day', 'Hour', 'Minute', 'Date']
+#     available_variables = [col for col in GLOBAL_PROCESSED_DATA_DF.columns 
+#                          if pd.api.types.is_numeric_dtype(GLOBAL_PROCESSED_DATA_DF[col]) 
+#                          and col not in excluded_cols]
+
+#     daily_stats_df = calculate_daily_summary_table(GLOBAL_PROCESSED_DATA_DF)
+#     daily_stats_html = daily_stats_df.to_html(classes='table table-striped', index=False)
+
+#     return render_template('visualizations_options.html',
+#                          stations=sorted(GLOBAL_PROCESSED_DATA_DF['Station'].unique()),
+#                          variables=sorted(available_variables),
+#                          daily_stats_table=daily_stats_html)
+
+# @app.route('/generate_plot', methods=['POST'])
+# def generate_plot():
+#     # [Votre code existant pour generate_plot reste inchangé]
+#     pass
+
+# @app.route('/generate_multi_variable_plot', methods=['POST'])
+# def generate_multi_variable_plot_route():
+#     """Génère un graphique multi-variables pour une station"""
+#     try:
+#         station = request.form['station']
+#         variables = request.form.getlist('variables[]')
+        
+#         if not station or not variables:
+#             flash('Veuillez sélectionner une station et au moins une variable', 'error')
+#             return redirect(url_for('visualizations_options'))
+
+#         fig = generate_multi_variable_station_plot(
+#             df=GLOBAL_PROCESSED_DATA_DF,
+#             station=station,
+#             colors=PALETTE_DEFAUT,
+#             metadata=METADATA_VARIABLES
+#         )
+        
+#         # Convertir la figure matplotlib en image
+#         img = io.BytesIO()
+#         fig.savefig(img, format='png', bbox_inches='tight')
+#         img.seek(0)
+#         plot_url = base64.b64encode(img.getvalue()).decode('utf8')
+#         plt.close(fig)
+        
+#         return render_template('plot_display.html', 
+#                             plot_url=plot_url,
+#                             title=f"Graphique multi-variables pour {station}")
+    
+#     except Exception as e:
+#         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
+#         return redirect(url_for('visualizations_options'))
+    
+# @app.route('/generate_plot', methods=['POST'])
+# def generate_plot():
+#     """Génère un graphique pour une variable ou une comparaison"""
+#     try:
+#         # Récupération des données du formulaire
+#         station = request.form.get('station')
+#         variable = request.form.get('variable')
+#         periode = request.form.get('periode')
+#         is_comparative = 'comparative' in request.form
+
+#         # Validation des données
+#         if not variable or not periode:
+#             flash('Veuillez sélectionner une variable et une période', 'error')
+#             return redirect(url_for('visualizations_options'))
+
+#         if not is_comparative and not station:
+#             flash('Veuillez sélectionner une station', 'error')
+#             return redirect(url_for('visualizations_options'))
+
+#         # Génération du graphique
+#         if is_comparative:
+#             fig = generer_graphique_comparatif(
+#                 df=GLOBAL_PROCESSED_DATA_DF,
+#                 variable=variable,
+#                 periode=periode,
+#                 colors=PALETTE_DEFAUT,
+#                 metadata=METADATA_VARIABLES
+#             )
+#             title = f"Comparaison de {METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} ({periode})"
+#         else:
+#             fig = generer_graphique_par_variable_et_periode(
+#                 df=GLOBAL_PROCESSED_DATA_DF,
+#                 station=station,
+#                 variable=variable,
+#                 periode=periode,
+#                 colors=PALETTE_DEFAUT,
+#                 metadata=METADATA_VARIABLES
+#             )
+#             title = f"{METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} à {station} ({periode})"
+
+#         # Conversion de la figure Plotly en HTML
+#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+#         return render_template('plot_display.html', 
+#                             plot_html=plot_html,
+#                             title=title)
+
+#     except Exception as e:
+#         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
+#         return redirect(url_for('visualizations_options'))
+    
+
+# @app.route('/preview')
+# def data_preview():
+#     if GLOBAL_PROCESSED_DATA_DF.empty:
+#         flash('Aucune donnée disponible. Veuillez uploader des fichiers d\'abord.', 'error')
+#         return redirect(url_for('index'))
+    
+#     # Préparer l'aperçu
+#     stations = GLOBAL_PROCESSED_DATA_DF['Station'].unique()
+    
+#     if len(stations) == 1:
+#         # Si une seule station, afficher 20 lignes
+#         preview_df = GLOBAL_PROCESSED_DATA_DF.head(20)
+#     else:
+#         # Si plusieurs stations, afficher 10 lignes par station
+#         preview_dfs = []
+#         for station in stations:
+#             station_df = GLOBAL_PROCESSED_DATA_DF[GLOBAL_PROCESSED_DATA_DF['Station'] == station].head(10)
+#             preview_dfs.append(station_df)
+#         preview_df = pd.concat(preview_dfs)
+    
+#     # Obtenir les dimensions
+#     rows, cols = GLOBAL_PROCESSED_DATA_DF.shape
+    
+#     return render_template('preview.html',
+#                          preview_table=preview_df.to_html(classes='table table-striped'),
+#                          dataset_shape=f"{rows} lignes × {cols} colonnes",
+#                          stations_count=len(stations))
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
+
+# import os
+# import pandas as pd
+# from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+# import plotly.graph_objects as go
+# import plotly.express as px
+# import json
+# import matplotlib.pyplot as plt
+# import io
+# import base64
+# import numpy as np
+# import traceback
+# from werkzeug.utils import secure_filename
+
+# # Importations des fonctions de traitement
+# from data_processing import (
+#     create_datetime,
+#     interpolation,
+#     _load_and_prepare_gps_data,
+#     gestion_doublons,
+#     calculate_daily_summary_table,
+#     generer_graphique_par_variable_et_periode,
+#     generer_graphique_comparatif,
+#     generate_multi_variable_station_plot,
+#     generate_variable_summary_plots_for_web,
+#     apply_station_specific_preprocessing
+# )
+
+# from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTENSIONS, STATIONS_BY_BASSIN
+
+# app = Flask(__name__)
+# app.secret_key = 'votre_cle_secrete_ici'
+# app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
+# app.config['UPLOAD_FOLDER'] = 'uploads'
+
+# @app.context_processor
+# def inject_globals():
+#     return {
+#         'METADATA_VARIABLES': METADATA_VARIABLES,
+#         'PALETTE_DEFAUT': PALETTE_DEFAUT,
+#         'STATIONS_BY_BASSIN': STATIONS_BY_BASSIN
+#     }
+
+# # Variables globales
+# GLOBAL_PROCESSED_DATA_DF = pd.DataFrame()
+# GLOBAL_GPS_DATA_DF = pd.DataFrame()
+
+# # Chargement des données GPS
+# with app.app_context():
+#     GLOBAL_GPS_DATA_DF = _load_and_prepare_gps_data()
+
+# def allowed_file(filename):
+#     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# @app.route('/')
+# def index():
+#     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+#     return render_template('index.html', 
+#                          bassins=sorted(STATIONS_BY_BASSIN.keys()),
+#                          stations_by_bassin=STATIONS_BY_BASSIN)
+
+# @app.route('/upload', methods=['POST'])
+# def upload_file():
+#     global GLOBAL_PROCESSED_DATA_DF
+
+#     if not request.files:
+#         flash('Aucun fichier reçu', 'error')
+#         return redirect(url_for('index'))
+
+#     # Récupération des fichiers et des stations
+#     uploaded_files = request.files.getlist('file[]')
+#     stations = [request.form.get(f'station_{i}') for i in range(len(uploaded_files)) 
+#                if request.form.get(f'station_{i}')]
+
+#     if len(uploaded_files) != len(stations):
+#         flash('Nombre de fichiers et de stations incompatible', 'error')
+#         return redirect(url_for('index'))
+
+#     df_current_batch_raw_merged = pd.DataFrame()
+
+#     for file, station in zip(uploaded_files, stations):
+#         if file and allowed_file(file.filename):
+#             try:
+#                 # Sauvegarde temporaire du fichier
+#                 filename = secure_filename(file.filename)
+#                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#                 file.save(filepath)
+
+#                 # Lecture du fichier
+#                 if filename.endswith('.csv'):
+#                     df_temp = pd.read_csv(filepath)
+#                 else:
+#                     df_temp = pd.read_excel(filepath)
+
+#                 # Prétraitement
+#                 df_temp['Station'] = station
+#                 df_temp = apply_station_specific_preprocessing(df_temp, station)
+#                 df_current_batch_raw_merged = pd.concat([df_current_batch_raw_merged, df_temp], ignore_index=True)
+
+#                 # Suppression du fichier temporaire
+#                 os.remove(filepath)
+
+#             except Exception as e:
+#                 flash(f"Erreur traitement {file.filename}: {str(e)}", 'error')
+#                 continue
+
+#     if df_current_batch_raw_merged.empty:
+#         flash('Aucune donnée valide traitée', 'error')
+#         return redirect(url_for('index'))
+
+#     # Traitement des données
+#     try:
+#         df_with_datetime = create_datetime(df_current_batch_raw_merged)
+#         df_cleaned = gestion_doublons(df_with_datetime)
+#         df_processed = df_cleaned.set_index('Datetime').sort_index()
+
+#         # Mise à jour des données globales
+#         if GLOBAL_PROCESSED_DATA_DF.empty:
+#             GLOBAL_PROCESSED_DATA_DF = df_processed
+#         else:
+#             stations_to_update = df_processed['Station'].unique()
+#             GLOBAL_PROCESSED_DATA_DF = GLOBAL_PROCESSED_DATA_DF[~GLOBAL_PROCESSED_DATA_DF['Station'].isin(stations_to_update)]
+#             GLOBAL_PROCESSED_DATA_DF = pd.concat([GLOBAL_PROCESSED_DATA_DF, df_processed]).sort_index()
+
+#         # Interpolation
+#         GLOBAL_PROCESSED_DATA_DF = interpolation(GLOBAL_PROCESSED_DATA_DF, DATA_LIMITS, GLOBAL_GPS_DATA_DF)
+#         flash('Fichiers traités avec succès', 'success')
+
+#     except Exception as e:
+#         flash(f'Erreur traitement données: {str(e)}', 'error')
+#         return redirect(url_for('index'))
+
+#     return redirect(url_for('visualizations_options'))
+
+# @app.route('/visualizations_options')
+# def visualizations_options():
+#     if GLOBAL_PROCESSED_DATA_DF.empty:
+#         flash('Veuillez uploader des fichiers d\'abord', 'error')
+#         return redirect(url_for('index'))
+
+#     excluded_cols = ['Station', 'Is_Daylight', 'Daylight_Duration', 
+#                    'Year', 'Month', 'Day', 'Hour', 'Minute', 'Date']
+#     available_variables = [col for col in GLOBAL_PROCESSED_DATA_DF.columns 
+#                          if pd.api.types.is_numeric_dtype(GLOBAL_PROCESSED_DATA_DF[col]) 
+#                          and col not in excluded_cols]
+
+#     daily_stats_df = calculate_daily_summary_table(GLOBAL_PROCESSED_DATA_DF)
+#     daily_stats_html = daily_stats_df.to_html(classes='table table-striped', index=False)
+
+#     return render_template('visualizations_options.html',
+#                          stations=sorted(GLOBAL_PROCESSED_DATA_DF['Station'].unique()),
+#                          variables=sorted(available_variables),
+#                          daily_stats_table=daily_stats_html)
+
+# @app.route('/generate_multi_variable_plot', methods=['POST'])
+# def generate_multi_variable_plot_route():
+#     """Génère un graphique multi-variables pour une station"""
+#     try:
+#         station = request.form['station']
+#         variables = request.form.getlist('variables[]')
+        
+#         if not station or not variables:
+#             flash('Veuillez sélectionner une station et au moins une variable', 'error')
+#             return redirect(url_for('visualizations_options'))
+
+#         fig = generate_multi_variable_station_plot(
+#             df=GLOBAL_PROCESSED_DATA_DF,
+#             station=station,
+#             colors=PALETTE_DEFAUT,
+#             metadata=METADATA_VARIABLES
+#         )
+        
+#         # Convertir la figure matplotlib en image
+#         img = io.BytesIO()
+#         fig.savefig(img, format='png', bbox_inches='tight')
+#         img.seek(0)
+#         plot_url = base64.b64encode(img.getvalue()).decode('utf8')
+#         plt.close(fig)
+        
+#         return render_template('plot_display.html', 
+#                             plot_url=plot_url,
+#                             title=f"Graphique multi-variables pour {station}")
+    
+#     except Exception as e:
+#         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
+#         return redirect(url_for('visualizations_options'))
+
+# @app.route('/generate_plot', methods=['POST'])
+# def generate_plot():
+#     """Génère un graphique pour une variable ou une comparaison"""
+#     try:
+#         # Récupération des données du formulaire
+#         station = request.form.get('station')
+#         variable = request.form.get('variable')
+#         periode = request.form.get('periode')
+#         is_comparative = 'comparative' in request.form
+
+#         # Validation des données
+#         if not variable or not periode:
+#             flash('Veuillez sélectionner une variable et une période', 'error')
+#             return redirect(url_for('visualizations_options'))
+
+#         if not is_comparative and not station:
+#             flash('Veuillez sélectionner une station', 'error')
+#             return redirect(url_for('visualizations_options'))
+
+#         # Génération du graphique
+#         if is_comparative:
+#             fig = generer_graphique_comparatif(
+#                 df=GLOBAL_PROCESSED_DATA_DF,
+#                 variable=variable,
+#                 periode=periode,
+#                 colors=PALETTE_DEFAUT,
+#                 metadata=METADATA_VARIABLES
+#             )
+#             title = f"Comparaison de {METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} ({periode})"
+#         else:
+#             fig = generer_graphique_par_variable_et_periode(
+#                 df=GLOBAL_PROCESSED_DATA_DF,
+#                 station=station,
+#                 variable=variable,
+#                 periode=periode,
+#                 colors=PALETTE_DEFAUT,
+#                 metadata=METADATA_VARIABLES
+#             )
+#             title = f"{METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} à {station} ({periode})"
+
+#         # Conversion de la figure Plotly en HTML
+#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+#         return render_template('plot_display.html', 
+#                             plot_html=plot_html,
+#                             title=title)
+
+#     except Exception as e:
+#         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
+#         return redirect(url_for('visualizations_options'))
+
+# @app.route('/preview')
+# def data_preview():
+#     if GLOBAL_PROCESSED_DATA_DF.empty:
+#         flash('Aucune donnée disponible. Veuillez uploader des fichiers d\'abord.', 'error')
+#         return redirect(url_for('index'))
+    
+#     # Préparer l'aperçu
+#     stations = GLOBAL_PROCESSED_DATA_DF['Station'].unique()
+    
+#     if len(stations) == 1:
+#         # Si une seule station, afficher 20 lignes
+#         preview_df = GLOBAL_PROCESSED_DATA_DF.head(20)
+#     else:
+#         # Si plusieurs stations, afficher 10 lignes par station
+#         preview_dfs = []
+#         for station in stations:
+#             station_df = GLOBAL_PROCESSED_DATA_DF[GLOBAL_PROCESSED_DATA_DF['Station'] == station].head(10)
+#             preview_dfs.append(station_df)
+#         preview_df = pd.concat(preview_dfs)
+    
+#     # Obtenir les dimensions
+#     rows, cols = GLOBAL_PROCESSED_DATA_DF.shape
+    
+#     return render_template('preview.html',
+#                          preview_table=preview_df.to_html(classes='table table-striped'),
+#                          dataset_shape=f"{rows} lignes × {cols} colonnes",
+#                          stations_count=len(stations))
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
+
 import os
 import pandas as pd
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import plotly.graph_objects as go
 import plotly.express as px
 import json
-import matplotlib.pyplot as plt
 import io
 import base64
 import numpy as np
 import traceback
 from werkzeug.utils import secure_filename
-
 
 # Importations des fonctions de traitement
 from data_processing import (
@@ -6149,20 +6713,15 @@ from data_processing import (
     generer_graphique_comparatif,
     generate_multi_variable_station_plot,
     generate_variable_summary_plots_for_web,
-    #preprocess_station_data , # Changé depuis apply_station_specific_preprocessing
     apply_station_specific_preprocessing
 )
 
 from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTENSIONS, STATIONS_BY_BASSIN
-#
-#from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTENSIONS, STATIONS_BY_BASSIN
 
 app = Flask(__name__)
 app.secret_key = 'votre_cle_secrete_ici'
 app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = 'uploads'
-
-
 
 @app.context_processor
 def inject_globals():
@@ -6171,6 +6730,7 @@ def inject_globals():
         'PALETTE_DEFAUT': PALETTE_DEFAUT,
         'STATIONS_BY_BASSIN': STATIONS_BY_BASSIN
     }
+
 # Variables globales
 GLOBAL_PROCESSED_DATA_DF = pd.DataFrame()
 GLOBAL_GPS_DATA_DF = pd.DataFrame()
@@ -6260,26 +6820,7 @@ def upload_file():
         flash(f'Erreur traitement données: {str(e)}', 'error')
         return redirect(url_for('index'))
 
-    return redirect(url_for('visualizations_options'))
-
-@app.route('/visualizations_options')
-# def visualizations_options():
-#     if GLOBAL_PROCESSED_DATA_DF.empty:
-#         flash('Veuillez uploader des fichiers d\'abord', 'error')
-#         return redirect(url_for('index'))
-
-#     excluded_cols = ['Station', 'Is_Daylight', 'Daylight_Duration', 'Year', 'Month', 'Day', 'Hour', 'Minute', 'Date']
-#     available_variables = [col for col in GLOBAL_PROCESSED_DATA_DF.columns 
-#                          if pd.api.types.is_numeric_dtype(GLOBAL_PROCESSED_DATA_DF[col]) and col not in excluded_cols]
-
-#     daily_stats_df = calculate_daily_summary_table(GLOBAL_PROCESSED_DATA_DF)
-#     daily_stats_html = daily_stats_df.to_html(classes='table table-striped', index=False)
-
-#     return render_template('visualizations_options.html',
-#                          stations=sorted(GLOBAL_PROCESSED_DATA_DF['Station'].unique()),
-#                          variables=sorted(available_variables),
-#                          daily_stats_table=daily_stats_html)
-
+    return redirect(url_for('data_preview'))
 
 @app.route('/visualizations_options')
 def visualizations_options():
@@ -6301,11 +6842,6 @@ def visualizations_options():
                          variables=sorted(available_variables),
                          daily_stats_table=daily_stats_html)
 
-@app.route('/generate_plot', methods=['POST'])
-def generate_plot():
-    # [Votre code existant pour generate_plot reste inchangé]
-    pass
-
 @app.route('/generate_multi_variable_plot', methods=['POST'])
 def generate_multi_variable_plot_route():
     """Génère un graphique multi-variables pour une station"""
@@ -6324,21 +6860,17 @@ def generate_multi_variable_plot_route():
             metadata=METADATA_VARIABLES
         )
         
-        # Convertir la figure matplotlib en image
-        img = io.BytesIO()
-        fig.savefig(img, format='png', bbox_inches='tight')
-        img.seek(0)
-        plot_url = base64.b64encode(img.getvalue()).decode('utf8')
-        plt.close(fig)
+        # Conversion de la figure Plotly en HTML
+        plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
         
         return render_template('plot_display.html', 
-                            plot_url=plot_url,
+                            plot_html=plot_html,
                             title=f"Graphique multi-variables pour {station}")
     
     except Exception as e:
         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
         return redirect(url_for('visualizations_options'))
-    
+
 @app.route('/generate_plot', methods=['POST'])
 def generate_plot():
     """Génère un graphique pour une variable ou une comparaison"""
@@ -6389,6 +6921,116 @@ def generate_plot():
     except Exception as e:
         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
         return redirect(url_for('visualizations_options'))
+
+
+# ... (le reste de vos imports et configurations existants)
+
+@app.route('/preview')
+def data_preview():
+    """Affiche l'aperçu des données"""
+    try:
+        if GLOBAL_PROCESSED_DATA_DF.empty:
+            flash('Aucune donnée disponible. Veuillez uploader des fichiers d\'abord.', 'error')
+            return redirect(url_for('index'))
+        
+        # Préparation de l'aperçu
+        stations = GLOBAL_PROCESSED_DATA_DF['Station'].unique()
+        
+        if len(stations) == 1:
+            preview_df = GLOBAL_PROCESSED_DATA_DF.head(20).reset_index()
+            preview_type = "20 premières lignes"
+        else:
+            preview_dfs = []
+            for station in stations:
+                station_df = GLOBAL_PROCESSED_DATA_DF[GLOBAL_PROCESSED_DATA_DF['Station'] == station].head(10).reset_index()
+                preview_dfs.append(station_df)
+            preview_df = pd.concat(preview_dfs)
+            preview_type = f"10 lignes × {len(stations)} stations"
+        
+        # Conversion en HTML - Version corrigée
+        preview_html = preview_df.to_html(
+            classes='table table-striped table-hover',
+            index=False,
+            border=0,
+            justify='left',
+            na_rep='NaN',  # Affichage des valeurs manquantes
+            max_rows=None  # Désactive la troncature
+        )
+        
+        return render_template('preview.html',
+                            preview_table=preview_html,
+                            preview_type=preview_type,
+                            dataset_shape=f"{GLOBAL_PROCESSED_DATA_DF.shape[0]} lignes × {GLOBAL_PROCESSED_DATA_DF.shape[1]} colonnes",
+                            stations_count=len(stations))
+    
+    except Exception as e:
+        flash(f'Erreur lors de la préparation de l\'aperçu: {str(e)}', 'error')
+        return redirect(url_for('index'))
+    
+# @app.route('/preview')
+# def data_preview():
+#     if GLOBAL_PROCESSED_DATA_DF.empty:
+#         flash('Aucune donnée disponible. Veuillez uploader des fichiers d\'abord.', 'error')
+#         return redirect(url_for('index'))
+    
+#     # Préparer l'aperçu selon le nombre de stations
+#     stations = GLOBAL_PROCESSED_DATA_DF['Station'].unique()
+    
+#     if len(stations) == 1:
+#         # Une seule station : afficher 20 lignes
+#         preview_df = GLOBAL_PROCESSED_DATA_DF.head(20).reset_index()
+#         preview_type = "20 premières lignes de la station unique"
+#     else:
+#         # Multiple stations : 10 lignes par station
+#         preview_dfs = []
+#         for station in stations:
+#             station_df = GLOBAL_PROCESSED_DATA_DF[GLOBAL_PROCESSED_DATA_DF['Station'] == station].head(10)
+#             preview_dfs.append(station_df)
+#         preview_df = pd.concat(preview_dfs).reset_index()
+#         preview_type = f"10 premières lignes de chacune des {len(stations)} stations"
+    
+#     # Obtenir les dimensions du dataset complet
+#     rows, cols = GLOBAL_PROCESSED_DATA_DF.shape
+    
+#     # Formater le tableau pour l'affichage HTML
+#     preview_table = preview_df.to_html(
+#         classes='table table-striped table-bordered',
+#         index=False,
+#         border=0,
+#         justify='left'
+#     )
+    
+#     return render_template('preview.html',
+#                          preview_table=preview_table,
+#                          preview_type=preview_type,
+#                          dataset_shape=f"{rows} lignes × {cols} colonnes",
+#                          stations_count=len(stations))
+
+
+@app.route('/reset_data', methods=['POST'])
+def reset_data():
+    global GLOBAL_PROCESSED_DATA_DF, GLOBAL_GPS_DATA_DF
+    
+    try:
+        # Réinitialisation des DataFrames
+        GLOBAL_PROCESSED_DATA_DF = pd.DataFrame()
+        GLOBAL_GPS_DATA_DF = _load_and_prepare_gps_data()  # Recharge les données GPS de base
+        
+        # Suppression des fichiers uploadés
+        upload_folder = app.config['UPLOAD_FOLDER']
+        for filename in os.listdir(upload_folder):
+            file_path = os.path.join(upload_folder, filename)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+            except Exception as e:
+                flash(f"Erreur lors de la suppression de {file_path}: {str(e)}", 'warning')
+        
+        flash('Données réinitialisées avec succès', 'success')
+    except Exception as e:
+        flash(f'Erreur lors de la réinitialisation: {str(e)}', 'error')
+    
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True)
