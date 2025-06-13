@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyse Météo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* [Vos styles CSS existants] */
+        .flash-message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            border-left: 4px solid;
+        }
+        .flash-message.error {
+            background-color: #fee2e2;
+            border-color: #ef4444;
+            color: #b91c1c;
+        }
+        .flash-message.success {
+            background-color: #dcfce7;
+            border-color: #22c55e;
+            color: #166534;
+        }
+        .input-group {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 my-8">
+        <h1 class="text-3xl font-bold text-center text-indigo-700 mb-8">Analyse de Données Météorologiques</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6 space-y-2">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form id="uploadForm" action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+            <div id="inputGroupsContainer" class="space-y-4">
+                <!-- Groupe initial -->
+                <div class="input-group bg-gray-50 p-4 rounded-lg" data-group-id="0">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-medium text-gray-700">Dataset #1</h3>
+                        <button type="button" onclick="removeGroup(this)" class="remove-btn text-red-500 hover:text-red-700 hidden">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="bassin_0" class="block text-sm font-medium text-gray-700 mb-1">Bassin</label>
+                            <select id="bassin_0" name="bassin_0" required onchange="updateStations(this)" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Sélectionnez un bassin</option>
+                                {% for bassin in bassins %}
+                                    <option value="{{ bassin }}">{{ bassin }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="station_0" class="block text-sm font-medium text-gray-700 mb-1">Station</label>
+                            <select id="station_0" name="station_0" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Sélectionnez une station</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label for="file_0" class="block text-sm font-medium text-gray-700 mb-1">Fichier de données</label>
+                        <input id="file_0" name="file[]" type="file" required accept=".csv,.xlsx,.xls"
+                               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center">
+                <button type="button" onclick="addGroup()" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                    Ajouter un dataset
+                </button>
+            </div>
+
+            <div class="pt-4">
+                <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Traiter les données
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const stationsData = JSON.parse('{{ stations_by_bassin|tojson }}');
+        let groupCount = 0;
+
+        function updateStations(selectElement) {
+            const groupId = selectElement.closest('.input-group').dataset.groupId;
+            const basin = selectElement.value;
+            const stationSelect = document.getElementById(`station_${groupId}`);
+
+            stationSelect.innerHTML = '<option value="">Sélectionnez une station</option>';
+
+            if (basin && stationsData[basin]) {
+                stationsData[basin].forEach(station => {
+                    const option = document.createElement('option');
+                    option.value = station;
+                    option.textContent = station;
+                    stationSelect.appendChild(option);
+                });
+            }
+        }
+
+        function addGroup() {
+            groupCount++;
+            const newGroupId = groupCount;
+            const template = document.querySelector('.input-group').cloneNode(true);
+
+            template.dataset.groupId = newGroupId;
+            template.querySelector('h3').textContent = `Dataset #${newGroupId + 1}`;
+            
+            // Update IDs and names
+            template.querySelectorAll('[id]').forEach(el => {
+                el.id = el.id.replace(/\d+$/, newGroupId);
+            });
+
+            template.querySelectorAll('[name]').forEach(el => {
+                if (el.name.startsWith('bassin_') || el.name.startsWith('station_')) {
+                    el.name = el.name.replace(/\d+$/, newGroupId);
+                }
+            });
+
+            // Reset values
+            template.querySelector('select').value = '';
+            template.querySelectorAll('select')[1].innerHTML = '<option value="">Sélectionnez une station</option>';
+            template.querySelector('input[type="file"]').value = '';
+            
+            // Show remove button
+            template.querySelector('.remove-btn').classList.remove('hidden');
+            
+            // Add event listener
+            template.querySelector('select').onchange = function() { updateStations(this); };
+
+            document.getElementById('inputGroupsContainer').appendChild(template);
+            updateRemoveButtons();
+        }
+
+        function removeGroup(button) {
+            const groups = document.querySelectorAll('.input-group');
+            if (groups.length > 1) {
+                button.closest('.input-group').remove();
+                updateRemoveButtons();
+            }
+        }
+
+        function updateRemoveButtons() {
+            const groups = document.querySelectorAll('.input-group');
+            groups.forEach((group, index) => {
+                const btn = group.querySelector('.remove-btn');
+                btn.classList.toggle('hidden', groups.length === 1);
+            });
+        }
+
+        // Form validation
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            let isValid = true;
+            const groups = document.querySelectorAll('.input-group');
+
+            groups.forEach(group => {
+                const basin = group.querySelector('select[name^="bassin"]');
+                const station = group.querySelector('select[name^="station"]');
+                const file = group.querySelector('input[type="file"]');
+
+                if (!basin.value || !station.value || !file.files.length) {
+                    isValid = false;
+                    group.classList.add('ring-2', 'ring-red-500');
+                } else {
+                    group.classList.remove('ring-2', 'ring-red-500');
+                }
+            });
+
+            if (!isValid) {
+                e.preventDefault();
+                alert('Veuillez remplir tous les champs obligatoires pour chaque dataset');
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            updateRemoveButtons();
+        });
+    </script>
+</body>
+</html>

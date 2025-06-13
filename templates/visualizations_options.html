@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">Options de Visualisation</h1>
+    
+    <!-- Section Statistiques Journalières -->
+    <div class="mb-8 p-6 border rounded-lg shadow-sm bg-white">
+        <h2 class="text-2xl font-semibold mb-4">Statistiques Journalières</h2>
+        <div class="overflow-x-auto">
+            {{ daily_stats_table|safe }}
+        </div>
+    </div>
+
+    <!-- Section Graphique par Variable -->
+    <div class="mb-8 p-6 border rounded-lg shadow-sm bg-white">
+        <h2 class="text-2xl font-semibold mb-4">Graphique par Variable</h2>
+        <form action="{{ url_for('generate_plot') }}" method="post" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="station" class="block text-sm font-medium text-gray-700">Station</label>
+                    <select name="station" id="station" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        {% for station in stations %}
+                            <option value="{{ station }}">{{ station }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="variable" class="block text-sm font-medium text-gray-700">Variable</label>
+                    <select name="variable" id="variable" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        {% for var in variables %}
+                            <option value="{{ var }}">
+                                {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="periode" class="block text-sm font-medium text-gray-700">Période</label>
+                    <select name="periode" id="periode" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="Brutes">Données Brutes</option>
+                        <option value="Journalière">Journalière</option>
+                        <option value="Hebdomadaire">Hebdomadaire</option>
+                        <option value="Mensuelle">Mensuelle</option>
+                        <option value="Annuelle">Annuelle</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Générer le Graphique
+            </button>
+        </form>
+    </div>
+
+    <!-- Section Graphique Comparatif -->
+    <div class="mb-8 p-6 border rounded-lg shadow-sm bg-white">
+        <h2 class="text-2xl font-semibold mb-4">Graphique Comparatif</h2>
+        <form action="{{ url_for('generate_plot') }}" method="post" class="space-y-4">
+            <input type="hidden" name="comparative" value="true">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="comp_variable" class="block text-sm font-medium text-gray-700">Variable</label>
+                    <select name="variable" id="comp_variable" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        {% for var in variables %}
+                            <option value="{{ var }}">
+                                {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label for="comp_periode" class="block text-sm font-medium text-gray-700">Période</label>
+                    <select name="periode" id="comp_periode" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="Brutes">Données Brutes</option>
+                        <option value="Journalière">Journalière</option>
+                        <option value="Hebdomadaire">Hebdomadaire</option>
+                        <option value="Mensuelle">Mensuelle</option>
+                        <option value="Annuelle">Annuelle</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                Générer la Comparaison
+            </button>
+        </form>
+    </div>
+
+    <!-- Section Graphique Multi-Variables -->
+    <div class="mb-8 p-6 border rounded-lg shadow-sm bg-white">
+        <h2 class="text-2xl font-semibold mb-4">Graphique Multi-Variables</h2>
+        <form action="{{ url_for('generate_multi_variable_plot_route') }}" method="post" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="multi_station" class="block text-sm font-medium text-gray-700">Station</label>
+                    <select name="station" id="multi_station" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        {% for station in stations %}
+                            <option value="{{ station }}">{{ station }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Variables</label>
+                    <div class="mt-1 space-y-2 max-h-60 overflow-y-auto p-2 border rounded">
+                        {% for var in variables %}
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    <input id="var-{{ loop.index }}" name="variables[]" type="checkbox" value="{{ var }}" class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    <label for="var-{{ loop.index }}" class="font-medium text-gray-700">
+                                        {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
+                                    </label>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                Générer le Graphique Multi-Variables
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
