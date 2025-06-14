@@ -3,35 +3,43 @@
 {% block content %}
 <div class="container-fluid px-4 py-5">
     <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-center mb-5">
-        <div>
-            <h1 class="display-5 fw-bold text-primary">
-                <i class="fas fa-chart-line me-3"></i>Options de Visualisation
-            </h1>
-            <p class="lead text-muted">Sélectionnez le type d'analyse à effectuer</p>
-        </div>
-        <div>
-            <a href="{{ url_for('data_preview') }}" class="btn btn-outline-primary">
-                <i class="fas fa-arrow-left me-2"></i>Retour aux données
-            </a>
-        </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-chart-line me-2"></i>Options de Visualisation
+        </h1>
+        <a href="{{ url_for('data_preview') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-2"></i>Retour aux données
+        </a>
     </div>
 
-    <!-- Daily Stats Card -->
-    <div class="card border-0 shadow-lg mb-5">
+    <!-- Statistics Card -->
+    <div class="card mb-4">
         <div class="card-header bg-white py-3">
             <h2 class="h5 mb-0">
-                <i class="fas fa-table me-2"></i>Statistiques Journalières
+                <i class="fas fa-chart-pie me-2"></i>Statistiques par Variable
             </h2>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                {{ daily_stats_table|safe }}
-            </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('statistiques' , variable=variable, station=station) }}">
+                <div class="form-group mb-3">
+                    <label for="variable" class="form-label">Sélectionnez une variable :</label>
+                    <select class="form-select" id="variable" name="variable" required>
+                        <option value="">-- Choisir une variable --</option>
+                        {% for var in variables %}
+                            <option value="{{ var }}">
+                                {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-chart-bar me-2"></i>Générer les Statistiques
+                </button>
+            </form>
         </div>
     </div>
 
-    <!-- Visualization Options Tabs -->
+    <!-- Visualization Options -->
     <div class="row g-4">
         <!-- Single Variable Plot -->
         <div class="col-lg-6">
@@ -53,8 +61,8 @@
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label for="variable" class="form-label">Variable</label>
-                                <select class="form-select" id="variable" name="variable" required>
+                                <label for="plot_variable" class="form-label">Variable</label>
+                                <select class="form-select" id="plot_variable" name="variable" required>
                                     {% for var in variables %}
                                     <option value="{{ var }}">
                                         {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
@@ -180,28 +188,6 @@
     .card:hover {
         transform: translateY(-5px);
         box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-    }
-    
-    .table {
-        --bs-table-bg: transparent;
-        font-size: 0.9rem;
-    }
-    
-    .table th {
-        background-color: #f8f9fa;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.5px;
-        color: #64748b;
-    }
-    
-    .table td {
-        vertical-align: middle;
-    }
-    
-    .table-hover tbody tr:hover {
-        background-color: #f8fafc;
     }
     
     .btn-purple {

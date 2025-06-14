@@ -303,3 +303,16 @@ PALETTE_DEFAUT = {
     "Wind_Dir_Deg": "#8c564b",  # Marron
     "BP_mbar_Avg": "#e377c2"    # Rose
 }
+
+# Palette de couleurs pour les statistiques
+PALETTE_COULEUR = {
+    'Maximum': '#d62728', 
+    'Minimum': '#1f77b4', 
+    'Moyenne': '#2ca02c',
+    'Mediane': '#ff7f0e', 
+    'Cumul_Annuel': '#8c564b',
+    'Moyenne_Jours_Pluvieux': '#9467bd', 
+    'Moyenne_Saison_Pluvieuse': '#e377c2',
+    'Duree_Saison_Pluvieuse_Jours': '#17becf',
+    'Duree_Secheresse_Definie_Jours': '#bcbd22'
+}
