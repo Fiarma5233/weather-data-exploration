@@ -2,33 +2,24 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h2 class="h4 mb-0">
-                <i class="fas fa-chart-bar me-2"></i>
-                Statistiques pour {{ variable_name }} ({{ unit }})
-            </h2>
-        </div>
+    <h2>Statistiques pour {{ variable_name }} ({{ unit }})</h2>
+    
+    <div class="card mb-4">
         <div class="card-body">
-            {% if img_url %}
-            <div class="text-center">
-                <img src="{{ img_url }}" 
-                     alt="Statistiques {{ variable_name }}" 
-                     class="img-fluid rounded shadow"
-                     onerror="this.onerror=null; this.src='{{ url_for('static', filename='images/fallback.png') }}'">
-            </div>
+            {% if plot_html %}
+                <div class="plot-container">
+                    {{ plot_html|safe }}
+                </div>
             {% else %}
-            <div class="alert alert-warning">
-                Aucune donnée disponible pour cette variable.
-            </div>
+                <div class="alert alert-danger">
+                    Aucune donnée à afficher pour cette variable.
+                </div>
             {% endif %}
-            
-            <div class="mt-4 text-center">
-                <a href="{{ url_for('visualisations_options') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-2"></i>Retour aux options
-                </a>
-            </div>
         </div>
     </div>
+
+    <a href="{{ url_for('visualisations_options') }}" class="btn btn-primary">
+        Retour aux options de visualisation
+    </a>
 </div>
 {% endblock %}
