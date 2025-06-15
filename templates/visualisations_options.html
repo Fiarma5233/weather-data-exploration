@@ -8,12 +8,13 @@
         height: 16px;
         border-radius: 4px;
         margin-right: 10px;
-        flex-shrink: 0; /* Empêche l'indicateur de couleur de rétrécir */
+        flex-shrink: 0;
     }
-    /* Styles pour les menus déroulants personnalisés */
+    
     .dropdown-container {
         position: relative;
     }
+    
     .dropdown-toggle {
         display: flex;
         justify-content: space-between;
@@ -27,15 +28,18 @@
         min-height: 2.5rem;
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
+    
     .dropdown-toggle:after {
         content: "▼";
         font-size: 0.75rem;
         transition: transform 0.2s;
         margin-left: 0.5rem;
     }
+    
     .dropdown-toggle.active:after {
         transform: rotate(180deg);
     }
+    
     .dropdown-menu {
         display: none;
         position: absolute;
@@ -50,41 +54,51 @@
         top: 100%;
         left: 0;
     }
+    
     .dropdown-item {
         padding: 0.5rem 1rem;
         display: flex;
         align-items: center;
         cursor: pointer;
     }
+    
     .dropdown-item:hover {
         background-color: #f3f4f6;
     }
-    /* Styles pour les options sélectionnées dans les custom dropdowns */
+    
     .dropdown-item.selected {
-        background-color: #e0e7ff; /* Légère teinte bleue pour indiquer la sélection */
+        background-color: #e0e7ff;
     }
 
-    /* Styles pour les messages de validation JavaScript (in-situ) */
     .validation-message {
-        color: #dc3545; /* Rouge pour les erreurs */
+        color: #dc3545;
         font-size: 0.875rem;
         margin-top: 0.5rem;
-        display: none; /* Caché par défaut */
+        display: none;
     }
+    
     .validation-message.show {
         display: block;
     }
 
-    /* Couleur personnalisée pour le bouton "Analyse Normalisée" */
     .bg-purple {
         background-color: #6f42c1;
     }
+    
     .btn-purple {
         background-color: #6f42c1;
         color: white;
     }
+    
     .btn-purple:hover {
         background-color: #5a32a3;
+    }
+
+    .card-header {
+        margin: -1rem -1rem 1rem -1rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.375rem 0.375rem 0 0;
+        color: white;
     }
 </style>
 {% endblock %}
@@ -107,8 +121,9 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Statistiques par Variable -->
         <div class="bg-white rounded-lg shadow-md p-4">
-            <div class="bg-blue-600 text-white px-4 py-3 -mx-4 -mt-4 mb-4">
+            <div class="card-header bg-blue-600">
                 <h2 class="text-lg font-medium">
                     <i class="fas fa-chart-pie mr-2"></i>Statistiques par Variable
                 </h2>
@@ -138,8 +153,9 @@
             </form>
         </div>
 
+        <!-- Graphique Multi-Variables -->
         <div class="bg-white rounded-lg shadow-md p-4">
-            <div class="bg-cyan-600 text-white px-4 py-3 -mx-4 -mt-4 mb-4">
+            <div class="card-header bg-cyan-600">
                 <h2 class="text-lg font-medium">
                     <i class="fas fa-layer-group mr-2"></i>Graphique Multi-Variables
                 </h2>
@@ -194,8 +210,9 @@
             </form>
         </div>
 
+        <!-- Comparaison entre Stations -->
         <div class="bg-white rounded-lg shadow-md p-4">
-            <div class="bg-green-600 text-white px-4 py-3 -mx-4 -mt-4 mb-4">
+            <div class="card-header bg-green-600">
                 <h2 class="text-lg font-medium">
                     <i class="fas fa-chart-bar mr-2"></i>Comparaison entre Stations
                 </h2>
@@ -239,8 +256,9 @@
             </form>
         </div>
 
+        <!-- Analyse Normalisée -->
         <div class="bg-white rounded-lg shadow-md p-4">
-            <div class="bg-purple text-white px-4 py-3 -mx-4 -mt-4 mb-4">
+            <div class="card-header bg-purple">
                 <h2 class="text-lg font-medium">
                     <i class="fas fa-balance-scale mr-2"></i>Analyse Normalisée
                 </h2>
@@ -289,7 +307,7 @@
                     </select>
                 </div>
                 
-                <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded flex items-center justify-center">
+                <button type="submit" class="w-full btn-purple hover:bg-purple-700 text-white py-2 px-4 rounded flex items-center justify-center">
                     <i class="fas fa-play-circle mr-2"></i>Générer l'Analyse
                 </button>
             </form>
@@ -300,254 +318,199 @@
 
 {% block extra_js %}
 <script>
-console.log('Script extra_js démarré.');
-
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM pleinement chargé. Démarrage des setups de dropdowns.');
-
-    // Fonction pour afficher un message de validation local (in-situ)
-    function showValidationMessage(messageElementId, message) {
-        const messageElement = document.getElementById(messageElementId);
-        if (messageElement) {
-            messageElement.textContent = message;
-            messageElement.classList.add('show');
-            // Cacher le message après un court délai pour les messages temporaires
-            // setTimeout(() => hideValidationMessage(messageElementId), 5000); 
+    // Fonction pour les messages de validation
+    function showValidationMessage(elementId, message) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = message;
+            element.classList.add('show');
         }
     }
 
-    // Fonction pour cacher un message de validation local
-    function hideValidationMessage(messageElementId) {
-        const messageElement = document.getElementById(messageElementId);
-        if (messageElement) {
-            messageElement.textContent = '';
-            messageElement.classList.remove('show');
+    function hideValidationMessage(elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = '';
+            element.classList.remove('show');
         }
     }
 
-    // Fonction générique pour gérer un menu déroulant personnalisé (mono-choix ou multi-choix)
+    // Gestion des dropdowns
     function setupCustomDropdown(toggleId, dropdownId, textId, inputName, isMultiSelect, validationMessageId, maxSelection = 1) {
-        console.log(`Tentative de setup du dropdown pour: ${toggleId}`);
         const toggle = document.getElementById(toggleId);
         const dropdown = document.getElementById(dropdownId);
         const textElement = document.getElementById(textId);
         const hiddenInput = isMultiSelect ? null : document.getElementById(toggleId.replace('Toggle', 'Input')); 
 
-        if (!toggle || !dropdown || !textElement || (!isMultiSelect && !hiddenInput)) {
-            console.error(`Erreur critique: Un élément clé manque pour le dropdown ${toggleId}.`);
-            return;
-        }
+        if (!toggle || !dropdown || !textElement || (!isMultiSelect && !hiddenInput)) return;
 
         const items = dropdown.querySelectorAll('.dropdown-item');
         const checkboxes = isMultiSelect ? dropdown.querySelectorAll('.variable-check') : null;
 
-        // Ouvrir/fermer le menu
         toggle.addEventListener('click', function(e) {
-            console.log(`Clic sur le toggle ${toggleId}.`);
             e.stopPropagation();
             const isDropdownVisible = dropdown.style.display === 'block';
             dropdown.style.display = isDropdownVisible ? 'none' : 'block';
             toggle.classList.toggle('active', !isDropdownVisible);
-            hideValidationMessage(validationMessageId); // Cacher le message quand on ouvre le dropdown
+            hideValidationMessage(validationMessageId);
         });
 
-        // Fermer quand on clique ailleurs sur le document, SAUF si le clic est à l'intérieur du dropdown-container
         document.addEventListener('click', function(e) {
-            if (e.target !== toggle && !dropdown.contains(e.target) && !toggle.contains(e.target)) {
-                console.log(`Clic en dehors du dropdown ${toggleId}. Fermeture du menu.`);
+            if (e.target !== toggle && !dropdown.contains(e.target)) {
                 dropdown.style.display = 'none';
                 toggle.classList.remove('active');
             }
         });
 
-        // Logique pour les éléments du dropdown
         items.forEach(item => {
             if (isMultiSelect) {
                 const checkbox = item.querySelector('.variable-check');
-                if (!checkbox) return; 
+                if (!checkbox) return;
 
-                // Écouteur pour le changement d'état de la checkbox
                 checkbox.addEventListener('change', function(e) {
-                    e.stopPropagation(); 
-                    hideValidationMessage(validationMessageId); // Cacher le message quand une sélection change
+                    e.stopPropagation();
+                    hideValidationMessage(validationMessageId);
 
                     const selected = Array.from(checkboxes).filter(cb => cb.checked);
                     if (selected.length > maxSelection) {
                         this.checked = false;
-                        showValidationMessage(validationMessageId, `Vous ne pouvez sélectionner qu'un maximum de ${maxSelection} variables.`);
+                        showValidationMessage(validationMessageId, `Maximum ${maxSelection} variables autorisées`);
                         return;
                     }
                     updateToggleText();
-                    item.classList.toggle('selected', this.checked); 
+                    item.classList.toggle('selected', this.checked);
                 });
 
-                // Rendre le label cliquable pour cocher/décoccher
                 const label = item.querySelector('label');
                 if (label) {
                     label.addEventListener('click', function(e) {
-                        if (e.target.tagName !== 'INPUT') { 
+                        if (e.target.tagName !== 'INPUT') {
                             const checkbox = this.previousElementSibling;
                             if (checkbox) {
                                 checkbox.checked = !checkbox.checked;
-                                const changeEvent = new Event('change');
-                                checkbox.dispatchEvent(changeEvent); 
+                                checkbox.dispatchEvent(new Event('change'));
                             }
                         }
-                        e.stopPropagation(); 
+                        e.stopPropagation();
                     });
                 }
-
-            } else { // Mono-choix
+            } else {
                 item.addEventListener('click', function(e) {
-                    e.stopPropagation(); 
-                    hideValidationMessage(validationMessageId); // Cacher le message quand une sélection est faite
+                    e.stopPropagation();
+                    hideValidationMessage(validationMessageId);
 
-                    // Désélectionner l'élément précédemment sélectionné
                     const currentSelected = dropdown.querySelector('.dropdown-item.selected');
-                    if (currentSelected) {
-                        currentSelected.classList.remove('selected');
-                    }
+                    if (currentSelected) currentSelected.classList.remove('selected');
 
-                    // Sélectionner le nouvel élément
                     const value = this.dataset.value;
                     const textContent = this.querySelector('span:last-child').textContent.trim();
                     const color = this.querySelector('.color-indicator').style.backgroundColor;
 
                     hiddenInput.value = value;
                     textElement.innerHTML = `<span class="color-indicator" style="background-color: ${color};"></span>${textContent}`;
-                    this.classList.add('selected'); 
-
-                    dropdown.style.display = 'none'; 
+                    this.classList.add('selected');
+                    dropdown.style.display = 'none';
                     toggle.classList.remove('active');
-                    console.log(`Dropdown ${toggleId}: sélectionné ${value}`);
                 });
             }
         });
 
-        // Fonction pour mettre à jour le texte du bouton toggle (multi-choix uniquement)
         function updateToggleText() {
-            if (!isMultiSelect) return; 
+            if (!isMultiSelect) return;
 
             const selected = Array.from(checkboxes).filter(cb => cb.checked);
             if (selected.length > 0) {
-                if (selected.length > 3) {
-                    textElement.textContent = `${selected.length} variables sélectionnées`;
-                } else {
-                    const selectedNames = selected.map(cb => {
-                        const labelSpan = cb.nextElementSibling ? cb.nextElementSibling.querySelector('span:last-child') : null;
+                textElement.textContent = selected.length > 3 ? 
+                    `${selected.length} variables sélectionnées` : 
+                    selected.map(cb => {
+                        const labelSpan = cb.nextElementSibling?.querySelector('span:last-child');
                         return labelSpan ? labelSpan.textContent.trim() : cb.value;
-                    });
-                    textElement.textContent = selectedNames.join(', ');
-                }
+                    }).join(', ');
             } else {
                 textElement.textContent = 'Sélectionner les variables';
             }
-            console.log(`Texte du toggle ${toggleId} mis à jour: "${textElement.textContent}".`);
         }
 
-        // Initialiser le texte et la sélection au chargement de la page
         if (isMultiSelect) {
             updateToggleText();
         } else {
-            if (hiddenInput.value) { 
+            if (hiddenInput.value) {
                 const initialSelected = dropdown.querySelector(`.dropdown-item[data-value="${hiddenInput.value}"]`);
                 if (initialSelected) {
                     initialSelected.classList.add('selected');
                     const textContent = initialSelected.querySelector('span:last-child').textContent.trim();
                     const color = initialSelected.querySelector('.color-indicator').style.backgroundColor;
                     textElement.innerHTML = `<span class="color-indicator" style="background-color: ${color};"></span>${textContent}`;
-                } else {
-                     textElement.innerHTML = 'Choisir une variable'; 
                 }
-            } else { 
-                 textElement.innerHTML = 'Choisir une variable';
             }
         }
     }
-    
-    // Initialiser les dropdowns personnalisés
+
+    // Initialisation des dropdowns
     setupCustomDropdown('multiVarToggle', 'multiVarDropdown', 'multiVarText', 'variables[]', true, 'multiVarValidationMessage', 5);
     setupCustomDropdown('normVarToggle', 'normVarDropdown', 'normVarText', 'variables[]', true, 'normVarValidationMessage', 10);
     setupCustomDropdown('statVarToggle', 'statVarDropdown', 'statVarText', 'variable', false, 'statVarValidationMessage');
     setupCustomDropdown('compVarToggle', 'compVarDropdown', 'compVarText', 'variable', false, 'compVarValidationMessage');
-    
-    // Gestion des soumissions de formulaires pour la validation (messages in-situ)
-    document.getElementById('multiVarForm').addEventListener('submit', function(e) {
+
+    // Validation des formulaires
+    document.getElementById('multiVarForm')?.addEventListener('submit', function(e) {
         const selected = this.querySelectorAll('input[name="variables[]"]:checked');
         if (selected.length === 0) {
             e.preventDefault();
-            showValidationMessage('multiVarValidationMessage', 'Veuillez sélectionner au moins une variable pour le graphique multi-variables.');
-        } else {
-            hideValidationMessage('multiVarValidationMessage');
+            showValidationMessage('multiVarValidationMessage', 'Sélectionnez au moins une variable');
         }
     });
-    
-    document.getElementById('normForm').addEventListener('submit', function(e) {
+
+    document.getElementById('normForm')?.addEventListener('submit', function(e) {
         const selected = this.querySelectorAll('input[name="variables[]"]:checked');
         if (selected.length === 0) {
             e.preventDefault();
-            showValidationMessage('normVarValidationMessage', 'Veuillez sélectionner au moins une variable pour l\'analyse normalisée.');
-        } else {
-            hideValidationMessage('normVarValidationMessage');
+            showValidationMessage('normVarValidationMessage', 'Sélectionnez au moins une variable');
         }
     });
 
-    document.getElementById('statVarForm').addEventListener('submit', function(e) {
-        const selectedValue = document.getElementById('statVarInput').value;
-        if (!selectedValue) {
+    document.getElementById('statVarForm')?.addEventListener('submit', function(e) {
+        if (!document.getElementById('statVarInput').value) {
             e.preventDefault();
-            showValidationMessage('statVarValidationMessage', 'Veuillez sélectionner une variable pour les statistiques.');
-        } else {
-            hideValidationMessage('statVarValidationMessage');
+            showValidationMessage('statVarValidationMessage', 'Sélectionnez une variable');
         }
     });
 
-    document.getElementById('compVarForm').addEventListener('submit', function(e) {
-        const selectedValue = document.getElementById('compVarInput').value;
-        if (!selectedValue) {
+    document.getElementById('compVarForm')?.addEventListener('submit', function(e) {
+        if (!document.getElementById('compVarInput').value) {
             e.preventDefault();
-            showValidationMessage('compVarValidationMessage', 'Veuillez sélectionner une variable pour la comparaison.');
-        } else {
-            hideValidationMessage('compVarValidationMessage');
+            showValidationMessage('compVarValidationMessage', 'Sélectionnez une variable');
         }
     });
-    
-    // Gestion du bouton de réinitialisation (utilisant les messages flash de Flask)
-    const resetBtn = document.getElementById('resetBtn');
-    if (resetBtn) {
-        resetBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            if(confirm('Êtes-vous sûr de vouloir réinitialiser toutes les données ? Cette action est irréversible.')) {
-                fetch("{{ url_for('reset_data') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json', // Nous envoyons du JSON, mais la réponse attendue est une redirection
-                    }
-                })
-                .then(response => {
-                    // Cette partie est cruciale. Flask devrait rediriger, et le navigateur suivra cette redirection.
-                    // Flask doit flasher le message AVANT la redirection.
-                    if (response.redirected) {
-                        window.location.href = response.url; // Le navigateur suit la redirection
-                    } else {
-                        // Si Flask ne redirige pas, cela signifie qu'il y a peut-être eu une erreur ou une réponse inattendue.
-                        // Nous ne devrions pas nous attendre à un JSON ici si Flask redirige correctement.
-                        // Pour le débogage, on peut logguer le problème.
-                        console.error('La requête de réinitialisation n\'a pas abouti à une redirection. Statut:', response.status);
-                        // Fallback très léger si aucune redirection n'est détectée
-                        // window.location.reload(); // Recharger quand même si Flask n'a pas redirigé pour tenter d'afficher le flash si présent
-                        // Ou mieux, un message d'erreur si on n'a pas pu rediriger
-                        alert('Une erreur inattendue est survenue lors de la réinitialisation des données. Veuillez vérifier le serveur.');
-                    }
-                })
-                .catch(error => {
-                    console.error('Erreur réseau lors de la réinitialisation:', error);
-                    // Si une erreur réseau se produit (pas de réponse du serveur du tout), nous affichons un alert de secours.
-                    alert('Impossible de communiquer avec le serveur pour réinitialiser les données. Veuillez réessayer.');
-                });
-            }
-        });
-    }
+
+    // Gestion du bouton de réinitialisation
+    document.getElementById('resetBtn')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        showConfirmation(
+            'Êtes-vous sûr de vouloir réinitialiser toutes les données ? Cette action est irréversible.',
+            'performReset()'
+        );
+
+        function performReset() {
+            fetch("{{ url_for('reset_data') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    throw new Error('Réinitialisation échouée');
+                }
+            })
+            .catch(error => {
+                showMessage('Échec de la réinitialisation: ' + error.message, 'error');
+            });
+        }
+    });
 });
 </script>
 {% endblock %}

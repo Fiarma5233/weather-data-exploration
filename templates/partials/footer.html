@@ -1,6 +1,6 @@
 <footer class="bg-gray-800 text-white py-8 mt-12">
     <div class="max-w-6xl mx-auto px-4">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
                 <h3 class="text-xl font-semibold mb-4">Analyse Météo</h3>
                 <p class="text-gray-400">
@@ -18,6 +18,16 @@
                     {% endif %}
                 </ul>
             </div>
+
+            <div>
+                <h4 class="text-lg font-medium mb-4">Liens utiles</h4>
+                <ul class="space-y-2">
+                    <li><a href="https://drive.google.com/drive/u/1/folders/10vGw9vwreH_I4nYBm5jfXrKUQKxzZ1Yj" class="text-gray-400 hover:text-white transition">Donnees meteo</a></li>
+                    <li><a href="https://wascal.org/" target="_blank" class="text-gray-400 hover:text-white transition">WASCAL</a></li>
+                    <li><a href="https://uv.bf/" target="_blank" class="text-gray-400 hover:text-white transition">UV-BF</a></li>
+                    {# Vous pouvez ajouter d'autres liens ici si nécessaire #}
+                </ul>
+            </div>
             
             <div>
                 <h4 class="text-lg font-medium mb-4">Contact</h4>
@@ -28,14 +38,18 @@
                     </li>
                     <li class="flex items-center">
                         <i class="fas fa-phone mr-2 text-gray-400"></i>
-                        <span class="text-gray-400">+226 67 48 91 87 / 52 33 61 52</span>
+                        <a href="tel:+22667489187" class="text-gray-400 hover:text-white transition"> +226 52 33 61 52 (Appel)</a>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fab fa-whatsapp mr-2 text-gray-400"></i>
+                        <a href="https://wa.me/22652336152" target="_blank" class="text-gray-400 hover:text-white transition">+226 67 48 91 87  (WhatsApp)</a>
                     </li>
                 </ul>
             </div>
         </div>
         
         <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
-            <p>&copy; {{ now.year }} Analyse Météo. Tous droits réservés.</p>
+            <p>&copy; 2025 Analyse Météo. Tous droits réservés.</p>
         </div>
     </div>
 </footer>

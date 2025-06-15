@@ -6,36 +6,37 @@
     <title>{% block title %}Analyse Météo{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        .message-container {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            z-index: 1000;
-            max-width: 400px;
-            width: 90%;
-        }
+        /* Styles de base pour les messages */
         .message {
             padding: 1rem;
             margin-bottom: 1rem;
             border-radius: 0.5rem;
             border-left: 4px solid;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 0.3s ease-out;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            animation: slideIn 0.3s ease-out;
+            flex-direction: column;
         }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        
+        .message-close {
+            cursor: pointer;
+            margin-left: auto;
+            font-weight: bold;
         }
+        
         .message.error { background-color: #fee2e2; border-color: #ef4444; color: #b91c1c; }
         .message.success { background-color: #dcfce7; border-color: #22c55e; color: #166534; }
         .message.warning { background-color: #fef3c7; border-color: #f59e0b; color: #92400e; }
         .message.info { background-color: #dbeafe; border-color: #3b82f6; color: #1e40af; }
-        .message-close { cursor: pointer; margin-left: 1rem; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
+    
     {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -43,28 +44,78 @@
         {% include 'partials/navbar.html' %}
     {% endblock %}
 
-    <div id="jsMessageContainer" class="message-container"></div>
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="message-container">
-                {% for category, message in messages %}
-                    <div class="message {{ category }}">
-                        <span>{{ message }}</span>
-                        <span class="message-close" onclick="this.parentElement.remove()">&times;</span>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-    {% endwith %}
-
     <div class="p-4">
+        <!-- Conteneur des messages système -->
+        <div id="systemMessages">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="message {{ category }}" data-autoclose>
+                            <div class="flex justify-between items-start">
+                                <div>{{ message|safe }}</div>
+                                <span class="message-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
         {% block content %}{% endblock %}
     </div>
 
     {% block footer %}
         {% include 'partials/footer.html' %}
     {% endblock %}
+
+    <!-- Scripts de base -->
+    <script>
+    // Fonctions de base pour la gestion des messages
+    function showMessage(message, category = 'info', autoClose = true) {
+        const container = document.getElementById('systemMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${category}`;
+        if (autoClose) messageDiv.dataset.autoclose = true;
+        
+        messageDiv.innerHTML = `
+            <div class="flex justify-between items-start">
+                <div>${message}</div>
+                <span class="message-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+            </div>
+        `;
+        container.prepend(messageDiv);
+        
+        if (autoClose) {
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.remove();
+                }
+            }, 5000);
+        }
+    }
+
+    function showConfirmation(message, confirmCallback, cancelCallback = null) {
+        const container = document.getElementById('systemMessages');
+        const confirmationDiv = document.createElement('div');
+        confirmationDiv.className = 'message warning';
+        
+        confirmationDiv.innerHTML = `
+            <div class="mb-2">${message}</div>
+            <div class="flex justify-end gap-2 mt-2">
+                <button onclick="this.closest('.message').remove(); ${cancelCallback ? cancelCallback : ''}" 
+                        class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">
+                    Annuler
+                </button>
+                <button onclick="this.closest('.message').remove(); ${confirmCallback}" 
+                        class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
+                    Confirmer
+                </button>
+            </div>
+        `;
+        
+        container.prepend(confirmationDiv);
+    }
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>
