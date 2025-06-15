@@ -1,79 +1,77 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container-fluid px-0">
+<div class="h-full flex flex-col px-4 sm:px-6 lg:px-8 py-8"> {# Main container with full height and responsive padding #}
     {# Barre d'en-tête avec boutons et titre #}
-    <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-3 position-relative">
-            {# Bouton Retour - position absolue à gauche #}
-            <a href="{{ url_for('visualisations_options') }}" class="btn btn-outline-primary btn-hover-effect position-absolute start-0">
-                <i class="bi bi-chevron-left fs-4"></i>
-                <span class="ms-1 d-none d-sm-inline">Retour</span>
-            </a>
-            
-            {# Titre principal - centré #}
-            <h1 class="text-center display-6 fw-bold text-dark mb-0 mx-auto">
-                <i class="bi bi-graph-up me-2"></i>Statistiques : {{ variable_name }}
-            </h1>
-            
-            {# Bouton Réinitialiser - position absolue à droite #}
-            <button class="btn btn-outline-danger btn-hover-effect position-absolute end-0" id="reset-btn">
-                <i class="bi bi-arrow-repeat fs-4"></i>
-                <span class="ms-1 d-none d-sm-inline">Réinitialiser</span>
-            </button>
-        </div>
+    <div class="flex items-center justify-between flex-wrap gap-4 mb-4">
+        {# Bouton Retour - positionné à gauche #}
+        <a href="{{ url_for('visualisations_options') }}" 
+           class="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-600 rounded-md shadow-sm text-sm font-medium hover:bg-blue-600 hover:text-white transition-colors duration-200 ease-in-out">
+            <i class="fas fa-arrow-left mr-2"></i> {# Utilisation de Font Awesome pour l'icône #}
+            <span class="ml-1 hidden sm:inline">Retour</span>
+        </a>
+        
+        {# Bouton Réinitialiser - positionné à droite #}
+        <button id="reset-btn" 
+                class="inline-flex items-center px-4 py-2 border border-red-600 text-red-600 rounded-md shadow-sm text-sm font-medium hover:bg-red-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200 ease-in-out">
+            <i class="fas fa-redo mr-2"></i> {# Utilisation de Font Awesome pour l'icône #}
+            <span class="ml-1 hidden sm:inline">Réinitialiser</span>
+        </button>
     </div>
 
-    {# Graphique en pleine largeur #}
-    <div class="container-fluid px-0">
-        <div class="row mx-0">
-            <div class="col-12 px-0">
-                {% if plot_html %}
-                    <div class="plot-container w-100">
-                        {{ plot_html|safe }}
-                    </div>
-                {% else %}
-                    <div class="container my-5">
-                        <div class="alert alert-warning d-flex align-items-center">
-                            <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
-                            <div>
-                                <h5 class="alert-heading mb-1">Aucune donnée disponible</h5>
-                                <p class="mb-0">Il n'y a pas de données à afficher pour cette variable.</p>
-                            </div>
+    {# Titre principal - centré juste en dessous des boutons #}
+    <div class="text-center mb-6">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
+            <i class="fas fa-chart-line mr-2"></i>Statistiques : {{ variable_name }}
+        </h1>
+    </div>
+
+    {# Graphique en pleine largeur et hauteur adaptative #}
+    <div id="plotContainer" class="flex-grow bg-white rounded-lg p-4 md:p-6 lg:p-8 overflow-hidden">
+        <div class="w-full h-full" style="min-height: 500px;">
+            {% if plot_html %}
+                {{ plot_html|safe }}
+            {% else %}
+                <div class="flex items-center justify-center h-full">
+                    <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md flex items-start" role="alert">
+                        <i class="fas fa-exclamation-triangle mr-3 text-2xl"></i>
+                        <div>
+                            <h5 class="font-bold mb-1">Aucune donnée disponible</h5>
+                            <p class="text-sm">Il n'y a pas de données à afficher pour cette variable.</p>
                         </div>
                     </div>
-                {% endif %}
-            </div>
+                </div>
+            {% endif %}
         </div>
     </div>
 
     {# Section des statistiques #}
     {% if stats %}
-    <div class="container mt-4 mb-5">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white border-0">
-                <h5 class="card-title mb-0 text-secondary">
-                    <i class="bi bi-calculator me-2"></i>Statistiques descriptives
+    <div class="mt-8 mb-5">
+        <div class="bg-white shadow-lg rounded-lg border border-gray-200">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <h5 class="text-lg font-semibold text-gray-700">
+                    <i class="fas fa-calculator mr-2"></i>Statistiques descriptives
                 </h5>
-                <p class="text-muted mb-0 small">Unité: {{ unit }}</p>
+                <p class="text-gray-500 text-sm">Unité: {{ unit }}</p>
             </div>
-            <div class="card-body pt-0">
-                <div class="row text-center">
-                    <div class="col-md-3 border-end py-2">
-                        <h6 class="text-muted mb-1">Moyenne</h6>
-                        <p class="h5 fw-bold text-primary">{{ stats.mean|round(2) }}</p>
+            <div class="p-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-200 text-center">
+                    <div class="py-4 px-2">
+                        <h6 class="text-sm font-medium text-gray-500 mb-1">Moyenne</h6>
+                        <p class="text-2xl font-bold text-blue-600">{{ stats.mean|round(2) }}</p>
                     </div>
-                    <div class="col-md-3 border-end py-2">
-                        <h6 class="text-muted mb-1">Médiane</h6>
-                        <p class="h5 fw-bold text-primary">{{ stats.median|round(2) }}</p>
+                    <div class="py-4 px-2">
+                        <h6 class="text-sm font-medium text-gray-500 mb-1">Médiane</h6>
+                        <p class="text-2xl font-bold text-blue-600">{{ stats.median|round(2) }}</p>
                     </div>
-                    <div class="col-md-3 border-end py-2">
-                        <h6 class="text-muted mb-1">Écart-type</h6>
-                        <p class="h5 fw-bold text-primary">{{ stats.std|round(2) }}</p>
+                    <div class="py-4 px-2">
+                        <h6 class="text-sm font-medium text-gray-500 mb-1">Écart-type</h6>
+                        <p class="text-2xl font-bold text-blue-600">{{ stats.std|round(2) }}</p>
                     </div>
-                    <div class="col-md-3 py-2">
-                        <h6 class="text-muted mb-1">Valeurs</h6>
-                        <p class="h5 fw-bold text-primary">{{ stats.count }}</p>
+                    <div class="py-4 px-2">
+                        <h6 class="text-sm font-medium text-gray-500 mb-1">Valeurs</h6>
+                        <p class="text-2xl font-bold text-blue-600">{{ stats.count }}</p>
                     </div>
                 </div>
             </div>
@@ -82,48 +80,106 @@
     {% endif %}
 </div>
 
-<style>
-    .plot-container {
-        width: 100%;
-        min-height: 500px;
-        background-color: #f8f9fa;
-    }
-    
-    .btn-hover-effect {
-        transition: all 0.3s ease;
-        border-width: 2px;
-        padding: 8px 16px;
-    }
-    
-    .btn-hover-effect:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    .btn-outline-primary:hover {
-        background-color: var(--bs-primary);
-        color: white;
-    }
-    
-    .btn-outline-danger:hover {
-        background-color: var(--bs-danger);
-        color: white;
-    }
-    
-    .card {
-        transition: transform 0.2s ease-in-out;
-    }
-    
-    .card:hover {
-        transform: translateY(-2px);
-    }
-</style>
-
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const messageContainer = document.getElementById('jsMessageContainer'); // Global message container from base.html
+    const plotContainer = document.getElementById('plotContainer');
+
+    function showDynamicMessage(message, type = 'danger') {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        messageDiv.innerHTML = `
+            <span>${message}</span>
+            <span class="message-close" onclick="this.parentElement.remove()">&times;</span>
+        `;
+        messageContainer.appendChild(messageDiv);
+
+        setTimeout(() => {
+            if (messageDiv.parentElement) {
+                messageDiv.remove();
+            }
+        }, 5000);
+    }
+
+    // Reset button logic
     document.getElementById('reset-btn').addEventListener('click', function() {
-        // Logique de réinitialisation ici
-        console.log('Réinitialisation effectuée');
-        // window.location.reload(); // Exemple simple
+        showDynamicMessage(`
+            <p class="text-base font-medium text-gray-700">Êtes-vous sûr de vouloir réinitialiser toutes les données ?</p>
+            <div class="mt-4 flex justify-end gap-3">
+                <button class="px-3 py-1 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="cancelReset">Annuler</button>
+                <button class="px-3 py-1 text-sm font-medium rounded-md border border-transparent bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" id="confirmReset">Confirmer</button>
+            </div>
+        `, 'warning');
+
+        setTimeout(() => {
+            const cancelResetBtn = document.getElementById('cancelReset');
+            const confirmResetBtn = document.getElementById('confirmReset');
+
+            if (cancelResetBtn) {
+                cancelResetBtn.addEventListener('click', () => {
+                    messageContainer.lastChild.remove();
+                });
+            }
+
+            if (confirmResetBtn) {
+                confirmResetBtn.addEventListener('click', () => {
+                    messageContainer.lastChild.remove(); // Remove confirmation
+                    showDynamicMessage('<i class="fas fa-spinner fa-spin mr-2"></i> Réinitialisation en cours...', 'info');
+
+                    fetch("{{ url_for('reset_data') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Remove loading message
+                        if (messageContainer.lastChild && messageContainer.lastChild.querySelector('.fa-spinner')) {
+                             messageContainer.lastChild.remove();
+                        }
+
+                        if(data.success) {
+                            showDynamicMessage(`<i class="fas fa-check-circle mr-2"></i> ${data.message || 'Réinitialisation réussie'}`, 'success');
+                            setTimeout(() => window.location.reload(), 2000);
+                        } else {
+                            showDynamicMessage(`<i class="fas fa-exclamation-circle mr-2"></i> ${data.message || 'Erreur lors de la réinitialisation'}`, 'danger');
+                        }
+                    })
+                    .catch(error => {
+                        // Remove loading message
+                        if (messageContainer.lastChild && messageContainer.lastChild.querySelector('.fa-spinner')) {
+                             messageContainer.lastChild.remove();
+                        }
+                        showDynamicMessage(`<i class="fas fa-exclamation-circle mr-2"></i> Erreur réseau: ${error.message}`, 'danger');
+                    });
+                });
+            }
+        }, 10);
     });
+
+    // Plotly resize logic for full width/height
+    const plotlyGraphDiv = plotContainer.querySelector('.js-plotly-plot');
+
+    if (plotlyGraphDiv) {
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function() {
+                Plotly.relayout(plotlyGraphDiv.id, {
+                    'autosize': true,
+                    'width': plotContainer.offsetWidth,
+                    'height': plotContainer.offsetHeight
+                });
+            }, 250);
+        });
+        // Initial resize on load
+        Plotly.relayout(plotlyGraphDiv.id, {
+            'autosize': true,
+            'width': plotContainer.offsetWidth,
+            'height': plotContainer.offsetHeight
+        });
+    }
+});
 </script>
 {% endblock %}
