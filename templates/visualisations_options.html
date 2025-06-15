@@ -493,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         textElement.textContent = textContent;
                     }
-                   
+                    
                     this.classList.add('selected');
                     dropdown.style.display = 'none';
                     toggle.classList.remove('active');
@@ -583,8 +583,12 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Gestion du bouton de réinitialisation
-    const jsMessageContainer = document.getElementById('jsMessageContainer');
+    // *** MODIFICATION CLÉ ICI : Utiliser 'systemMessages' au lieu de 'jsMessageContainer' ***
+    // 'systemMessages' est le conteneur de messages déjà défini dans base.html
+    const jsMessageContainer = document.getElementById('systemMessages');
 
+    // J'ai intégré la fonction showDynamicMessage directement, mais vous pouvez aussi utiliser la fonction showMessage de base.html si elle est suffisante.
+    // Pour les besoins de la confirmation et du spinner, une fonction dédiée ici est plus pratique.
     function showDynamicMessage(message, type = 'danger') {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
@@ -592,45 +596,52 @@ document.addEventListener('DOMContentLoaded', function() {
             <span>${message}</span>
             <span class="message-close" onclick="this.parentElement.remove()">&times;</span>
         `;
-        jsMessageContainer.appendChild(messageDiv);
+        // Utilise prepend pour que les nouveaux messages s'affichent en haut
+        jsMessageContainer.prepend(messageDiv); 
 
-        setTimeout(() => {
-            if (messageDiv.parentElement) {
-                messageDiv.remove();
-            }
-        }, 5000);
+        // Auto-fermeture pour les messages d'info/danger/success, mais pas pour la confirmation
+        if (type !== 'warning') { // La confirmation est de type 'warning' et gère sa propre fermeture
+            setTimeout(() => {
+                if (messageDiv.parentElement) {
+                    messageDiv.remove();
+                }
+            }, 5000);
+        }
+        return messageDiv; // Retourne l'élément créé pour pouvoir le manipuler (ex: le supprimer)
     }
 
     document.getElementById('resetBtn')?.addEventListener('click', function(e) {
         e.preventDefault();
         
-        const existingConfirmations = document.querySelectorAll('#jsMessageContainer .message.warning');
+        // Supprime les confirmations existantes pour éviter les doublons si on clique plusieurs fois
+        const existingConfirmations = jsMessageContainer.querySelectorAll('.message.warning');
         existingConfirmations.forEach(msg => msg.remove());
 
-        showDynamicMessage(
+        // Affiche la confirmation en utilisant la fonction showDynamicMessage
+        const confirmationMessageDiv = showDynamicMessage(
             `<p class="text-base font-medium text-gray-700">Êtes-vous sûr de vouloir réinitialiser toutes les données ? Cette action est irréversible.</p>
             <div class="mt-4 flex justify-end gap-3">
                 <button class="px-3 py-1 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="cancelReset">Annuler</button>
                 <button class="px-3 py-1 text-sm font-medium rounded-md border border-transparent bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" id="confirmReset">Confirmer</button>
             </div>`,
-            'warning'
+            'warning' // Utilise le type 'warning' pour la confirmation
         );
 
-        setTimeout(() => {
-            const cancelReset = document.getElementById('cancelReset');
-            const confirmReset = document.getElementById('confirmReset');
-            const currentMessageDiv = cancelReset ? cancelReset.closest('.message') : null;
-
+        // Les écouteurs d'événements doivent être attachés *après* que les boutons sont dans le DOM
+        setTimeout(() => { // Un petit délai pour s'assurer que les boutons sont rendus
+            const cancelReset = confirmationMessageDiv.querySelector('#cancelReset');
+            const confirmReset = confirmationMessageDiv.querySelector('#confirmReset');
+            
             if (cancelReset) {
                 cancelReset.addEventListener('click', () => {
-                    if (currentMessageDiv) currentMessageDiv.remove();
+                    confirmationMessageDiv.remove(); // Supprime le message de confirmation
                 });
             }
 
             if (confirmReset) {
                 confirmReset.addEventListener('click', () => {
-                    if (currentMessageDiv) currentMessageDiv.remove();
-                    showDynamicMessage('<i class="fas fa-spinner fa-spin mr-2"></i> Réinitialisation en cours...', 'info');
+                    confirmationMessageDiv.remove(); // Supprime le message de confirmation
+                    const loadingMessageDiv = showDynamicMessage('<i class="fas fa-spinner fa-spin mr-2"></i> Réinitialisation en cours...', 'info');
 
                     fetch("{{ url_for('reset_data') }}", {
                         method: 'POST',
@@ -639,27 +650,32 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     })
                     .then(response => {
-                        const loadingMessage = document.querySelector('#jsMessageContainer .message.info .fa-spinner')?.closest('.message');
-                        if (loadingMessage) loadingMessage.remove();
-
+                        loadingMessageDiv.remove(); // Supprime le message de chargement
                         if (response.redirected) {
-                            window.location.href = response.url;
+                            window.location.href = response.url; // Redirection si le backend le demande
                         } else {
+                            // Si ce n'est pas une redirection, attendez une réponse JSON
                             return response.json().then(data => {
-                                throw new Error(data.message || 'Réinitialisation échouée');
-                            }).catch(() => {
-                                throw new Error('Réinitialisation échouée (réponse non-JSON)');
+                                if (response.ok) { // Vérifie si la réponse HTTP est OK (2xx)
+                                    showDynamicMessage(data.message || 'Données réinitialisées avec succès.', 'success');
+                                    // Optionnel: Recharger la page après un succès sans redirection explicite
+                                    // setTimeout(() => window.location.reload(), 1500); 
+                                } else {
+                                    throw new Error(data.message || 'Erreur lors de la réinitialisation.');
+                                }
+                            }).catch(jsonError => {
+                                // Gère les erreurs de parsing JSON ou les erreurs de logique du backend
+                                showDynamicMessage(`Erreur de traitement: ${jsonError.message}`, 'danger');
                             });
                         }
                     })
                     .catch(error => {
-                        const loadingMessage = document.querySelector('#jsMessageContainer .message.info .fa-spinner')?.closest('.message');
-                        if (loadingMessage) loadingMessage.remove();
+                        loadingMessageDiv.remove(); // S'assure que le message de chargement est supprimé en cas d'erreur réseau
                         showDynamicMessage(`Échec de la réinitialisation: ${error.message}`, 'danger');
                     });
                 });
             }
-        }, 50);
+        }, 50); // Petit délai pour s'assurer que les boutons sont dans le DOM avant d'attacher les écouteurs
     });
 });
 </script>

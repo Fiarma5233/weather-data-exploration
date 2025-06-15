@@ -45,8 +45,7 @@
     {% endblock %}
 
     <div class="p-4">
-        <!-- Conteneur des messages système -->
-        <div id="systemMessages">
+        <div id="systemMessages" class="fixed top-4 right-4 z-50 space-y-2"> 
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
@@ -68,7 +67,6 @@
         {% include 'partials/footer.html' %}
     {% endblock %}
 
-    <!-- Scripts de base -->
     <script>
     // Fonctions de base pour la gestion des messages
     function showMessage(message, category = 'info', autoClose = true) {
@@ -83,7 +81,7 @@
                 <span class="message-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
             </div>
         `;
-        container.prepend(messageDiv);
+        container.prepend(messageDiv); // Utilise prepend pour que les nouveaux messages soient en haut
         
         if (autoClose) {
             setTimeout(() => {
@@ -96,6 +94,10 @@
 
     function showConfirmation(message, confirmCallback, cancelCallback = null) {
         const container = document.getElementById('systemMessages');
+        // Supprime les confirmations existantes pour éviter les doublons
+        const existingConfirmations = container.querySelectorAll('.message.warning');
+        existingConfirmations.forEach(msg => msg.remove());
+
         const confirmationDiv = document.createElement('div');
         confirmationDiv.className = 'message warning';
         
