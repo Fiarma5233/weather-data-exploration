@@ -2,174 +2,267 @@
 
 {% block content %}
 <div class="container-fluid px-4 py-5">
-    <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">
-            <i class="fas fa-chart-line me-2"></i>Options de Visualisation
-        </h1>
-        <a href="{{ url_for('data_preview') }}" class="btn btn-outline-primary">
+    <!-- Message Container -->
+    <div id="messageContainer" class="mb-4" style="display: none;">
+        <div class="alert alert-dismissible fade show" role="alert">
+            <span id="messageContent"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+
+    <!-- Boutons en haut -->
+    <div class="d-flex justify-content-between mb-3">
+        <a href="{{ url_for('data_preview') }}" class="btn btn-outline-primary text-primary">
             <i class="fas fa-arrow-left me-2"></i>Retour aux données
         </a>
+        <button id="resetBtn" class="btn btn-outline-danger">
+            <i class="fas fa-redo me-1"></i>Réinitialiser toutes les données
+        </button>
     </div>
 
-    <!-- Statistics Card -->
-    <div class="card mb-4">
-        <div class="card-header bg-white py-3">
-            <h2 class="h5 mb-0">
-                <i class="fas fa-chart-pie me-2"></i>Statistiques par Variable
-            </h2>
-        </div>
-        <div class="card-body">
-            <form method="GET" action="{{ url_for('statistiques' , variable=variable, station=station) }}">
-                <div class="form-group mb-3">
-                    <label for="variable" class="form-label">Sélectionnez une variable :</label>
-                    <select class="form-select" id="variable" name="variable" required>
-                        <option value="">-- Choisir une variable --</option>
-                        {% for var in variables %}
-                            <option value="{{ var }}">
-                                {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="fas fa-chart-bar me-2"></i>Générer les Statistiques
-                </button>
-            </form>
-        </div>
+    <!-- Titre centré sous les boutons -->
+    <div class="text-center mb-4">
+        <h1 class="h3 mb-3">
+            <i class="fas fa-chart-line me-2"></i>Options de Visualisation
+        </h1>
     </div>
 
-    <!-- Visualization Options -->
+    <!-- Visualization Grid -->
     <div class="row g-4">
-        <!-- Single Variable Plot -->
+        <!-- Cell 1: Statistics -->
         <div class="col-lg-6">
-            <div class="card h-100 border-0 shadow">
-                <div class="card-header bg-white py-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-primary text-white py-3">
                     <h2 class="h5 mb-0">
-                        <i class="fas fa-chart-bar me-2 text-blue"></i>Graphique par Variable
+                        <i class="fas fa-chart-pie me-2"></i>Statistiques par Variable
                     </h2>
                 </div>
                 <div class="card-body">
-                    <form action="{{ url_for('generate_plot') }}" method="post">
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-4">
-                                <label for="station" class="form-label">Station</label>
-                                <select class="form-select" id="station" name="station" required>
-                                    {% for station in stations %}
-                                    <option value="{{ station }}">{{ station }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="plot_variable" class="form-label">Variable</label>
-                                <select class="form-select" id="plot_variable" name="variable" required>
-                                    {% for var in variables %}
-                                    <option value="{{ var }}">
-                                        {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="periode" class="form-label">Période</label>
-                                <select class="form-select" id="periode" name="periode" required>
-                                    <option value="Brutes">Données Brutes</option>
-                                    <option value="Journalière">Journalière</option>
-                                    <option value="Hebdomadaire">Hebdomadaire</option>
-                                    <option value="Mensuelle">Mensuelle</option>
-                                    <option value="Annuelle">Annuelle</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-play-circle me-2"></i>Générer le Graphique
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Comparative Plot -->
-        <div class="col-lg-6">
-            <div class="card h-100 border-0 shadow">
-                <div class="card-header bg-white py-3">
-                    <h2 class="h5 mb-0">
-                        <i class="fas fa-chart-pie me-2 text-green"></i>Graphique Comparatif
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <form action="{{ url_for('generate_plot') }}" method="post">
-                        <input type="hidden" name="comparative" value="true">
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <label for="comp_variable" class="form-label">Variable</label>
-                                <select class="form-select" id="comp_variable" name="variable" required>
-                                    {% for var in variables %}
-                                    <option value="{{ var }}">
-                                        {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="comp_periode" class="form-label">Période</label>
-                                <select class="form-select" id="comp_periode" name="periode" required>
-                                    <option value="Brutes">Données Brutes</option>
-                                    <option value="Journalière">Journalière</option>
-                                    <option value="Hebdomadaire">Hebdomadaire</option>
-                                    <option value="Mensuelle">Mensuelle</option>
-                                    <option value="Annuelle">Annuelle</option>
-                                </select>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-success w-100">
-                            <i class="fas fa-play-circle me-2"></i>Générer la Comparaison
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Multi-Variable Plot -->
-        <div class="col-12">
-            <div class="card border-0 shadow">
-                <div class="card-header bg-white py-3">
-                    <h2 class="h5 mb-0">
-                        <i class="fas fa-chart-area me-2 text-purple"></i>Graphique Multi-Variables
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <form action="{{ url_for('generate_multi_variable_plot_route') }}" method="post">
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <label for="multi_station" class="form-label">Station</label>
-                                <select class="form-select" id="multi_station" name="station" required>
-                                    {% for station in stations %}
-                                    <option value="{{ station }}">{{ station }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-9">
-                                <label class="form-label">Variables à inclure</label>
-                                <div class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;">
-                                    <div class="row g-2">
+                    <form method="GET" action="{{ url_for('statistiques') }}" id="statsForm">
+                        <div class="mb-3">
+                            <label class="form-label">Variable à analyser</label>
+                            <div class="dropdown">
+                                <button class="btn btn-light border dropdown-toggle w-100 text-start" 
+                                        type="button" id="statVariableDropdown" 
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    Choisir une variable
+                                </button>
+                                <ul class="dropdown-menu w-100 p-3" aria-labelledby="statVariableDropdown">
+                                    <div style="max-height: 300px; overflow-y: scroll; padding-right: 8px;">
                                         {% for var in variables %}
-                                        <div class="col-md-4">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="variables[]" 
-                                                       id="var-{{ loop.index }}" value="{{ var }}">
-                                                <label class="form-check-label" for="var-{{ loop.index }}">
-                                                    {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
-                                                </label>
-                                            </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input stat-variable-radio" 
+                                                   type="radio" name="variable" 
+                                                   value="{{ var }}" id="stat-var-{{ loop.index }}"
+                                                   required>
+                                            <label class="form-check-label d-flex align-items-center" 
+                                                   for="stat-var-{{ loop.index }}">
+                                                <span class="color-indicator me-2" 
+                                                      style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
+                                                {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
+                                            </label>
                                         </div>
                                         {% endfor %}
                                     </div>
-                                </div>
+                                </ul>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-purple w-100 mt-4">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-chart-bar me-2"></i>Générer les Statistiques
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cell 2: Multi-Variable Plot -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-info text-white py-3">
+                    <h2 class="h5 mb-0">
+                        <i class="fas fa-layer-group me-2"></i>Graphique Multi-Variables
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('generate_plot') }}" method="post" id="multiVarForm">
+                        <div class="mb-3">
+                            <label for="mv_station" class="form-label">Station météo</label>
+                            <select class="form-select" id="mv_station" name="station" required>
+                                {% for station in stations %}
+                                <option value="{{ station }}">{{ station }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Variables à visualiser (max 5)</label>
+                            <div class="dropdown">
+                                <button class="btn btn-light border dropdown-toggle w-100 text-start" 
+                                        type="button" id="mvVariableDropdown" 
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    Sélectionner les variables
+                                </button>
+                                <ul class="dropdown-menu w-100 p-3" aria-labelledby="mvVariableDropdown">
+                                    <div style="max-height: 300px; overflow-y: scroll; padding-right: 8px;">
+                                        {% for var in variables %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input variable-check" 
+                                                   type="checkbox" name="variables[]" 
+                                                   value="{{ var }}" id="mv-var-{{ loop.index }}"
+                                                   data-max="5">
+                                            <label class="form-check-label d-flex align-items-center" 
+                                                   for="mv-var-{{ loop.index }}">
+                                                <span class="color-indicator me-2" 
+                                                      style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
+                                                {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="mv_periode" class="form-label">Période d'analyse</label>
+                            <select class="form-select" id="mv_periode" name="periode" required>
+                                <option value="Brutes">Données Brutes</option>
+                                <option value="Journalière">Journalière</option>
+                                <option value="Hebdomadaire">Hebdomadaire</option>
+                                <option value="Mensuelle">Mensuelle</option>
+                                <option value="Annuelle">Annuelle</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-info text-white w-100">
                             <i class="fas fa-play-circle me-2"></i>Générer le Graphique
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cell 3: Comparative Plot -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-success text-white py-3">
+                    <h2 class="h5 mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Comparaison entre Stations
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('generate_plot') }}" method="post" id="compForm">
+                        <input type="hidden" name="comparative" value="true">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Variable à comparer</label>
+                            <div class="dropdown">
+                                <button class="btn btn-light border dropdown-toggle w-100 text-start" 
+                                        type="button" id="compVariableDropdown" 
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    Choisir une variable
+                                </button>
+                                <ul class="dropdown-menu w-100 p-3" aria-labelledby="compVariableDropdown">
+                                    <div style="max-height: 300px; overflow-y: scroll; padding-right: 8px;">
+                                        {% for var in variables %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input comp-variable-radio" 
+                                                   type="radio" name="variable" 
+                                                   value="{{ var }}" id="comp-var-{{ loop.index }}"
+                                                   required>
+                                            <label class="form-check-label d-flex align-items-center" 
+                                                   for="comp-var-{{ loop.index }}">
+                                                <span class="color-indicator me-2" 
+                                                      style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
+                                                {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="comp_periode" class="form-label">Période d'analyse</label>
+                            <select class="form-select" id="comp_periode" name="periode" required>
+                                <option value="Brutes">Données Brutes</option>
+                                <option value="Journalière">Journalière</option>
+                                <option value="Hebdomadaire">Hebdomadaire</option>
+                                <option value="Mensuelle">Mensuelle</option>
+                                <option value="Annuelle">Annuelle</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-play-circle me-2"></i>Comparer les Stations
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cell 4: Normalized Analysis -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-purple text-white py-3">
+                    <h2 class="h5 mb-0">
+                        <i class="fas fa-balance-scale me-2"></i>Analyse Normalisée
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('generate_multi_variable_plot_route') }}" method="post" id="normForm">
+                        <div class="mb-3">
+                            <label for="norm_station" class="form-label">Station météo</label>
+                            <select class="form-select" id="norm_station" name="station" required>
+                                {% for station in stations %}
+                                <option value="{{ station }}">{{ station }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Variables à comparer (max 10)</label>
+                            <div class="dropdown">
+                                <button class="btn btn-light border dropdown-toggle w-100 text-start" 
+                                        type="button" id="normVariableDropdown" 
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    Sélectionner les variables
+                                </button>
+                                <ul class="dropdown-menu w-100 p-3" aria-labelledby="normVariableDropdown">
+                                    <div style="max-height: 300px; overflow-y: scroll; padding-right: 8px;">
+                                        {% for var in variables %}
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input variable-check" 
+                                                   type="checkbox" name="variables[]" 
+                                                   id="norm-var-{{ loop.index }}" value="{{ var }}"
+                                                   data-max="10">
+                                            <label class="form-check-label d-flex align-items-center" 
+                                                   for="norm-var-{{ loop.index }}">
+                                                <span class="color-indicator me-2" 
+                                                      style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
+                                                {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="norm_periode" class="form-label">Période d'analyse</label>
+                            <select class="form-select" id="norm_periode" name="periode" required>
+                                <option value="Brutes">Données Brutes</option>
+                                <option value="Journalière">Journalière</option>
+                                <option value="Hebdomadaire">Hebdomadaire</option>
+                                <option value="Mensuelle">Mensuelle</option>
+                                <option value="Annuelle">Annuelle</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-purple text-white w-100">
+                            <i class="fas fa-play-circle me-2"></i>Générer l'Analyse
                         </button>
                     </form>
                 </div>
@@ -180,19 +273,19 @@
 
 <!-- Custom CSS -->
 <style>
-    .card {
-        border-radius: 12px;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    :root {
+        --purple: #6f42c1;
+        --light-bg: #f8fafc;
     }
     
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    .bg-purple {
+        background-color: var(--purple) !important;
     }
     
     .btn-purple {
-        background-color: #6f42c1;
+        background-color: var(--purple);
         color: white;
+        border-color: var(--purple);
     }
     
     .btn-purple:hover {
@@ -200,13 +293,262 @@
         color: white;
     }
     
-    .text-blue { color: #0d6efd; }
-    .text-green { color: #198754; }
-    .text-purple { color: #6f42c1; }
+    .card {
+        border-radius: 0.5rem;
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        background-color: var(--light-bg);
+    }
     
-    .form-check-input:checked {
-        background-color: #6f42c1;
-        border-color: #6f42c1;
+    .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.1) !important;
+    }
+    
+    .card-header {
+        border-bottom: none;
+        border-radius: 0.5rem 0.5rem 0 0 !important;
+    }
+    
+    .color-indicator {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        margin-right: 10px;
+        transition: transform 0.2s;
+    }
+    
+    .form-check:hover .color-indicator {
+        transform: scale(1.1);
+    }
+    
+    .dropdown-toggle {
+        background-color: white;
+        text-align: left;
+        position: relative;
+    }
+    
+    .dropdown-toggle::after {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    .dropdown-menu {
+        border: 1px solid rgba(0,0,0,0.1);
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+    }
+    
+    .form-check-label {
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .form-select, .form-control, .dropdown-toggle {
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+    }
+    
+    .btn {
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+
+    /* Style personnalisé pour la scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+    /* Message container styles */
+    #messageContainer .alert {
+        border-radius: 0.5rem;
+        padding: 1rem 1.5rem;
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+    }
+
+    #messageContainer {
+        position: sticky;
+        top: 1rem;
+        z-index: 1000;
+    }
+
+    /* Style spécifique pour le bouton Retour */
+    .btn-outline-primary.text-primary {
+        color: #0d6efd !important;
+    }
+    .btn-outline-primary.text-primary:hover {
+        color: white !important;
     }
 </style>
+
+<!-- JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Message management system
+    const messageContainer = document.getElementById('messageContainer');
+    const messageContent = document.getElementById('messageContent');
+    const alertBox = messageContainer.querySelector('.alert');
+
+    function showMessage(message, type = 'danger') {
+        // Configure style based on type
+        alertBox.className = `alert alert-${type} alert-dismissible fade show`;
+        
+        // Add message content
+        messageContent.innerHTML = message;
+        
+        // Show container
+        messageContainer.style.display = 'block';
+        
+        // Auto-hide after 5 seconds (except for success messages)
+        if (type !== 'success') {
+            setTimeout(() => {
+                const bsAlert = bootstrap.Alert.getOrCreateInstance(alertBox);
+                bsAlert.close();
+            }, 5000);
+        }
+    }
+
+    // Close message handler
+    alertBox.addEventListener('closed.bs.alert', () => {
+        messageContainer.style.display = 'none';
+    });
+
+    // Initialize dropdown functionality for checkboxes
+    function initCheckboxDropdown(buttonId, checkboxesSelector) {
+        const dropdownButton = document.getElementById(buttonId);
+        const checkboxes = document.querySelectorAll(checkboxesSelector);
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const maxSelection = parseInt(this.dataset.max) || 5;
+                const selected = Array.from(document.querySelectorAll(`${checkboxesSelector}:checked`));
+                
+                // Enforce max selection
+                if (selected.length > maxSelection) {
+                    this.checked = false;
+                    showMessage(`Maximum ${maxSelection} variables autorisées`, 'warning');
+                    return;
+                }
+                
+                // Update button text
+                if (selected.length > 0) {
+                    const selectedNames = selected.map(cb => {
+                        return cb.nextElementSibling.querySelector('span').nextSibling.textContent.trim();
+                    });
+                    
+                    if (selectedNames.length > 2) {
+                        dropdownButton.innerHTML = `${selectedNames.length} variables sélectionnées`;
+                    } else {
+                        dropdownButton.innerHTML = selectedNames.join(', ');
+                    }
+                } else {
+                    dropdownButton.innerHTML = 'Sélectionner les variables';
+                }
+            });
+        });
+    }
+    
+    // Initialize dropdown functionality for radio buttons
+    function initRadioDropdown(buttonId, radiosSelector) {
+        const dropdownButton = document.getElementById(buttonId);
+        const radios = document.querySelectorAll(radiosSelector);
+        
+        radios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    const selectedName = this.nextElementSibling.querySelector('span').nextSibling.textContent.trim();
+                    dropdownButton.innerHTML = selectedName;
+                }
+            });
+        });
+    }
+    
+    // Initialize all dropdowns
+    initCheckboxDropdown('mvVariableDropdown', '#mvVariableDropdown ~ .dropdown-menu .variable-check');
+    initCheckboxDropdown('normVariableDropdown', '#normVariableDropdown ~ .dropdown-menu .variable-check');
+    initRadioDropdown('statVariableDropdown', '#statVariableDropdown ~ .dropdown-menu .stat-variable-radio');
+    initRadioDropdown('compVariableDropdown', '#compVariableDropdown ~ .dropdown-menu .comp-variable-radio');
+    
+    // Form validation
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const checkboxes = this.querySelectorAll('input[name="variables[]"]:checked');
+            if (checkboxes.length === 0 && this.querySelector('input[name="variables[]"]')) {
+                e.preventDefault();
+                showMessage('Veuillez sélectionner au moins une variable', 'warning');
+            }
+        });
+    });
+
+    // Reset data button handling
+    document.getElementById('resetBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Create confirmation message
+        const confirmMessage = document.createElement('div');
+        confirmMessage.innerHTML = `
+            <p class="mb-3">Êtes-vous sûr de vouloir réinitialiser toutes les données ?</p>
+            <div class="d-flex justify-content-center gap-3">
+                <button class="btn btn-secondary" id="cancelReset">Annuler</button>
+                <button class="btn btn-danger" id="confirmReset">Confirmer</button>
+            </div>
+        `;
+        
+        showMessage(confirmMessage.innerHTML, 'warning');
+        
+        // Handle button clicks
+        document.getElementById('cancelReset').addEventListener('click', () => {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alertBox);
+            bsAlert.close();
+        });
+        
+        document.getElementById('confirmReset').addEventListener('click', () => {
+            // Show processing message
+            showMessage('<i class="fas fa-spinner fa-spin me-2"></i> Réinitialisation en cours...', 'info');
+            
+            // Submit the reset request
+            fetch("{{ url_for('reset_data') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage(`<i class="fas fa-check-circle me-2"></i> ${data.message || 'Réinitialisation réussie'}`, 'success');
+                    // Reload after 2 seconds
+                    setTimeout(() => window.location.reload(), 2000);
+                } else {
+                    showMessage(`<i class="fas fa-exclamation-circle me-2"></i> ${data.message || 'Erreur lors de la réinitialisation'}`, 'danger');
+                }
+            })
+            .catch(error => {
+                showMessage(`<i class="fas fa-exclamation-circle me-2"></i> Erreur: ${error.message}`, 'danger');
+            });
+        });
+    });
+});
+</script>
 {% endblock %}

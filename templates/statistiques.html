@@ -1,25 +1,129 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Statistiques pour {{ variable_name }} ({{ unit }})</h2>
-    
-    <div class="card mb-4">
-        <div class="card-body">
-            {% if plot_html %}
-                <div class="plot-container">
-                    {{ plot_html|safe }}
-                </div>
-            {% else %}
-                <div class="alert alert-danger">
-                    Aucune donnée à afficher pour cette variable.
-                </div>
-            {% endif %}
+<div class="container-fluid px-0">
+    {# Barre d'en-tête avec boutons et titre #}
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 position-relative">
+            {# Bouton Retour - position absolue à gauche #}
+            <a href="{{ url_for('visualisations_options') }}" class="btn btn-outline-primary btn-hover-effect position-absolute start-0">
+                <i class="bi bi-chevron-left fs-4"></i>
+                <span class="ms-1 d-none d-sm-inline">Retour</span>
+            </a>
+            
+            {# Titre principal - centré #}
+            <h1 class="text-center display-6 fw-bold text-dark mb-0 mx-auto">
+                <i class="bi bi-graph-up me-2"></i>Statistiques : {{ variable_name }}
+            </h1>
+            
+            {# Bouton Réinitialiser - position absolue à droite #}
+            <button class="btn btn-outline-danger btn-hover-effect position-absolute end-0" id="reset-btn">
+                <i class="bi bi-arrow-repeat fs-4"></i>
+                <span class="ms-1 d-none d-sm-inline">Réinitialiser</span>
+            </button>
         </div>
     </div>
 
-    <a href="{{ url_for('visualisations_options') }}" class="btn btn-primary">
-        Retour aux options de visualisation
-    </a>
+    {# Graphique en pleine largeur #}
+    <div class="container-fluid px-0">
+        <div class="row mx-0">
+            <div class="col-12 px-0">
+                {% if plot_html %}
+                    <div class="plot-container w-100">
+                        {{ plot_html|safe }}
+                    </div>
+                {% else %}
+                    <div class="container my-5">
+                        <div class="alert alert-warning d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+                            <div>
+                                <h5 class="alert-heading mb-1">Aucune donnée disponible</h5>
+                                <p class="mb-0">Il n'y a pas de données à afficher pour cette variable.</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Section des statistiques #}
+    {% if stats %}
+    <div class="container mt-4 mb-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0 text-secondary">
+                    <i class="bi bi-calculator me-2"></i>Statistiques descriptives
+                </h5>
+                <p class="text-muted mb-0 small">Unité: {{ unit }}</p>
+            </div>
+            <div class="card-body pt-0">
+                <div class="row text-center">
+                    <div class="col-md-3 border-end py-2">
+                        <h6 class="text-muted mb-1">Moyenne</h6>
+                        <p class="h5 fw-bold text-primary">{{ stats.mean|round(2) }}</p>
+                    </div>
+                    <div class="col-md-3 border-end py-2">
+                        <h6 class="text-muted mb-1">Médiane</h6>
+                        <p class="h5 fw-bold text-primary">{{ stats.median|round(2) }}</p>
+                    </div>
+                    <div class="col-md-3 border-end py-2">
+                        <h6 class="text-muted mb-1">Écart-type</h6>
+                        <p class="h5 fw-bold text-primary">{{ stats.std|round(2) }}</p>
+                    </div>
+                    <div class="col-md-3 py-2">
+                        <h6 class="text-muted mb-1">Valeurs</h6>
+                        <p class="h5 fw-bold text-primary">{{ stats.count }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
+
+<style>
+    .plot-container {
+        width: 100%;
+        min-height: 500px;
+        background-color: #f8f9fa;
+    }
+    
+    .btn-hover-effect {
+        transition: all 0.3s ease;
+        border-width: 2px;
+        padding: 8px 16px;
+    }
+    
+    .btn-hover-effect:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .btn-outline-primary:hover {
+        background-color: var(--bs-primary);
+        color: white;
+    }
+    
+    .btn-outline-danger:hover {
+        background-color: var(--bs-danger);
+        color: white;
+    }
+    
+    .card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+
+<script>
+    document.getElementById('reset-btn').addEventListener('click', function() {
+        // Logique de réinitialisation ici
+        console.log('Réinitialisation effectuée');
+        // window.location.reload(); // Exemple simple
+    });
+</script>
 {% endblock %}

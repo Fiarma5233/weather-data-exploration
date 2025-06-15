@@ -7763,7 +7763,7 @@ from data_processing import (
     generate_daily_stats_plot_plotly
 )
 
-from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTENSIONS, STATIONS_BY_BASSIN, PALETTE_COULEUR
+from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTENSIONS, STATIONS_BY_BASSIN, PALETTE_COULEUR, CUSTOM_STATION_COLORS
 
 app = Flask(__name__)
 app.secret_key = 'votre_cle_secrete_ici'
@@ -7937,67 +7937,229 @@ def visualisations_options():
                         stations=sorted(GLOBAL_PROCESSED_DATA_DF['Station'].unique()),
                         variables=sorted(available_vars),
                         METADATA_VARIABLES=METADATA_VARIABLES,
+                        PALETTE_DEFAUT=PALETTE_DEFAUT,
                         daily_stats_table=daily_stats_html)
+
+# @app.route('/generate_plot', methods=['POST'])
+# def generate_plot():
+#     try:
+#         station = request.form.get('station')
+#         variable = request.form.get('variable')
+#         periode = request.form.get('periode')
+#         is_comparative = 'comparative' in request.form
+
+#         if not variable or not periode:
+#             flash('Veuillez sélectionner une variable et une période', 'error')
+#             return redirect(url_for('visualisations_options'))
+
+#         if not is_comparative and not station:
+#             flash('Veuillez sélectionner une station', 'error')
+#             return redirect(url_for('visualisations_options'))
+
+#         # if is_comparative:
+#         #     fig = generer_graphique_comparatif(
+#         #         df=GLOBAL_PROCESSED_DATA_DF,
+#         #         variable=variable,
+#         #         periode=periode,
+#         #         colors=PALETTE_DEFAUT,
+#         #         metadata=METADATA_VARIABLES
+#         #     )
+
+#         # Dans la route generate_plot
+#         if is_comparative:
+#             fig = generer_graphique_comparatif(
+#                 df=GLOBAL_PROCESSED_DATA_DF,
+#                 variable=variable,
+#                 periode=periode,
+#                 colors=CUSTOM_STATION_COLORS,
+#                 metadata=METADATA_VARIABLES
+#             )
+#             title = f"Comparaison de {METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} ({periode})"
+#         else:
+#             # fig = generer_graphique_par_variable_et_periode(
+#             #     df=GLOBAL_PROCESSED_DATA_DF,
+#             #     station=station,
+#             #     variable=variable,
+#             #     periode=periode,
+#             #     colors=PALETTE_DEFAUT,
+#             #     metadata=METADATA_VARIABLES
+#             # )
+
+#             fig = generer_graphique_par_variable_et_periode(
+#                 df=GLOBAL_PROCESSED_DATA_DF,
+#                 station=station,
+#                 variable=variable,
+#                 periode=periode,
+#                 colors=PALETTE_DEFAUT,
+#                 metadata=METADATA_VARIABLES
+#             )
+
+#             title = f"{METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} à {station} ({periode})"
+
+#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+#         return render_template('plot_display.html',
+#                             plot_html=plot_html,
+#                             title=title)
+
+#     except Exception as e:
+#         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
+#         return redirect(url_for('visualisations_options'))
+
+# @app.route('/generate_plot', methods=['POST'])
+# def generate_plot():
+#     try:
+#         station = request.form.get('station')
+#         variables = request.form.getlist('variables[]')  # Maintenant une liste de variables
+#         periode = request.form.get('periode')
+#         is_comparative = 'comparative' in request.form
+
+#         if not variables or not periode:
+#             flash('Veuillez sélectionner au moins une variable et une période', 'error')
+#             return redirect(url_for('visualisations_options'))
+
+#         if is_comparative:
+#             fig = generer_graphique_comparatif(
+#                 df=GLOBAL_PROCESSED_DATA_DF,
+#                 variable=variables[0],  # Pour la comparaison, on prend la première variable
+#                 periode=periode,
+#                 colors=CUSTOM_STATION_COLORS,
+#                 metadata=METADATA_VARIABLES
+#             )
+#             title = f"Comparaison de {METADATA_VARIABLES.get(variables[0], {}).get('Nom', variables[0])} ({periode})"
+#         else:
+#             fig = generer_graphique_par_variable_et_periode(
+#                 df=GLOBAL_PROCESSED_DATA_DF,
+#                 station=station,
+#                 variables=variables,  # Liste des variables sélectionnées
+#                 periode=periode,
+#                 colors=PALETTE_DEFAUT,  # Palette par variable
+#                 metadata=METADATA_VARIABLES
+#             )
+#             title = f"Évolution des variables pour {station} ({periode})"
+
+#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+#         return render_template('plot_display.html',
+#                             plot_html=plot_html,
+#                             title=title)
+
+#     except Exception as e:
+#         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
+#         return redirect(url_for('visualisations_options'))
 
 @app.route('/generate_plot', methods=['POST'])
 def generate_plot():
     try:
-        station = request.form.get('station')
-        variable = request.form.get('variable')
-        periode = request.form.get('periode')
         is_comparative = 'comparative' in request.form
+        periode = request.form.get('periode')
 
-        if not variable or not periode:
-            flash('Veuillez sélectionner une variable et une période', 'error')
-            return redirect(url_for('visualisations_options'))
-
-        if not is_comparative and not station:
-            flash('Veuillez sélectionner une station', 'error')
+        # Validation de base commune
+        if not periode:
+            flash('Veuillez sélectionner une période', 'error')
             return redirect(url_for('visualisations_options'))
 
         if is_comparative:
+            # Validation spécifique pour le mode comparatif
+            variable = request.form.get('variable')
+            if not variable:
+                flash('Veuillez sélectionner une variable pour la comparaison', 'error')
+                return redirect(url_for('visualisations_options'))
+
             fig = generer_graphique_comparatif(
                 df=GLOBAL_PROCESSED_DATA_DF,
                 variable=variable,
                 periode=periode,
-                colors=PALETTE_DEFAUT,
+                colors=CUSTOM_STATION_COLORS,
                 metadata=METADATA_VARIABLES
             )
             title = f"Comparaison de {METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} ({periode})"
+            
         else:
+            # Validation spécifique pour le mode normal
+            station = request.form.get('station')
+            variables = request.form.getlist('variables[]')
+            
+            if not station:
+                flash('Veuillez sélectionner une station', 'error')
+                return redirect(url_for('visualisations_options'))
+                
+            if not variables:
+                flash('Veuillez sélectionner au moins une variable', 'error')
+                return redirect(url_for('visualisations_options'))
+
             fig = generer_graphique_par_variable_et_periode(
                 df=GLOBAL_PROCESSED_DATA_DF,
                 station=station,
-                variable=variable,
+                variables=variables,
                 periode=periode,
                 colors=PALETTE_DEFAUT,
                 metadata=METADATA_VARIABLES
             )
-            title = f"{METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} à {station} ({periode})"
+            title = f"Évolution des variables pour {station} ({periode})"
+
+        # Génération du graphique
+        if not fig.data:
+            flash('Aucune donnée disponible pour les critères sélectionnés', 'warning')
+            return redirect(url_for('visualisations_options'))
 
         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
-
         return render_template('plot_display.html',
                             plot_html=plot_html,
                             title=title)
 
     except Exception as e:
+        app.logger.error(f"Erreur generate_plot: {str(e)}", exc_info=True)
         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
         return redirect(url_for('visualisations_options'))
     
-@app.route('/generate_multi_variable_plot', methods=['POST'])
+# @app.route('/generate_multi_variable_plot', methods=['POST'])
+# def generate_multi_variable_plot_route():
+#     try:
+#         station = request.form['station']
+#         variables = request.form.getlist('variables[]')
+        
+#         if not station or not variables:
+#             flash('Veuillez sélectionner une station et au moins une variable', 'error')
+#             return redirect(url_for('visualisations_options'))
+
+#         # fig = generate_multi_variable_station_plot(
+#         #     df=GLOBAL_PROCESSED_DATA_DF,
+#         #     station=station,
+#         #     colors=PALETTE_DEFAUT,
+#         #     metadata=METADATA_VARIABLES
+#         # )
+
+#         # Dans la route generate_multi_variable_plot_route
+#         fig = generate_multi_variable_station_plot(
+#             df=GLOBAL_PROCESSED_DATA_DF,
+#             station=station,
+#             colors=PALETTE_DEFAUT,
+#             metadata=METADATA_VARIABLES
+#         )
+        
+#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+        
+#         return render_template('plot_display.html',
+#                             plot_html=plot_html,
+#                             title=f"Graphique multi-variables pour {station}")
+    
+#     except Exception as e:
+#         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
+#         return redirect(url_for('visualisations_options'))
+
+@app.route('/generate_multi_variable_plot_route', methods=['POST'])
 def generate_multi_variable_plot_route():
     try:
         station = request.form['station']
         variables = request.form.getlist('variables[]')
+        periode = request.form.get('periode', 'Brutes')  # Par défaut 'Brutes' si non spécifié
         
-        if not station or not variables:
-            flash('Veuillez sélectionner une station et au moins une variable', 'error')
-            return redirect(url_for('visualisations_options'))
-
         fig = generate_multi_variable_station_plot(
             df=GLOBAL_PROCESSED_DATA_DF,
             station=station,
+            variables=variables,
+            periode=periode,
             colors=PALETTE_DEFAUT,
             metadata=METADATA_VARIABLES
         )
@@ -8006,7 +8168,7 @@ def generate_multi_variable_plot_route():
         
         return render_template('plot_display.html',
                             plot_html=plot_html,
-                            title=f"Graphique multi-variables pour {station}")
+                            title=f"Analyse Multi-Variables Normalisées - {station} ({periode})")
     
     except Exception as e:
         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')

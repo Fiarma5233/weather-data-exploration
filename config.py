@@ -278,19 +278,57 @@ METADATA_VARIABLES = {
 
 # Palette de couleurs personnalisée pour les stations (DOIT ÊTRE UN DICTIONNAIRE)
 # Assurez-vous que les noms de stations ici correspondent EXACTEMENT à ceux de vos fichiers et de STATIONS_BY_BASSIN
+# CUSTOM_STATION_COLORS = {
+#     "Dreyer Foundation": "#1f77b4",
+#     "Fafo": "#ff7f0e",
+#     "Koundri": "#2ca02c",
+#     "Wantéhoun": "#d62728",
+#     "Lare": "#9467bd",
+#     "Bankandi": "#8c564b",
+#     "Ouriyori 1": "#e377c2",
+#     "Pouri": "#7f7f7f", # Exemple: Pouri
+#     "Fandohoun": "#bcbd22", # Exemple: Fandohoun
+#     "Nagasséga": "#17becf", # Exemple: Nagasséga
+#     "Kayoro EC": "#aec7e8", # Exemple: Kayoro EC
+#     # Ajoutez toutes les stations que vous utilisez avec une couleur unique
+# }
+
 CUSTOM_STATION_COLORS = {
-    "Dreyer Foundation": "#1f77b4",
-    "Fafo": "#ff7f0e",
-    "Koundri": "#2ca02c",
-    "Wantéhoun": "#d62728",
-    "Lare": "#9467bd",
-    "Bankandi": "#8c564b",
-    "Ouriyori 1": "#e377c2",
-    "Pouri": "#7f7f7f", # Exemple: Pouri
-    "Fandohoun": "#bcbd22", # Exemple: Fandohoun
-    "Nagasséga": "#17becf", # Exemple: Nagasséga
-    "Kayoro EC": "#aec7e8", # Exemple: Kayoro EC
-    # Ajoutez toutes les stations que vous utilisez avec une couleur unique
+    # Bassin DANO (8 stations)
+    'Dreyer Foundation': '#FF0000',  # Rouge vif
+    'Lare': '#00AA00',       # Vert foncé
+    'Bankandi': '#0000FF',   # Bleu pur
+    'Wahablé': '#FF00FF',    # Magenta
+    'Fafo': '#FFA500',       # Orange
+    'Yabogane': '#00FFFF',   # Cyan
+    'Tambiri 1': '#A52A2A',  # Marron
+    'Tambiri 2': '#FFD700',  # Or
+    
+    # Bassin DASSARI (9 stations)
+    'Pouri (Fandohoun)': '#9400D3',  # Violet foncé
+    'Nagasséga': '#008000',   # Vert sapin
+    'Koundri': '#4B0082',     # Indigo
+    'Koupendri': '#FF4500',   # Orange-rouge
+    'Ouriyori 2': '#20B2AA',  # Vert mer clair
+    'Ouriyori 1': '#9932CC',  # Orchidée foncée
+    'Wantéhoun': '#8B0000',   # Rouge foncé
+    'Pouri': '#000080',       # Bleu marine
+    'Fandohoun': '#556B2F',   # Vert olive
+    
+    # Bassin VEA_SISSILI (13 stations)
+    'Kayoro EC': '#E60000',    # Rouge vif
+    'Doninga ': '#00CED1',     # Bleu turquoise
+    'Bongo Soe': '#32CD32',    # Vert lime
+    'Nabugubulle ': '#8A2BE2', # Bleu violet
+    'Gwosi': '#FF8C00',        # Orange foncé
+    'Bongo Atampisi': '#EE82EE', # Violet clair
+    'Manyoro': '#006400',      # Vert très foncé
+    'Aniabiisi': '#800000',    # Rouge bordeaux
+    'Nazinga EC': '#0000CD',   # Bleu moyen
+    'Oualem ': '#FF69B4',      # Rose vif
+    'Nebou': '#808000',        # Olive
+    'Tabou ': '#7CFC00',       # Vert prairie
+    'Nazinga': '#BA55D3'       # Violet moyen
 }
 
 # Palette de couleurs personnalisée pour les variables (DOIT ÊTRE UN DICTIONNAIRE)
