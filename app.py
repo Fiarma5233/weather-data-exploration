@@ -8190,6 +8190,41 @@ def reset_data():
     
     flash('Données réinitialisées avec succès', 'success')
     return redirect(url_for('index'))
+
+
+
+# @app.route('/statistiques')
+# def statistiques():
+#     try:
+#         variable = request.args.get('variable')
+        
+#         if not variable or variable not in GLOBAL_PROCESSED_DATA_DF.columns:
+#             flash('Variable invalide', 'error')
+#             return redirect(url_for('visualisations_options'))
+
+#         # Génération de la figure avec Plotly
+#         fig = generate_daily_stats_plot_plotly(GLOBAL_PROCESSED_DATA_DF, variable)
+        
+#         if not fig:
+#             flash('Erreur lors de la génération des statistiques', 'error')
+#             return redirect(url_for('visualisations_options'))
+
+#         # Conversion en HTML
+#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+#         var_meta = METADATA_VARIABLES.get(variable, {'Nom': variable, 'Unite': ''})
+#         return render_template('statistiques.html',
+#                             variable_name=var_meta.get('Nom', variable),
+#                             unit=var_meta.get('Unite', ''),
+#                             plot_html=plot_html)
+
+#     except Exception as e:
+#         app.logger.error(f"ERREUR dans /statistiques: {str(e)}")
+#         traceback.print_exc()
+#         flash('Erreur technique lors de la génération des statistiques', 'error')
+#         return redirect(url_for('visualisations_options'))
+
+
 @app.route('/statistiques')
 def statistiques():
     try:
@@ -8199,8 +8234,12 @@ def statistiques():
             flash('Variable invalide', 'error')
             return redirect(url_for('visualisations_options'))
 
-        # Génération de la figure avec Plotly
-        fig = generate_daily_stats_plot_plotly(GLOBAL_PROCESSED_DATA_DF, variable)
+        # Génération de la figure avec Plotly en passant CUSTOM_STATION_COLORS
+        fig = generate_daily_stats_plot_plotly(
+            df=GLOBAL_PROCESSED_DATA_DF, 
+            variable=variable,
+            station_colors=CUSTOM_STATION_COLORS
+        )
         
         if not fig:
             flash('Erreur lors de la génération des statistiques', 'error')
@@ -8220,6 +8259,7 @@ def statistiques():
         traceback.print_exc()
         flash('Erreur technique lors de la génération des statistiques', 'error')
         return redirect(url_for('visualisations_options'))
-
+    
+    
 if __name__ == '__main__':
     app.run(debug=True)

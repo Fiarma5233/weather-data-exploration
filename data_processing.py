@@ -1438,400 +1438,400 @@ def generate_stats_plots(df: pd.DataFrame, station: str, variable: str, metadata
     return fig
 
 
+#&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-
-def generate_daily_stats_plot_plotly(df: pd.DataFrame, variable: str) -> go.Figure:
-    """
-    Version dynamique avec Plotly de la fonction daily_stats, générant des graphiques interactifs
-    avec intégration des dates pour les maximums et minimums.
+# def generate_daily_stats_plot_plotly(df: pd.DataFrame, variable: str) -> go.Figure:
+#     """
+#     Version dynamique avec Plotly de la fonction daily_stats, générant des graphiques interactifs
+#     avec intégration des dates pour les maximums et minimums.
     
-    Args:
-        df (pd.DataFrame): DataFrame contenant les données météo
-        variable (str): Variable à analyser
+#     Args:
+#         df (pd.DataFrame): DataFrame contenant les données météo
+#         variable (str): Variable à analyser
         
-    Returns:
-        go.Figure: Figure Plotly prête pour l'affichage web
-    """
-    try:
-        df = df.copy()
+#     Returns:
+#         go.Figure: Figure Plotly prête pour l'affichage web
+#     """
+#     try:
+#         df = df.copy()
 
-        # supprimer les colonnes Rain_01_mm et Rain_02_mm du dataset
-        #colonnes a supprimer 
-        col_sup = ['Rain_01_mm', 'Rain_02_mm']
-        for var in col_sup:
-            if var in col_sup and var in df.columns:
-                df = df.drop(var, axis=1)
+#         # supprimer les colonnes Rain_01_mm et Rain_02_mm du dataset
+#         #colonnes a supprimer 
+#         col_sup = ['Rain_01_mm', 'Rain_02_mm']
+#         for var in col_sup:
+#             if var in col_sup and var in df.columns:
+#                 df = df.drop(var, axis=1)
                 
-        if isinstance(df.index, pd.DatetimeIndex):
-            df = df.reset_index()
+#         if isinstance(df.index, pd.DatetimeIndex):
+#             df = df.reset_index()
         
-        df['Datetime'] = pd.to_datetime(df['Datetime'], errors='coerce')
-        df = df.dropna(subset=['Datetime', 'Station'])
+#         df['Datetime'] = pd.to_datetime(df['Datetime'], errors='coerce')
+#         df = df.dropna(subset=['Datetime', 'Station'])
         
-        if 'Is_Daylight' not in df.columns:
-            df['Is_Daylight'] = (df['Datetime'].dt.hour >= 7) & (df['Datetime'].dt.hour <= 18)
+#         if 'Is_Daylight' not in df.columns:
+#             df['Is_Daylight'] = (df['Datetime'].dt.hour >= 7) & (df['Datetime'].dt.hour <= 18)
 
-        if variable not in df.columns:
-            return go.Figure()
+#         if variable not in df.columns:
+#             return go.Figure()
 
-        var_meta = METADATA_VARIABLES.get(variable, {'Nom': variable, 'Unite': '', 'is_rain': False})
+#         var_meta = METADATA_VARIABLES.get(variable, {'Nom': variable, 'Unite': '', 'is_rain': False})
 
-        # --- Traitement spécifique pour la pluie ---
-        if var_meta.get('is_rain', False) and variable == 'Rain_mm':
-            # Calcul des données quotidiennes de précipitations
-            df_daily_rain = df.groupby(['Station', pd.Grouper(key='Datetime', freq='D')])['Rain_mm'].sum().reset_index()
+#         # --- Traitement spécifique pour la pluie ---
+#         if var_meta.get('is_rain', False) and variable == 'Rain_mm':
+#             # Calcul des données quotidiennes de précipitations
+#             df_daily_rain = df.groupby(['Station', pd.Grouper(key='Datetime', freq='D')])['Rain_mm'].sum().reset_index()
 
-            # Détection des saisons pluvieuses
-            RAIN_SEASON_GAP_THRESHOLD = pd.Timedelta(days=60)
-            season_stats = []
+#             # Détection des saisons pluvieuses
+#             RAIN_SEASON_GAP_THRESHOLD = pd.Timedelta(days=60)
+#             season_stats = []
 
-            for station_name, station_df in df_daily_rain.groupby('Station'):
-                station_df = station_df.set_index('Datetime').sort_index()
-                rain_events = station_df[station_df['Rain_mm'] > 0].index
+#             for station_name, station_df in df_daily_rain.groupby('Station'):
+#                 station_df = station_df.set_index('Datetime').sort_index()
+#                 rain_events = station_df[station_df['Rain_mm'] > 0].index
 
-                if rain_events.empty:
-                    season_stats.append({
-                        'Station': station_name,
-                        'Moyenne_Saison_Pluvieuse': np.nan,
-                        'Debut_Saison_Pluvieuse': pd.NaT,
-                        'Fin_Saison_Pluvieuse': pd.NaT,
-                        'Duree_Saison_Pluvieuse_Jours': np.nan
-                    })
-                    continue
+#                 if rain_events.empty:
+#                     season_stats.append({
+#                         'Station': station_name,
+#                         'Moyenne_Saison_Pluvieuse': np.nan,
+#                         'Debut_Saison_Pluvieuse': pd.NaT,
+#                         'Fin_Saison_Pluvieuse': pd.NaT,
+#                         'Duree_Saison_Pluvieuse_Jours': np.nan
+#                     })
+#                     continue
 
-                block_ids = (rain_events.to_series().diff() > RAIN_SEASON_GAP_THRESHOLD).cumsum()
-                valid_blocks = {}
+#                 block_ids = (rain_events.to_series().diff() > RAIN_SEASON_GAP_THRESHOLD).cumsum()
+#                 valid_blocks = {}
 
-                for block_id, rain_dates_in_block in rain_events.to_series().groupby(block_ids):
-                    if not rain_dates_in_block.empty:
-                        block_start = rain_dates_in_block.min()
-                        block_end = rain_dates_in_block.max()
-                        full_block_df = station_df.loc[block_start:block_end]
-                        valid_blocks[block_id] = full_block_df
+#                 for block_id, rain_dates_in_block in rain_events.to_series().groupby(block_ids):
+#                     if not rain_dates_in_block.empty:
+#                         block_start = rain_dates_in_block.min()
+#                         block_end = rain_dates_in_block.max()
+#                         full_block_df = station_df.loc[block_start:block_end]
+#                         valid_blocks[block_id] = full_block_df
 
-                if not valid_blocks:
-                    season_stats.append({
-                        'Station': station_name,
-                        'Moyenne_Saison_Pluvieuse': np.nan,
-                        'Debut_Saison_Pluvieuse': pd.NaT,
-                        'Fin_Saison_Pluvieuse': pd.NaT,
-                        'Duree_Saison_Pluvieuse_Jours': np.nan
-                    })
-                    continue
+#                 if not valid_blocks:
+#                     season_stats.append({
+#                         'Station': station_name,
+#                         'Moyenne_Saison_Pluvieuse': np.nan,
+#                         'Debut_Saison_Pluvieuse': pd.NaT,
+#                         'Fin_Saison_Pluvieuse': pd.NaT,
+#                         'Duree_Saison_Pluvieuse_Jours': np.nan
+#                     })
+#                     continue
 
-                main_block_id = max(valid_blocks, key=lambda k: (valid_blocks[k].index.max() - valid_blocks[k].index.min()).days)
-                main_season_df = valid_blocks[main_block_id]
+#                 main_block_id = max(valid_blocks, key=lambda k: (valid_blocks[k].index.max() - valid_blocks[k].index.min()).days)
+#                 main_season_df = valid_blocks[main_block_id]
 
-                debut_saison = main_season_df.index.min()
-                fin_saison = main_season_df.index.max()
-                total_days = (fin_saison - debut_saison).days + 1
-                moyenne_saison = main_season_df['Rain_mm'].sum() / total_days if total_days > 0 else 0
+#                 debut_saison = main_season_df.index.min()
+#                 fin_saison = main_season_df.index.max()
+#                 total_days = (fin_saison - debut_saison).days + 1
+#                 moyenne_saison = main_season_df['Rain_mm'].sum() / total_days if total_days > 0 else 0
 
-                season_stats.append({
-                    'Station': station_name,
-                    'Moyenne_Saison_Pluvieuse': moyenne_saison,
-                    'Debut_Saison_Pluvieuse': debut_saison,
-                    'Fin_Saison_Pluvieuse': fin_saison,
-                    'Duree_Saison_Pluvieuse_Jours': total_days
-                })
+#                 season_stats.append({
+#                     'Station': station_name,
+#                     'Moyenne_Saison_Pluvieuse': moyenne_saison,
+#                     'Debut_Saison_Pluvieuse': debut_saison,
+#                     'Fin_Saison_Pluvieuse': fin_saison,
+#                     'Duree_Saison_Pluvieuse_Jours': total_days
+#                 })
 
-            df_season_stats = pd.DataFrame(season_stats)
+#             df_season_stats = pd.DataFrame(season_stats)
 
-            # Détection des périodes de sécheresse
-            station_dry_spell_events = []
+#             # Détection des périodes de sécheresse
+#             station_dry_spell_events = []
 
-            for station_name, station_df in df_daily_rain.groupby('Station'):
-                station_df = station_df.set_index('Datetime').sort_index()
-                full_daily_series = station_df['Rain_mm'].resample('D').sum().fillna(0)
-                rainy_days_index = full_daily_series[full_daily_series > 0].index
+#             for station_name, station_df in df_daily_rain.groupby('Station'):
+#                 station_df = station_df.set_index('Datetime').sort_index()
+#                 full_daily_series = station_df['Rain_mm'].resample('D').sum().fillna(0)
+#                 rainy_days_index = full_daily_series[full_daily_series > 0].index
 
-                if rainy_days_index.empty:
-                    continue
+#                 if rainy_days_index.empty:
+#                     continue
 
-                for i in range(1, len(rainy_days_index)):
-                    prev_rain_date = rainy_days_index[i-1]
-                    current_rain_date = rainy_days_index[i]
-                    dry_days = (current_rain_date - prev_rain_date).days - 1
+#                 for i in range(1, len(rainy_days_index)):
+#                     prev_rain_date = rainy_days_index[i-1]
+#                     current_rain_date = rainy_days_index[i]
+#                     dry_days = (current_rain_date - prev_rain_date).days - 1
 
-                    if dry_days > 0:
-                        rain_prev_day = full_daily_series.loc[prev_rain_date]
-                        saison_moyenne = df_season_stats.loc[
-                            df_season_stats['Station'] == station_name,
-                            'Moyenne_Saison_Pluvieuse'
-                        ].iloc[0] if not df_season_stats[df_season_stats['Station'] == station_name].empty else np.nan
+#                     if dry_days > 0:
+#                         rain_prev_day = full_daily_series.loc[prev_rain_date]
+#                         saison_moyenne = df_season_stats.loc[
+#                             df_season_stats['Station'] == station_name,
+#                             'Moyenne_Saison_Pluvieuse'
+#                         ].iloc[0] if not df_season_stats[df_season_stats['Station'] == station_name].empty else np.nan
 
-                        debut_secheresse = pd.NaT
-                        duree_secheresse = 0
+#                         debut_secheresse = pd.NaT
+#                         duree_secheresse = 0
 
-                        if pd.isna(saison_moyenne) or saison_moyenne == 0:
-                            continue
+#                         if pd.isna(saison_moyenne) or saison_moyenne == 0:
+#                             continue
 
-                        for j in range(1, dry_days + 1):
-                            current_dry_date = prev_rain_date + timedelta(days=j)
-                            current_ratio = rain_prev_day / j
+#                         for j in range(1, dry_days + 1):
+#                             current_dry_date = prev_rain_date + timedelta(days=j)
+#                             current_ratio = rain_prev_day / j
 
-                            if current_ratio < saison_moyenne:
-                                debut_secheresse = current_dry_date
-                                duree_secheresse = (current_rain_date - debut_secheresse).days
-                                break
+#                             if current_ratio < saison_moyenne:
+#                                 debut_secheresse = current_dry_date
+#                                 duree_secheresse = (current_rain_date - debut_secheresse).days
+#                                 break
 
-                        if pd.notna(debut_secheresse) and duree_secheresse > 0:
-                            station_dry_spell_events.append({
-                                'Station': station_name,
-                                'Debut_Secheresse_Definie': debut_secheresse,
-                                'Fin_Secheresse_Definie': current_rain_date - timedelta(days=1),
-                                'Duree_Secheresse_Definie_Jours': duree_secheresse
-                            })
+#                         if pd.notna(debut_secheresse) and duree_secheresse > 0:
+#                             station_dry_spell_events.append({
+#                                 'Station': station_name,
+#                                 'Debut_Secheresse_Definie': debut_secheresse,
+#                                 'Fin_Secheresse_Definie': current_rain_date - timedelta(days=1),
+#                                 'Duree_Secheresse_Definie_Jours': duree_secheresse
+#                             })
 
-            df_dry_spell_events = pd.DataFrame(station_dry_spell_events)
+#             df_dry_spell_events = pd.DataFrame(station_dry_spell_events)
 
-            # Calcul des statistiques finales avec dates
-            stats = df[df['Rain_mm'] > 0].groupby('Station')['Rain_mm'].agg(
-                Maximum='max', Minimum='min', Mediane='median'
-            ).reset_index()
+#             # Calcul des statistiques finales avec dates
+#             stats = df[df['Rain_mm'] > 0].groupby('Station')['Rain_mm'].agg(
+#                 Maximum='max', Minimum='min', Mediane='median'
+#             ).reset_index()
 
-            # Ajout des dates des max/min
-            max_dates = df.loc[df.groupby('Station')['Rain_mm'].idxmax()][['Station', 'Datetime']]
-            min_dates = df.loc[df.groupby('Station')['Rain_mm'].idxmin()][['Station', 'Datetime']]
+#             # Ajout des dates des max/min
+#             max_dates = df.loc[df.groupby('Station')['Rain_mm'].idxmax()][['Station', 'Datetime']]
+#             min_dates = df.loc[df.groupby('Station')['Rain_mm'].idxmin()][['Station', 'Datetime']]
             
-            stats = stats.merge(
-                max_dates.rename(columns={'Datetime': 'Date_Max'}),
-                on='Station', how='left'
-            )
-            stats = stats.merge(
-                min_dates.rename(columns={'Datetime': 'Date_Min'}),
-                on='Station', how='left'
-            )
+#             stats = stats.merge(
+#                 max_dates.rename(columns={'Datetime': 'Date_Max'}),
+#                 on='Station', how='left'
+#             )
+#             stats = stats.merge(
+#                 min_dates.rename(columns={'Datetime': 'Date_Min'}),
+#                 on='Station', how='left'
+#             )
 
-            total_cumul = df.groupby('Station')['Rain_mm'].sum().reset_index(name='Cumul_Annuel')
-            stats = stats.merge(total_cumul, on='Station', how='left')
+#             total_cumul = df.groupby('Station')['Rain_mm'].sum().reset_index(name='Cumul_Annuel')
+#             stats = stats.merge(total_cumul, on='Station', how='left')
 
-            stats = stats.merge(
-                df_daily_rain[df_daily_rain['Rain_mm'] > 0].groupby('Station')['Rain_mm'].mean().reset_index().rename(
-                    columns={'Rain_mm': 'Moyenne_Jours_Pluvieux'}),
-                on='Station', how='left'
-            )
+#             stats = stats.merge(
+#                 df_daily_rain[df_daily_rain['Rain_mm'] > 0].groupby('Station')['Rain_mm'].mean().reset_index().rename(
+#                     columns={'Rain_mm': 'Moyenne_Jours_Pluvieux'}),
+#                 on='Station', how='left'
+#             )
             
-            stats = stats.merge(
-                df_season_stats[['Station', 'Moyenne_Saison_Pluvieuse', 'Debut_Saison_Pluvieuse',
-                            'Fin_Saison_Pluvieuse', 'Duree_Saison_Pluvieuse_Jours']],
-                on='Station', how='left'
-            )
+#             stats = stats.merge(
+#                 df_season_stats[['Station', 'Moyenne_Saison_Pluvieuse', 'Debut_Saison_Pluvieuse',
+#                             'Fin_Saison_Pluvieuse', 'Duree_Saison_Pluvieuse_Jours']],
+#                 on='Station', how='left'
+#             )
 
-            if not df_dry_spell_events.empty:
-                longest_dry_spells = df_dry_spell_events.loc[
-                    df_dry_spell_events.groupby('Station')['Duree_Secheresse_Definie_Jours'].idxmax()
-                ][['Station', 'Duree_Secheresse_Definie_Jours', 'Debut_Secheresse_Definie', 'Fin_Secheresse_Definie']]
+#             if not df_dry_spell_events.empty:
+#                 longest_dry_spells = df_dry_spell_events.loc[
+#                     df_dry_spell_events.groupby('Station')['Duree_Secheresse_Definie_Jours'].idxmax()
+#                 ][['Station', 'Duree_Secheresse_Definie_Jours', 'Debut_Secheresse_Definie', 'Fin_Secheresse_Definie']]
 
-                stats = stats.merge(longest_dry_spells, on='Station', how='left')
+#                 stats = stats.merge(longest_dry_spells, on='Station', how='left')
 
-            metrics_to_plot = [
-                'Maximum', 'Minimum', 'Cumul_Annuel', 'Mediane',
-                'Moyenne_Jours_Pluvieux', 'Moyenne_Saison_Pluvieuse',
-                'Duree_Saison_Pluvieuse_Jours', 'Duree_Secheresse_Definie_Jours'
-            ]
+#             metrics_to_plot = [
+#                 'Maximum', 'Minimum', 'Cumul_Annuel', 'Mediane',
+#                 'Moyenne_Jours_Pluvieux', 'Moyenne_Saison_Pluvieuse',
+#                 'Duree_Saison_Pluvieuse_Jours', 'Duree_Secheresse_Definie_Jours'
+#             ]
 
-            fig = make_subplots(
-                rows=4, cols=2,
-                subplot_titles=[f"{var_meta['Nom']} {metric.replace('_', ' ')}" for metric in metrics_to_plot],
-                vertical_spacing=0.1
-            )
+#             fig = make_subplots(
+#                 rows=4, cols=2,
+#                 subplot_titles=[f"{var_meta['Nom']} {metric.replace('_', ' ')}" for metric in metrics_to_plot],
+#                 vertical_spacing=0.1
+#             )
 
-            for i, metric in enumerate(metrics_to_plot):
-                row = (i // 2) + 1
-                col = (i % 2) + 1
+#             for i, metric in enumerate(metrics_to_plot):
+#                 row = (i // 2) + 1
+#                 col = (i % 2) + 1
                 
-                if metric not in stats.columns:
-                    continue
+#                 if metric not in stats.columns:
+#                     continue
 
-                hover_text_list = []
-                for _, row_data in stats.iterrows():
-                    value = row_data[metric]
-                    if pd.isna(value):
-                        hover_text_list.append("")
-                        continue
+#                 hover_text_list = []
+#                 for _, row_data in stats.iterrows():
+#                     value = row_data[metric]
+#                     if pd.isna(value):
+#                         hover_text_list.append("")
+#                         continue
 
-                    if metric in ['Duree_Saison_Pluvieuse_Jours', 'Duree_Secheresse_Definie_Jours']:
-                        date_debut = ''
-                        date_fin = ''
-                        if metric == 'Duree_Saison_Pluvieuse_Jours' and pd.notna(row_data.get('Debut_Saison_Pluvieuse')) and pd.notna(row_data.get('Fin_Saison_Pluvieuse')):
-                            date_debut = row_data['Debut_Saison_Pluvieuse'].strftime('%d/%m/%Y')
-                            date_fin = row_data['Fin_Saison_Pluvieuse'].strftime('%d/%m/%Y')
-                        elif metric == 'Duree_Secheresse_Definie_Jours' and pd.notna(row_data.get('Debut_Secheresse_Definie')) and pd.notna(row_data.get('Fin_Secheresse_Definie')):
-                            date_debut = row_data['Debut_Secheresse_Definie'].strftime('%d/%m/%Y')
-                            date_fin = row_data['Fin_Secheresse_Definie'].strftime('%d/%m/%Y')
+#                     if metric in ['Duree_Saison_Pluvieuse_Jours', 'Duree_Secheresse_Definie_Jours']:
+#                         date_debut = ''
+#                         date_fin = ''
+#                         if metric == 'Duree_Saison_Pluvieuse_Jours' and pd.notna(row_data.get('Debut_Saison_Pluvieuse')) and pd.notna(row_data.get('Fin_Saison_Pluvieuse')):
+#                             date_debut = row_data['Debut_Saison_Pluvieuse'].strftime('%d/%m/%Y')
+#                             date_fin = row_data['Fin_Saison_Pluvieuse'].strftime('%d/%m/%Y')
+#                         elif metric == 'Duree_Secheresse_Definie_Jours' and pd.notna(row_data.get('Debut_Secheresse_Definie')) and pd.notna(row_data.get('Fin_Secheresse_Definie')):
+#                             date_debut = row_data['Debut_Secheresse_Definie'].strftime('%d/%m/%Y')
+#                             date_fin = row_data['Fin_Secheresse_Definie'].strftime('%d/%m/%Y')
 
-                        hover_text = f"<b>{metric.replace('_', ' ')}</b><br>"
-                        if date_debut and date_fin:
-                            hover_text += f"Du {date_debut} au {date_fin}<br>"
-                        hover_text += f"Durée: {int(value)} jours"
-                    elif metric == 'Maximum':
-                        date_str = row_data['Date_Max'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Max')) else 'Date inconnue'
-                        hover_text = f"<b>Maximum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
-                    elif metric == 'Minimum':
-                        date_str = row_data['Date_Min'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Min')) else 'Date inconnue'
-                        hover_text = f"<b>Minimum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
-                    elif metric in ['Cumul_Annuel', 'Moyenne_Jours_Pluvieux', 'Moyenne_Saison_Pluvieuse', 'Mediane']:
-                        hover_text = f"<b>{metric.replace('_', ' ')}</b><br>{value:.1f} {var_meta['Unite']}"
-                    else:
-                        hover_text = f"<b>{metric.replace('_', ' ')}</b><br>{value:.1f} {var_meta['Unite']}"
+#                         hover_text = f"<b>{metric.replace('_', ' ')}</b><br>"
+#                         if date_debut and date_fin:
+#                             hover_text += f"Du {date_debut} au {date_fin}<br>"
+#                         hover_text += f"Durée: {int(value)} jours"
+#                     elif metric == 'Maximum':
+#                         date_str = row_data['Date_Max'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Max')) else 'Date inconnue'
+#                         hover_text = f"<b>Maximum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
+#                     elif metric == 'Minimum':
+#                         date_str = row_data['Date_Min'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Min')) else 'Date inconnue'
+#                         hover_text = f"<b>Minimum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
+#                     elif metric in ['Cumul_Annuel', 'Moyenne_Jours_Pluvieux', 'Moyenne_Saison_Pluvieuse', 'Mediane']:
+#                         hover_text = f"<b>{metric.replace('_', ' ')}</b><br>{value:.1f} {var_meta['Unite']}"
+#                     else:
+#                         hover_text = f"<b>{metric.replace('_', ' ')}</b><br>{value:.1f} {var_meta['Unite']}"
 
-                    hover_text_list.append(hover_text)
+#                     hover_text_list.append(hover_text)
 
-                fig.add_trace(
-                    go.Bar(
-                        x=stats[metric],
-                        y=stats['Station'],
-                        orientation='h',
-                        marker_color=PALETTE_COULEUR.get(metric, '#000000'),
-                        name=metric,
-                        hovertext=hover_text_list,
-                        hoverinfo='text',
-                        textposition='none'  # Désactive le texte au-dessus des barres
-                    ),
-                    row=row,
-                    col=col
-                )
+#                 fig.add_trace(
+#                     go.Bar(
+#                         x=stats[metric],
+#                         y=stats['Station'],
+#                         orientation='h',
+#                         marker_color=PALETTE_COULEUR.get(metric, '#000000'),
+#                         name=metric,
+#                         hovertext=hover_text_list,
+#                         hoverinfo='text',
+#                         textposition='none'  # Désactive le texte au-dessus des barres
+#                     ),
+#                     row=row,
+#                     col=col
+#                 )
 
-                fig.update_xaxes(
-                    showgrid=False,  # Désactive la grille
-                    row=row, 
-                    col=col
-                )
+#                 fig.update_xaxes(
+#                     showgrid=False,  # Désactive la grille
+#                     row=row, 
+#                     col=col
+#                 )
                 
                 
-                fig.update_layout(
-                    {f'xaxis{i+1}_title': "Jours" if "Duree" in metric else f"{var_meta['Nom']} ({var_meta['Unite']})"}
-                )
+#                 fig.update_layout(
+#                     {f'xaxis{i+1}_title': "Jours" if "Duree" in metric else f"{var_meta['Nom']} ({var_meta['Unite']})"}
+#                 )
 
 
-                fig.update_yaxes(
-                    #title_text="Stations",
-                    showgrid=False,  # Désactive la grille
-                    row=row, 
-                    col=col
-                )
+#                 fig.update_yaxes(
+#                     #title_text="Stations",
+#                     showgrid=False,  # Désactive la grille
+#                     row=row, 
+#                     col=col
+#                 )
 
-            fig.update_layout(
-                height=1200,
-                title_text=f"Statistiques des {var_meta['Nom']} par Station",
-                showlegend=False,
-                hovermode='closest',
-                plot_bgcolor='white',
-                paper_bgcolor='white'
-            )
+#             fig.update_layout(
+#                 height=1200,
+#                 title_text=f"Statistiques des {var_meta['Nom']} par Station",
+#                 showlegend=False,
+#                 hovermode='closest',
+#                 plot_bgcolor='white',
+#                 paper_bgcolor='white'
+#             )
             
-        else:
-            # --- Traitement des autres variables ---
-            df[variable] = pd.to_numeric(df[variable], errors='coerce')
-            df_clean = df.dropna(subset=[variable, 'Station']).copy()
+#         else:
+#             # --- Traitement des autres variables ---
+#             df[variable] = pd.to_numeric(df[variable], errors='coerce')
+#             df_clean = df.dropna(subset=[variable, 'Station']).copy()
             
-            if variable == 'Solar_R_W/m^2':
-                df_clean = df_clean[df_clean['Is_Daylight']].copy()
+#             if variable == 'Solar_R_W/m^2':
+#                 df_clean = df_clean[df_clean['Is_Daylight']].copy()
             
-            if df_clean.empty:
-                return go.Figure()
+#             if df_clean.empty:
+#                 return go.Figure()
                 
-            # Calcul des statistiques avec dates
-            stats = df_clean.groupby('Station')[variable].agg(
-                Maximum='max', Minimum='min', Mediane='median'
-            ).reset_index()
+#             # Calcul des statistiques avec dates
+#             stats = df_clean.groupby('Station')[variable].agg(
+#                 Maximum='max', Minimum='min', Mediane='median'
+#             ).reset_index()
             
-            # Ajout des dates des max/min
-            max_dates = df_clean.loc[df_clean.groupby('Station')[variable].idxmax()][['Station', 'Datetime']]
-            min_dates = df_clean.loc[df_clean.groupby('Station')[variable].idxmin()][['Station', 'Datetime']]
+#             # Ajout des dates des max/min
+#             max_dates = df_clean.loc[df_clean.groupby('Station')[variable].idxmax()][['Station', 'Datetime']]
+#             min_dates = df_clean.loc[df_clean.groupby('Station')[variable].idxmin()][['Station', 'Datetime']]
             
-            stats = stats.merge(
-                max_dates.rename(columns={'Datetime': 'Date_Max'}),
-                on='Station', how='left'
-            )
-            stats = stats.merge(
-                min_dates.rename(columns={'Datetime': 'Date_Min'}),
-                on='Station', how='left'
-            )
+#             stats = stats.merge(
+#                 max_dates.rename(columns={'Datetime': 'Date_Max'}),
+#                 on='Station', how='left'
+#             )
+#             stats = stats.merge(
+#                 min_dates.rename(columns={'Datetime': 'Date_Min'}),
+#                 on='Station', how='left'
+#             )
             
-            stats['Moyenne'] = df_clean.groupby('Station')[variable].mean().values
+#             stats['Moyenne'] = df_clean.groupby('Station')[variable].mean().values
 
-            metrics_to_plot = ['Maximum', 'Minimum', 'Moyenne', 'Mediane']
+#             metrics_to_plot = ['Maximum', 'Minimum', 'Moyenne', 'Mediane']
             
-            fig = make_subplots(
-                rows=2, cols=2,
-                subplot_titles=[f"{var_meta['Nom']} {metric}" for metric in metrics_to_plot],
-                vertical_spacing=0.15
-            )
+#             fig = make_subplots(
+#                 rows=2, cols=2,
+#                 subplot_titles=[f"{var_meta['Nom']} {metric}" for metric in metrics_to_plot],
+#                 vertical_spacing=0.15
+#             )
 
-            for i, metric in enumerate(metrics_to_plot):
-                row = (i // 2) + 1
-                col = (i % 2) + 1
+#             for i, metric in enumerate(metrics_to_plot):
+#                 row = (i // 2) + 1
+#                 col = (i % 2) + 1
                 
-                if metric not in stats.columns:
-                    continue
+#                 if metric not in stats.columns:
+#                     continue
 
-                hover_text_list = []
-                for _, row_data in stats.iterrows():
-                    value = row_data[metric]
-                    if pd.isna(value):
-                        hover_text_list.append("")
-                        continue
+#                 hover_text_list = []
+#                 for _, row_data in stats.iterrows():
+#                     value = row_data[metric]
+#                     if pd.isna(value):
+#                         hover_text_list.append("")
+#                         continue
 
-                    if metric == 'Maximum':
-                        date_str = row_data['Date_Max'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Max')) else 'Date inconnue'
-                        hover_text = f"<b>Maximum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
-                    elif metric == 'Minimum':
-                        date_str = row_data['Date_Min'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Min')) else 'Date inconnue'
-                        hover_text = f"<b>Minimum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
-                    else:
-                        hover_text = f"<b>{metric}</b><br>{value:.1f} {var_meta['Unite']}"
+#                     if metric == 'Maximum':
+#                         date_str = row_data['Date_Max'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Max')) else 'Date inconnue'
+#                         hover_text = f"<b>Maximum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
+#                     elif metric == 'Minimum':
+#                         date_str = row_data['Date_Min'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Min')) else 'Date inconnue'
+#                         hover_text = f"<b>Minimum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
+#                     else:
+#                         hover_text = f"<b>{metric}</b><br>{value:.1f} {var_meta['Unite']}"
 
-                    hover_text_list.append(hover_text)
+#                     hover_text_list.append(hover_text)
 
-                fig.add_trace(
-                    go.Bar(
-                        x=stats[metric],
-                        y=stats['Station'],
-                        orientation='h',
-                        marker_color=PALETTE_COULEUR.get(metric, '#000000'),
-                        name=metric,
-                        hovertext=hover_text_list,
-                        hoverinfo='text',
-                        textposition='none'  # Désactive le texte au-dessus des barres
-                    ),
-                    row=row,
-                    col=col
-                )
+#                 fig.add_trace(
+#                     go.Bar(
+#                         x=stats[metric],
+#                         y=stats['Station'],
+#                         orientation='h',
+#                         marker_color=PALETTE_COULEUR.get(metric, '#000000'),
+#                         name=metric,
+#                         hovertext=hover_text_list,
+#                         hoverinfo='text',
+#                         textposition='none'  # Désactive le texte au-dessus des barres
+#                     ),
+#                     row=row,
+#                     col=col
+#                 )
 
-                fig.update_xaxes(
-                    showgrid=False,  # Désactive la grille
-                    row=row, 
-                    col=col
-                )
+#                 fig.update_xaxes(
+#                     showgrid=False,  # Désactive la grille
+#                     row=row, 
+#                     col=col
+#                 )
                 
-                fig.update_yaxes(
-                    showgrid=False,  # Désactive la grille
-                    row=row, 
-                    col=col
-                )
+#                 fig.update_yaxes(
+#                     showgrid=False,  # Désactive la grille
+#                     row=row, 
+#                     col=col
+#                 )
 
-                fig.update_layout(
-                            {f'xaxis{i+1}_title': f"{var_meta['Nom']} ({var_meta['Unite']})"}
-                        )
+#                 fig.update_layout(
+#                             {f'xaxis{i+1}_title': f"{var_meta['Nom']} ({var_meta['Unite']})"}
+#                         )
 
 
-            fig.update_layout(
-                height=800,
-                title_text=f"Statistiques de {var_meta['Nom']} par Station",
-                showlegend=False,
-                hovermode='closest',
-                plot_bgcolor='white',
-                paper_bgcolor='white'
-            )
+#             fig.update_layout(
+#                 height=800,
+#                 title_text=f"Statistiques de {var_meta['Nom']} par Station",
+#                 showlegend=False,
+#                 hovermode='closest',
+#                 plot_bgcolor='white',
+#                 paper_bgcolor='white'
+#             )
         
-        return fig
+#         return fig
     
-    except Exception as e:
-        print(f"Erreur dans generate_daily_stats_plot_plotly: {str(e)}")
-        traceback.print_exc()
-        return go.Figure()
+#     except Exception as e:
+#         print(f"Erreur dans generate_daily_stats_plot_plotly: {str(e)}")
+#         traceback.print_exc()
+#         return go.Figure()
     
 
 ##########################
@@ -2430,3 +2430,609 @@ def generate_multi_variable_station_plot(df: pd.DataFrame, station: str, variabl
     )
 
     return fig
+
+# ##########
+# def generate_daily_stats_plot_plotly(df: pd.DataFrame, variable: str, station_colors: dict) -> go.Figure:
+#     """
+#     Version dynamique avec Plotly de la fonction daily_stats, générant des graphiques interactifs
+#     avec intégration des dates pour les maximums et minimums.
+#     Les couleurs des barres correspondent aux couleurs spécifiques des stations.
+    
+#     Args:
+#         df (pd.DataFrame): DataFrame contenant les données météo
+#         variable (str): Variable à analyser
+#         station_colors (dict): Dictionnaire des couleurs par station
+        
+#     Returns:
+#         go.Figure: Figure Plotly prête pour l'affichage web
+#     """
+#     try:
+#         df = df.copy()
+
+#         # Supprimer les colonnes inutiles
+#         col_sup = ['Rain_01_mm', 'Rain_02_mm']
+#         for var in col_sup:
+#             if var in df.columns:
+#                 df = df.drop(var, axis=1)
+                
+#         if isinstance(df.index, pd.DatetimeIndex):
+#             df = df.reset_index()
+        
+#         df['Datetime'] = pd.to_datetime(df['Datetime'], errors='coerce')
+#         df = df.dropna(subset=['Datetime', 'Station'])
+        
+#         if 'Is_Daylight' not in df.columns:
+#             df['Is_Daylight'] = (df['Datetime'].dt.hour >= 7) & (df['Datetime'].dt.hour <= 18)
+
+#         if variable not in df.columns:
+#             return go.Figure()
+
+#         var_meta = METADATA_VARIABLES.get(variable, {'Nom': variable, 'Unite': '', 'is_rain': False})
+
+#         # --- Traitement spécifique pour la pluie ---
+#         if var_meta.get('is_rain', False) and variable == 'Rain_mm':
+#             # [Conserver tout le traitement spécifique à la pluie existant...]
+            
+#             # Modifier la partie création des graphiques pour utiliser les couleurs des stations
+#             metrics_to_plot = [
+#                 'Maximum', 'Minimum', 'Cumul_Annuel', 'Mediane',
+#                 'Moyenne_Jours_Pluvieux', 'Moyenne_Saison_Pluvieuse',
+#                 'Duree_Saison_Pluvieuse_Jours', 'Duree_Secheresse_Definie_Jours'
+#             ]
+
+#             fig = make_subplots(
+#                 rows=4, cols=2,
+#                 subplot_titles=[f"{var_meta['Nom']} {metric.replace('_', ' ')}" for metric in metrics_to_plot],
+#                 vertical_spacing=0.1
+#             )
+
+#             for i, metric in enumerate(metrics_to_plot):
+#                 row = (i // 2) + 1
+#                 col = (i % 2) + 1
+                
+#                 if metric not in stats.columns:
+#                     continue
+
+#                 hover_text_list = []
+#                 station_colors_list = []
+#                 for _, row_data in stats.iterrows():
+#                     station_name = row_data['Station']
+#                     # Récupérer la couleur spécifique à la station
+#                     station_color = station_colors.get(station_name, '#1f77b4')
+#                     station_colors_list.append(station_color)
+                    
+#                     # [Conserver le code existant pour hover_text_list...]
+
+#                 fig.add_trace(
+#                     go.Bar(
+#                         x=stats[metric],
+#                         y=stats['Station'],
+#                         orientation='h',
+#                         marker_color=station_colors_list,  # Utilisation des couleurs par station
+#                         name=metric,
+#                         hovertext=hover_text_list,
+#                         hoverinfo='text',
+#                         textposition='none',
+#                         marker_line_width=0
+#                     ),
+#                     row=row,
+#                     col=col
+#                 )
+
+#                 # [Conserver le reste du code existant...]
+            
+#         else:
+#             # --- Traitement des autres variables ---
+#             df[variable] = pd.to_numeric(df[variable], errors='coerce')
+#             df_clean = df.dropna(subset=[variable, 'Station']).copy()
+            
+#             if variable == 'Solar_R_W/m^2':
+#                 df_clean = df_clean[df_clean['Is_Daylight']].copy()
+            
+#             if df_clean.empty:
+#                 return go.Figure()
+                
+#             # Calcul des statistiques avec dates
+#             stats = df_clean.groupby('Station')[variable].agg(
+#                 Maximum='max', Minimum='min', Mediane='median'
+#             ).reset_index()
+            
+#             # Ajout des dates des max/min
+#             max_dates = df_clean.loc[df_clean.groupby('Station')[variable].idxmax()][['Station', 'Datetime']]
+#             min_dates = df_clean.loc[df_clean.groupby('Station')[variable].idxmin()][['Station', 'Datetime']]
+            
+#             stats = stats.merge(
+#                 max_dates.rename(columns={'Datetime': 'Date_Max'}),
+#                 on='Station', how='left'
+#             )
+#             stats = stats.merge(
+#                 min_dates.rename(columns={'Datetime': 'Date_Min'}),
+#                 on='Station', how='left'
+#             )
+            
+#             stats['Moyenne'] = df_clean.groupby('Station')[variable].mean().values
+
+#             metrics_to_plot = ['Maximum', 'Minimum', 'Moyenne', 'Mediane']
+            
+#             fig = make_subplots(
+#                 rows=2, cols=2,
+#                 subplot_titles=[f"{var_meta['Nom']} {metric}" for metric in metrics_to_plot],
+#                 vertical_spacing=0.15
+#             )
+
+#             for i, metric in enumerate(metrics_to_plot):
+#                 row = (i // 2) + 1
+#                 col = (i % 2) + 1
+                
+#                 if metric not in stats.columns:
+#                     continue
+
+#                 hover_text_list = []
+#                 station_colors_list = []
+#                 for _, row_data in stats.iterrows():
+#                     station_name = row_data['Station']
+#                     # Récupérer la couleur spécifique à la station
+#                     station_color = station_colors.get(station_name, '#1f77b4')
+#                     station_colors_list.append(station_color)
+                    
+#                     value = row_data[metric]
+#                     if pd.isna(value):
+#                         hover_text_list.append("")
+#                         continue
+
+#                     if metric == 'Maximum':
+#                         date_str = row_data['Date_Max'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Max')) else 'Date inconnue'
+#                         hover_text = f"<b>Maximum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
+#                     elif metric == 'Minimum':
+#                         date_str = row_data['Date_Min'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Min')) else 'Date inconnue'
+#                         hover_text = f"<b>Minimum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
+#                     else:
+#                         hover_text = f"<b>{metric}</b><br>{value:.1f} {var_meta['Unite']}"
+
+#                     hover_text_list.append(hover_text)
+
+#                 fig.add_trace(
+#                     go.Bar(
+#                         x=stats[metric],
+#                         y=stats['Station'],
+#                         orientation='h',
+#                         marker_color=station_colors_list,  # Utilisation des couleurs par station
+#                         name=metric,
+#                         hovertext=hover_text_list,
+#                         hoverinfo='text',
+#                         textposition='none',
+#                         marker_line_width=0
+#                     ),
+#                     row=row,
+#                     col=col
+#                 )
+
+#                 fig.update_xaxes(
+#                     showgrid=False,
+#                     row=row, 
+#                     col=col
+#                 )
+                
+#                 fig.update_yaxes(
+#                     showgrid=False,
+#                     row=row, 
+#                     col=col
+#                 )
+
+#                 fig.update_layout(
+#                     {f'xaxis{i+1}_title': f"{var_meta['Nom']} ({var_meta['Unite']})"}
+#                 )
+
+#             fig.update_layout(
+#                 height=800,
+#                 title_text=f"Statistiques de {var_meta['Nom']} par Station",
+#                 showlegend=False,
+#                 hovermode='closest',
+#                 plot_bgcolor='white',
+#                 paper_bgcolor='white'
+#             )
+        
+#         return fig
+    
+#     except Exception as e:
+#         print(f"Erreur dans generate_daily_stats_plot_plotly: {str(e)}")
+#         traceback.print_exc()
+#         return go.Figure()
+
+
+def generate_daily_stats_plot_plotly(df: pd.DataFrame, variable: str, station_colors: dict) -> go.Figure:
+    """
+    Version dynamique avec Plotly de la fonction daily_stats, générant des graphiques interactifs
+    avec intégration des dates pour les maximums et minimums.
+    Les couleurs des barres correspondent aux couleurs spécifiques des stations.
+    """
+    try:
+        df = df.copy()
+
+        # Supprimer les colonnes inutiles
+        col_sup = ['Rain_01_mm', 'Rain_02_mm']
+        for var in col_sup:
+            if var in df.columns:
+                df = df.drop(var, axis=1)
+                
+        if isinstance(df.index, pd.DatetimeIndex):
+            df = df.reset_index()
+        
+        df['Datetime'] = pd.to_datetime(df['Datetime'], errors='coerce')
+        df = df.dropna(subset=['Datetime', 'Station'])
+        
+        if 'Is_Daylight' not in df.columns:
+            df['Is_Daylight'] = (df['Datetime'].dt.hour >= 7) & (df['Datetime'].dt.hour <= 18)
+
+        if variable not in df.columns:
+            return go.Figure()
+
+        var_meta = METADATA_VARIABLES.get(variable, {'Nom': variable, 'Unite': '', 'is_rain': False})
+
+        # Initialiser stats avant les blocs conditionnels
+        stats = pd.DataFrame()
+
+        # --- Traitement spécifique pour la pluie ---
+        if var_meta.get('is_rain', False) and variable == 'Rain_mm':
+            # Calcul des données quotidiennes de précipitations
+            df_daily_rain = df.groupby(['Station', pd.Grouper(key='Datetime', freq='D')])['Rain_mm'].sum().reset_index()
+
+            # Détection des saisons pluvieuses
+            RAIN_SEASON_GAP_THRESHOLD = pd.Timedelta(days=60)
+            season_stats = []
+
+            for station_name, station_df in df_daily_rain.groupby('Station'):
+                station_df = station_df.set_index('Datetime').sort_index()
+                rain_events = station_df[station_df['Rain_mm'] > 0].index
+
+                if rain_events.empty:
+                    season_stats.append({
+                        'Station': station_name,
+                        'Moyenne_Saison_Pluvieuse': np.nan,
+                        'Debut_Saison_Pluvieuse': pd.NaT,
+                        'Fin_Saison_Pluvieuse': pd.NaT,
+                        'Duree_Saison_Pluvieuse_Jours': np.nan
+                    })
+                    continue
+
+                block_ids = (rain_events.to_series().diff() > RAIN_SEASON_GAP_THRESHOLD).cumsum()
+                valid_blocks = {}
+
+                for block_id, rain_dates_in_block in rain_events.to_series().groupby(block_ids):
+                    if not rain_dates_in_block.empty:
+                        block_start = rain_dates_in_block.min()
+                        block_end = rain_dates_in_block.max()
+                        full_block_df = station_df.loc[block_start:block_end]
+                        valid_blocks[block_id] = full_block_df
+
+                if not valid_blocks:
+                    season_stats.append({
+                        'Station': station_name,
+                        'Moyenne_Saison_Pluvieuse': np.nan,
+                        'Debut_Saison_Pluvieuse': pd.NaT,
+                        'Fin_Saison_Pluvieuse': pd.NaT,
+                        'Duree_Saison_Pluvieuse_Jours': np.nan
+                    })
+                    continue
+
+                main_block_id = max(valid_blocks, key=lambda k: (valid_blocks[k].index.max() - valid_blocks[k].index.min()).days)
+                main_season_df = valid_blocks[main_block_id]
+
+                debut_saison = main_season_df.index.min()
+                fin_saison = main_season_df.index.max()
+                total_days = (fin_saison - debut_saison).days + 1
+                moyenne_saison = main_season_df['Rain_mm'].sum() / total_days if total_days > 0 else 0
+
+                season_stats.append({
+                    'Station': station_name,
+                    'Moyenne_Saison_Pluvieuse': moyenne_saison,
+                    'Debut_Saison_Pluvieuse': debut_saison,
+                    'Fin_Saison_Pluvieuse': fin_saison,
+                    'Duree_Saison_Pluvieuse_Jours': total_days
+                })
+
+            df_season_stats = pd.DataFrame(season_stats)
+
+            # Détection des périodes de sécheresse
+            station_dry_spell_events = []
+
+            for station_name, station_df in df_daily_rain.groupby('Station'):
+                station_df = station_df.set_index('Datetime').sort_index()
+                full_daily_series = station_df['Rain_mm'].resample('D').sum().fillna(0)
+                rainy_days_index = full_daily_series[full_daily_series > 0].index
+
+                if rainy_days_index.empty:
+                    continue
+
+                for i in range(1, len(rainy_days_index)):
+                    prev_rain_date = rainy_days_index[i-1]
+                    current_rain_date = rainy_days_index[i]
+                    dry_days = (current_rain_date - prev_rain_date).days - 1
+
+                    if dry_days > 0:
+                        rain_prev_day = full_daily_series.loc[prev_rain_date]
+                        saison_moyenne = df_season_stats.loc[
+                            df_season_stats['Station'] == station_name,
+                            'Moyenne_Saison_Pluvieuse'
+                        ].iloc[0] if not df_season_stats[df_season_stats['Station'] == station_name].empty else np.nan
+
+                        debut_secheresse = pd.NaT
+                        duree_secheresse = 0
+
+                        if pd.isna(saison_moyenne) or saison_moyenne == 0:
+                            continue
+
+                        for j in range(1, dry_days + 1):
+                            current_dry_date = prev_rain_date + timedelta(days=j)
+                            current_ratio = rain_prev_day / j
+
+                            if current_ratio < saison_moyenne:
+                                debut_secheresse = current_dry_date
+                                duree_secheresse = (current_rain_date - debut_secheresse).days
+                                break
+
+                        if pd.notna(debut_secheresse) and duree_secheresse > 0:
+                            station_dry_spell_events.append({
+                                'Station': station_name,
+                                'Debut_Secheresse_Definie': debut_secheresse,
+                                'Fin_Secheresse_Definie': current_rain_date - timedelta(days=1),
+                                'Duree_Secheresse_Definie_Jours': duree_secheresse
+                            })
+
+            df_dry_spell_events = pd.DataFrame(station_dry_spell_events)
+
+            # Calcul des statistiques finales avec dates
+            stats = df[df['Rain_mm'] > 0].groupby('Station')['Rain_mm'].agg(
+                Maximum='max', Minimum='min', Mediane='median'
+            ).reset_index()
+
+            # Ajout des dates des max/min
+            max_dates = df.loc[df.groupby('Station')['Rain_mm'].idxmax()][['Station', 'Datetime']]
+            min_dates = df.loc[df.groupby('Station')['Rain_mm'].idxmin()][['Station', 'Datetime']]
+            
+            stats = stats.merge(
+                max_dates.rename(columns={'Datetime': 'Date_Max'}),
+                on='Station', how='left'
+            )
+            stats = stats.merge(
+                min_dates.rename(columns={'Datetime': 'Date_Min'}),
+                on='Station', how='left'
+            )
+
+            total_cumul = df.groupby('Station')['Rain_mm'].sum().reset_index(name='Cumul_Annuel')
+            stats = stats.merge(total_cumul, on='Station', how='left')
+
+            stats = stats.merge(
+                df_daily_rain[df_daily_rain['Rain_mm'] > 0].groupby('Station')['Rain_mm'].mean().reset_index().rename(
+                    columns={'Rain_mm': 'Moyenne_Jours_Pluvieux'}),
+                on='Station', how='left'
+            )
+            
+            stats = stats.merge(
+                df_season_stats[['Station', 'Moyenne_Saison_Pluvieuse', 'Debut_Saison_Pluvieuse',
+                            'Fin_Saison_Pluvieuse', 'Duree_Saison_Pluvieuse_Jours']],
+                on='Station', how='left'
+            )
+
+            if not df_dry_spell_events.empty:
+                longest_dry_spells = df_dry_spell_events.loc[
+                    df_dry_spell_events.groupby('Station')['Duree_Secheresse_Definie_Jours'].idxmax()
+                ][['Station', 'Duree_Secheresse_Definie_Jours', 'Debut_Secheresse_Definie', 'Fin_Secheresse_Definie']]
+
+                stats = stats.merge(longest_dry_spells, on='Station', how='left')
+
+            metrics_to_plot = [
+                'Maximum', 'Minimum', 'Cumul_Annuel', 'Mediane',
+                'Moyenne_Jours_Pluvieux', 'Moyenne_Saison_Pluvieuse',
+                'Duree_Saison_Pluvieuse_Jours', 'Duree_Secheresse_Definie_Jours'
+            ]
+
+            fig = make_subplots(
+                rows=4, cols=2,
+                subplot_titles=[f"{var_meta['Nom']} {metric.replace('_', ' ')}" for metric in metrics_to_plot],
+                vertical_spacing=0.1
+            )
+
+            for i, metric in enumerate(metrics_to_plot):
+                row = (i // 2) + 1
+                col = (i % 2) + 1
+                
+                if metric not in stats.columns:
+                    continue
+
+                hover_text_list = []
+                station_colors_list = []
+                for _, row_data in stats.iterrows():
+                    station_name = row_data['Station']
+                    # Récupérer la couleur spécifique à la station
+                    station_color = station_colors.get(station_name, '#1f77b4')
+                    station_colors_list.append(station_color)
+                    
+                    value = row_data[metric]
+                    if pd.isna(value):
+                        hover_text_list.append("")
+                        continue
+
+                    if metric in ['Duree_Saison_Pluvieuse_Jours', 'Duree_Secheresse_Definie_Jours']:
+                        date_debut = ''
+                        date_fin = ''
+                        if metric == 'Duree_Saison_Pluvieuse_Jours' and pd.notna(row_data.get('Debut_Saison_Pluvieuse')) and pd.notna(row_data.get('Fin_Saison_Pluvieuse')):
+                            date_debut = row_data['Debut_Saison_Pluvieuse'].strftime('%d/%m/%Y')
+                            date_fin = row_data['Fin_Saison_Pluvieuse'].strftime('%d/%m/%Y')
+                        elif metric == 'Duree_Secheresse_Definie_Jours' and pd.notna(row_data.get('Debut_Secheresse_Definie')) and pd.notna(row_data.get('Fin_Secheresse_Definie')):
+                            date_debut = row_data['Debut_Secheresse_Definie'].strftime('%d/%m/%Y')
+                            date_fin = row_data['Fin_Secheresse_Definie'].strftime('%d/%m/%Y')
+
+                        hover_text = f"<b>{metric.replace('_', ' ')}</b><br>"
+                        if date_debut and date_fin:
+                            hover_text += f"Du {date_debut} au {date_fin}<br>"
+                        hover_text += f"Durée: {int(value)} jours"
+                    elif metric == 'Maximum':
+                        date_str = row_data['Date_Max'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Max')) else 'Date inconnue'
+                        hover_text = f"<b>Maximum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
+                    elif metric == 'Minimum':
+                        date_str = row_data['Date_Min'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Min')) else 'Date inconnue'
+                        hover_text = f"<b>Minimum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
+                    elif metric in ['Cumul_Annuel', 'Moyenne_Jours_Pluvieux', 'Moyenne_Saison_Pluvieuse', 'Mediane']:
+                        hover_text = f"<b>{metric.replace('_', ' ')}</b><br>{value:.1f} {var_meta['Unite']}"
+                    else:
+                        hover_text = f"<b>{metric.replace('_', ' ')}</b><br>{value:.1f} {var_meta['Unite']}"
+
+                    hover_text_list.append(hover_text)
+
+                fig.add_trace(
+                    go.Bar(
+                        x=stats[metric],
+                        y=stats['Station'],
+                        orientation='h',
+                        marker_color=station_colors_list,
+                        name=metric,
+                        hovertext=hover_text_list,
+                        hoverinfo='text',
+                        textposition='none'
+                    ),
+                    row=row,
+                    col=col
+                )
+
+                fig.update_xaxes(
+                    showgrid=False,
+                    row=row, 
+                    col=col
+                )
+                
+                fig.update_layout(
+                    {f'xaxis{i+1}_title': "Jours" if "Duree" in metric else f"{var_meta['Nom']} ({var_meta['Unite']})"}
+                )
+
+                fig.update_yaxes(
+                    showgrid=False,
+                    row=row, 
+                    col=col
+                )
+
+            fig.update_layout(
+                height=1200,
+                title_text=f"Statistiques des {var_meta['Nom']} par Station",
+                showlegend=False,
+                hovermode='closest',
+                plot_bgcolor='white',
+                paper_bgcolor='white'
+            )
+            
+        else:
+            # --- Traitement des autres variables ---
+            df[variable] = pd.to_numeric(df[variable], errors='coerce')
+            df_clean = df.dropna(subset=[variable, 'Station']).copy()
+            
+            if variable == 'Solar_R_W/m^2':
+                df_clean = df_clean[df_clean['Is_Daylight']].copy()
+            
+            if df_clean.empty:
+                return go.Figure()
+                
+            # Calcul des statistiques avec dates
+            stats = df_clean.groupby('Station')[variable].agg(
+                Maximum='max', Minimum='min', Mediane='median'
+            ).reset_index()
+            
+            # Ajout des dates des max/min
+            max_dates = df_clean.loc[df_clean.groupby('Station')[variable].idxmax()][['Station', 'Datetime']]
+            min_dates = df_clean.loc[df_clean.groupby('Station')[variable].idxmin()][['Station', 'Datetime']]
+            
+            stats = stats.merge(
+                max_dates.rename(columns={'Datetime': 'Date_Max'}),
+                on='Station', how='left'
+            )
+            stats = stats.merge(
+                min_dates.rename(columns={'Datetime': 'Date_Min'}),
+                on='Station', how='left'
+            )
+            
+            stats['Moyenne'] = df_clean.groupby('Station')[variable].mean().values
+
+            metrics_to_plot = ['Maximum', 'Minimum', 'Moyenne', 'Mediane']
+            
+            fig = make_subplots(
+                rows=2, cols=2,
+                subplot_titles=[f"{var_meta['Nom']} {metric}" for metric in metrics_to_plot],
+                vertical_spacing=0.15
+            )
+
+            for i, metric in enumerate(metrics_to_plot):
+                row = (i // 2) + 1
+                col = (i % 2) + 1
+                
+                if metric not in stats.columns:
+                    continue
+
+                hover_text_list = []
+                station_colors_list = []
+                for _, row_data in stats.iterrows():
+                    station_name = row_data['Station']
+                    # Récupérer la couleur spécifique à la station
+                    station_color = station_colors.get(station_name, '#1f77b4')
+                    station_colors_list.append(station_color)
+                    
+                    value = row_data[metric]
+                    if pd.isna(value):
+                        hover_text_list.append("")
+                        continue
+
+                    if metric == 'Maximum':
+                        date_str = row_data['Date_Max'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Max')) else 'Date inconnue'
+                        hover_text = f"<b>Maximum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
+                    elif metric == 'Minimum':
+                        date_str = row_data['Date_Min'].strftime('%d/%m/%Y') if pd.notna(row_data.get('Date_Min')) else 'Date inconnue'
+                        hover_text = f"<b>Minimum</b><br>Valeur: {value:.1f} {var_meta['Unite']}<br>Date: {date_str}"
+                    else:
+                        hover_text = f"<b>{metric}</b><br>{value:.1f} {var_meta['Unite']}"
+
+                    hover_text_list.append(hover_text)
+
+                fig.add_trace(
+                    go.Bar(
+                        x=stats[metric],
+                        y=stats['Station'],
+                        orientation='h',
+                        marker_color=station_colors_list,
+                        name=metric,
+                        hovertext=hover_text_list,
+                        hoverinfo='text',
+                        textposition='none'
+                    ),
+                    row=row,
+                    col=col
+                )
+
+                fig.update_xaxes(
+                    showgrid=False,
+                    row=row, 
+                    col=col
+                )
+                
+                fig.update_yaxes(
+                    showgrid=False,
+                    row=row, 
+                    col=col
+                )
+
+                fig.update_layout(
+                    {f'xaxis{i+1}_title': f"{var_meta['Nom']} ({var_meta['Unite']})"}
+                )
+
+            fig.update_layout(
+                height=800,
+                title_text=f"Statistiques de {var_meta['Nom']} par Station",
+                showlegend=False,
+                hovermode='closest',
+                plot_bgcolor='white',
+                paper_bgcolor='white'
+            )
+        
+        return fig
+    
+    except Exception as e:
+        print(f"Erreur dans generate_daily_stats_plot_plotly: {str(e)}")
+        traceback.print_exc()
+        return go.Figure()
