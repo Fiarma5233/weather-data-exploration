@@ -1,554 +1,553 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container-fluid px-4 py-5">
-    <!-- Message Container -->
-    <div id="messageContainer" class="mb-4" style="display: none;">
-        <div class="alert alert-dismissible fade show" role="alert">
-            <span id="messageContent"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    </div>
-
-    <!-- Boutons en haut -->
-    <div class="d-flex justify-content-between mb-3">
-        <a href="{{ url_for('data_preview') }}" class="btn btn-outline-primary text-primary">
-            <i class="fas fa-arrow-left me-2"></i>Retour aux données
-        </a>
-        <button id="resetBtn" class="btn btn-outline-danger">
-            <i class="fas fa-redo me-1"></i>Réinitialiser toutes les données
-        </button>
-    </div>
-
-    <!-- Titre centré sous les boutons -->
-    <div class="text-center mb-4">
-        <h1 class="h3 mb-3">
-            <i class="fas fa-chart-line me-2"></i>Options de Visualisation
-        </h1>
-    </div>
-
-    <!-- Visualization Grid -->
-    <div class="row g-4">
-        <!-- Cell 1: Statistics -->
-        <div class="col-lg-6">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-primary text-white py-3">
-                    <h2 class="h5 mb-0">
-                        <i class="fas fa-chart-pie me-2"></i>Statistiques par Variable
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <form method="GET" action="{{ url_for('statistiques') }}" id="statsForm">
-                        <div class="mb-3">
-                            <label class="form-label">Variable à analyser</label>
-                            <div class="dropdown">
-                                <button class="btn btn-light border dropdown-toggle w-100 text-start" 
-                                        type="button" id="statVariableDropdown" 
-                                        data-bs-toggle="dropdown" aria-expanded="false">
-                                    Choisir une variable
-                                </button>
-                                <ul class="dropdown-menu w-100 p-3" aria-labelledby="statVariableDropdown">
-                                    <div style="max-height: 300px; overflow-y: scroll; padding-right: 8px;">
-                                        {% for var in variables %}
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input stat-variable-radio" 
-                                                   type="radio" name="variable" 
-                                                   value="{{ var }}" id="stat-var-{{ loop.index }}"
-                                                   required>
-                                            <label class="form-check-label d-flex align-items-center" 
-                                                   for="stat-var-{{ loop.index }}">
-                                                <span class="color-indicator me-2" 
-                                                      style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
-                                                {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
-                                            </label>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                </ul>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-chart-bar me-2"></i>Générer les Statistiques
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Cell 2: Multi-Variable Plot -->
-        <div class="col-lg-6">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-info text-white py-3">
-                    <h2 class="h5 mb-0">
-                        <i class="fas fa-layer-group me-2"></i>Graphique Multi-Variables
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <form action="{{ url_for('generate_plot') }}" method="post" id="multiVarForm">
-                        <div class="mb-3">
-                            <label for="mv_station" class="form-label">Station météo</label>
-                            <select class="form-select" id="mv_station" name="station" required>
-                                {% for station in stations %}
-                                <option value="{{ station }}">{{ station }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Variables à visualiser (max 5)</label>
-                            <div class="dropdown">
-                                <button class="btn btn-light border dropdown-toggle w-100 text-start" 
-                                        type="button" id="mvVariableDropdown" 
-                                        data-bs-toggle="dropdown" aria-expanded="false">
-                                    Sélectionner les variables
-                                </button>
-                                <ul class="dropdown-menu w-100 p-3" aria-labelledby="mvVariableDropdown">
-                                    <div style="max-height: 300px; overflow-y: scroll; padding-right: 8px;">
-                                        {% for var in variables %}
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input variable-check" 
-                                                   type="checkbox" name="variables[]" 
-                                                   value="{{ var }}" id="mv-var-{{ loop.index }}"
-                                                   data-max="5">
-                                            <label class="form-check-label d-flex align-items-center" 
-                                                   for="mv-var-{{ loop.index }}">
-                                                <span class="color-indicator me-2" 
-                                                      style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
-                                                {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
-                                            </label>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="mv_periode" class="form-label">Période d'analyse</label>
-                            <select class="form-select" id="mv_periode" name="periode" required>
-                                <option value="Brutes">Données Brutes</option>
-                                <option value="Journalière">Journalière</option>
-                                <option value="Hebdomadaire">Hebdomadaire</option>
-                                <option value="Mensuelle">Mensuelle</option>
-                                <option value="Annuelle">Annuelle</option>
-                            </select>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-info text-white w-100">
-                            <i class="fas fa-play-circle me-2"></i>Générer le Graphique
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Cell 3: Comparative Plot -->
-        <div class="col-lg-6">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-success text-white py-3">
-                    <h2 class="h5 mb-0">
-                        <i class="fas fa-chart-bar me-2"></i>Comparaison entre Stations
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <form action="{{ url_for('generate_plot') }}" method="post" id="compForm">
-                        <input type="hidden" name="comparative" value="true">
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Variable à comparer</label>
-                            <div class="dropdown">
-                                <button class="btn btn-light border dropdown-toggle w-100 text-start" 
-                                        type="button" id="compVariableDropdown" 
-                                        data-bs-toggle="dropdown" aria-expanded="false">
-                                    Choisir une variable
-                                </button>
-                                <ul class="dropdown-menu w-100 p-3" aria-labelledby="compVariableDropdown">
-                                    <div style="max-height: 300px; overflow-y: scroll; padding-right: 8px;">
-                                        {% for var in variables %}
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input comp-variable-radio" 
-                                                   type="radio" name="variable" 
-                                                   value="{{ var }}" id="comp-var-{{ loop.index }}"
-                                                   required>
-                                            <label class="form-check-label d-flex align-items-center" 
-                                                   for="comp-var-{{ loop.index }}">
-                                                <span class="color-indicator me-2" 
-                                                      style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
-                                                {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
-                                            </label>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="comp_periode" class="form-label">Période d'analyse</label>
-                            <select class="form-select" id="comp_periode" name="periode" required>
-                                <option value="Brutes">Données Brutes</option>
-                                <option value="Journalière">Journalière</option>
-                                <option value="Hebdomadaire">Hebdomadaire</option>
-                                <option value="Mensuelle">Mensuelle</option>
-                                <option value="Annuelle">Annuelle</option>
-                            </select>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-success w-100">
-                            <i class="fas fa-play-circle me-2"></i>Comparer les Stations
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Cell 4: Normalized Analysis -->
-        <div class="col-lg-6">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-purple text-white py-3">
-                    <h2 class="h5 mb-0">
-                        <i class="fas fa-balance-scale me-2"></i>Analyse Normalisée
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <form action="{{ url_for('generate_multi_variable_plot_route') }}" method="post" id="normForm">
-                        <div class="mb-3">
-                            <label for="norm_station" class="form-label">Station météo</label>
-                            <select class="form-select" id="norm_station" name="station" required>
-                                {% for station in stations %}
-                                <option value="{{ station }}">{{ station }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Variables à comparer (max 10)</label>
-                            <div class="dropdown">
-                                <button class="btn btn-light border dropdown-toggle w-100 text-start" 
-                                        type="button" id="normVariableDropdown" 
-                                        data-bs-toggle="dropdown" aria-expanded="false">
-                                    Sélectionner les variables
-                                </button>
-                                <ul class="dropdown-menu w-100 p-3" aria-labelledby="normVariableDropdown">
-                                    <div style="max-height: 300px; overflow-y: scroll; padding-right: 8px;">
-                                        {% for var in variables %}
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input variable-check" 
-                                                   type="checkbox" name="variables[]" 
-                                                   id="norm-var-{{ loop.index }}" value="{{ var }}"
-                                                   data-max="10">
-                                            <label class="form-check-label d-flex align-items-center" 
-                                                   for="norm-var-{{ loop.index }}">
-                                                <span class="color-indicator me-2" 
-                                                      style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
-                                                {{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}
-                                            </label>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="norm_periode" class="form-label">Période d'analyse</label>
-                            <select class="form-select" id="norm_periode" name="periode" required>
-                                <option value="Brutes">Données Brutes</option>
-                                <option value="Journalière">Journalière</option>
-                                <option value="Hebdomadaire">Hebdomadaire</option>
-                                <option value="Mensuelle">Mensuelle</option>
-                                <option value="Annuelle">Annuelle</option>
-                            </select>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-purple text-white w-100">
-                            <i class="fas fa-play-circle me-2"></i>Générer l'Analyse
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Custom CSS -->
+{% block extra_css %}
 <style>
-    :root {
-        --purple: #6f42c1;
-        --light-bg: #f8fafc;
-    }
-    
-    .bg-purple {
-        background-color: var(--purple) !important;
-    }
-    
-    .btn-purple {
-        background-color: var(--purple);
-        color: white;
-        border-color: var(--purple);
-    }
-    
-    .btn-purple:hover {
-        background-color: #5a32a3;
-        color: white;
-    }
-    
-    .card {
-        border-radius: 0.5rem;
-        border: 1px solid rgba(0,0,0,0.05);
-        transition: all 0.3s ease;
-        background-color: var(--light-bg);
-    }
-    
-    .card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.1) !important;
-    }
-    
-    .card-header {
-        border-bottom: none;
-        border-radius: 0.5rem 0.5rem 0 0 !important;
-    }
-    
     .color-indicator {
         display: inline-block;
         width: 16px;
         height: 16px;
         border-radius: 4px;
         margin-right: 10px;
-        transition: transform 0.2s;
+        flex-shrink: 0; /* Empêche l'indicateur de couleur de rétrécir */
     }
-    
-    .form-check:hover .color-indicator {
-        transform: scale(1.1);
-    }
-    
-    .dropdown-toggle {
-        background-color: white;
-        text-align: left;
+    /* Styles pour les menus déroulants personnalisés */
+    .dropdown-container {
         position: relative;
     }
-    
-    .dropdown-toggle::after {
-        position: absolute;
-        right: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-    }
-    
-    .dropdown-menu {
-        border: 1px solid rgba(0,0,0,0.1);
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
-    }
-    
-    .form-check-label {
-        cursor: pointer;
-        user-select: none;
-    }
-    
-    .form-select, .form-control, .dropdown-toggle {
+    .dropdown-toggle {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
         padding: 0.5rem 1rem;
+        background: white;
+        border: 1px solid #d1d5db;
         border-radius: 0.375rem;
+        cursor: pointer;
+        min-height: 2.5rem;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
-    
-    .btn {
+    .dropdown-toggle:after {
+        content: "▼";
+        font-size: 0.75rem;
+        transition: transform 0.2s;
+        margin-left: 0.5rem;
+    }
+    .dropdown-toggle.active:after {
+        transform: rotate(180deg);
+    }
+    .dropdown-menu {
+        display: none;
+        position: absolute;
+        width: 100%;
+        max-height: 300px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        z-index: 50;
+        top: 100%;
+        left: 0;
+    }
+    .dropdown-item {
         padding: 0.5rem 1rem;
-        font-weight: 500;
-        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
     }
-    
-    .btn:hover {
-        transform: translateY(-1px);
+    .dropdown-item:hover {
+        background-color: #f3f4f6;
     }
-
-    /* Style personnalisé pour la scrollbar */
-    ::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-        background: #555;
+    /* Styles pour les options sélectionnées dans les custom dropdowns */
+    .dropdown-item.selected {
+        background-color: #e0e7ff; /* Légère teinte bleue pour indiquer la sélection */
     }
 
-    /* Message container styles */
-    #messageContainer .alert {
-        border-radius: 0.5rem;
-        padding: 1rem 1.5rem;
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+    /* Styles pour les messages de validation JavaScript (in-situ) */
+    .validation-message {
+        color: #dc3545; /* Rouge pour les erreurs */
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        display: none; /* Caché par défaut */
+    }
+    .validation-message.show {
+        display: block;
     }
 
-    #messageContainer {
-        position: sticky;
-        top: 1rem;
-        z-index: 1000;
+    /* Couleur personnalisée pour le bouton "Analyse Normalisée" */
+    .bg-purple {
+        background-color: #6f42c1;
     }
-
-    /* Style spécifique pour le bouton Retour */
-    .btn-outline-primary.text-primary {
-        color: #0d6efd !important;
+    .btn-purple {
+        background-color: #6f42c1;
+        color: white;
     }
-    .btn-outline-primary.text-primary:hover {
-        color: white !important;
+    .btn-purple:hover {
+        background-color: #5a32a3;
     }
 </style>
+{% endblock %}
 
-<!-- JavaScript -->
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="flex justify-between mb-6">
+        <a href="{{ url_for('data_preview') }}" class="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-600 rounded hover:bg-blue-600 hover:text-white transition">
+            <i class="fas fa-arrow-left mr-2"></i>Retour aux données
+        </a>
+        <button id="resetBtn" class="inline-flex items-center px-4 py-2 border border-red-600 text-red-600 rounded hover:bg-red-600 hover:text-white transition">
+            <i class="fas fa-redo mr-2"></i>Réinitialiser toutes les données
+        </button>
+    </div>
+
+    <div class="text-center mb-8">
+        <h1 class="text-2xl font-semibold">
+            <i class="fas fa-chart-line mr-2"></i>Options de Visualisation
+        </h1>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <div class="bg-blue-600 text-white px-4 py-3 -mx-4 -mt-4 mb-4">
+                <h2 class="text-lg font-medium">
+                    <i class="fas fa-chart-pie mr-2"></i>Statistiques par Variable
+                </h2>
+            </div>
+            <form method="GET" action="{{ url_for('statistiques') }}" id="statVarForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Variable à analyser</label>
+                    <div class="dropdown-container">
+                        <button type="button" class="dropdown-toggle" id="statVarToggle">
+                            <span id="statVarText">Choisir une variable</span>
+                        </button>
+                        <div class="dropdown-menu" id="statVarDropdown">
+                            {% for var in variables %}
+                            <div class="dropdown-item" data-value="{{ var }}">
+                                <span class="color-indicator" style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
+                                <span>{{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="variable" id="statVarInput" required>
+                    </div>
+                    <div id="statVarValidationMessage" class="validation-message"></div>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded flex items-center justify-center">
+                    <i class="fas fa-chart-bar mr-2"></i>Générer les Statistiques
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <div class="bg-cyan-600 text-white px-4 py-3 -mx-4 -mt-4 mb-4">
+                <h2 class="text-lg font-medium">
+                    <i class="fas fa-layer-group mr-2"></i>Graphique Multi-Variables
+                </h2>
+            </div>
+            <form action="{{ url_for('generate_plot') }}" method="post" id="multiVarForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2" for="multiStationSelect">Station météo</label>
+                    <select class="w-full px-3 py-2 border rounded" name="station" id="multiStationSelect" required>
+                        {% for station in stations %}
+                        <option value="{{ station }}">{{ station }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Variables à visualiser (max 5)</label>
+                    <div class="dropdown-container">
+                        <button type="button" class="dropdown-toggle" id="multiVarToggle">
+                            <span id="multiVarText">Sélectionner les variables</span>
+                        </button>
+                        <div class="dropdown-menu" id="multiVarDropdown">
+                            {% for var in variables %}
+                            <div class="dropdown-item">
+                                <input type="checkbox" name="variables[]" value="{{ var }}" 
+                                       id="mv-var-{{ loop.index }}" class="mr-2 variable-check" 
+                                       data-max="5">
+                                <label for="mv-var-{{ loop.index }}" class="flex items-center cursor-pointer">
+                                    <span class="color-indicator" style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
+                                    <span>{{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}</span>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div id="multiVarValidationMessage" class="validation-message"></div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2" for="multiPeriodSelect">Période d'analyse</label>
+                    <select class="w-full px-3 py-2 border rounded" name="periode" id="multiPeriodSelect" required>
+                        <option value="Brutes">Données Brutes</option>
+                        <option value="Journalière">Journalière</option>
+                        <option value="Hebdomadaire">Hebdomadaire</option>
+                        <option value="Mensuelle">Mensuelle</option>
+                        <option value="Annuelle">Annuelle</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-2 px-4 rounded flex items-center justify-center">
+                    <i class="fas fa-play-circle mr-2"></i>Générer le Graphique
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <div class="bg-green-600 text-white px-4 py-3 -mx-4 -mt-4 mb-4">
+                <h2 class="text-lg font-medium">
+                    <i class="fas fa-chart-bar mr-2"></i>Comparaison entre Stations
+                </h2>
+            </div>
+            <form action="{{ url_for('generate_plot') }}" method="post" id="compVarForm">
+                <input type="hidden" name="comparative" value="true">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Variable à comparer</label>
+                    <div class="dropdown-container">
+                        <button type="button" class="dropdown-toggle" id="compVarToggle">
+                            <span id="compVarText">Choisir une variable</span>
+                        </button>
+                        <div class="dropdown-menu" id="compVarDropdown">
+                            {% for var in variables %}
+                            <div class="dropdown-item" data-value="{{ var }}">
+                                <span class="color-indicator" style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
+                                <span>{{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="variable" id="compVarInput" required>
+                    </div>
+                    <div id="compVarValidationMessage" class="validation-message"></div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2" for="compPeriodSelect">Période d'analyse</label>
+                    <select class="w-full px-3 py-2 border rounded" name="periode" id="compPeriodSelect" required>
+                        <option value="Brutes">Données Brutes</option>
+                        <option value="Journalière">Journalière</option>
+                        <option value="Hebdomadaire">Hebdomadaire</option>
+                        <option value="Mensuelle">Mensuelle</option>
+                        <option value="Annuelle">Annuelle</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded flex items-center justify-center">
+                    <i class="fas fa-play-circle mr-2"></i>Comparer les Stations
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-4">
+            <div class="bg-purple text-white px-4 py-3 -mx-4 -mt-4 mb-4">
+                <h2 class="text-lg font-medium">
+                    <i class="fas fa-balance-scale mr-2"></i>Analyse Normalisée
+                </h2>
+            </div>
+            <form action="{{ url_for('generate_multi_variable_plot_route') }}" method="post" id="normForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2" for="normStationSelect">Station météo</label>
+                    <select class="w-full px-3 py-2 border rounded" name="station" id="normStationSelect" required>
+                        {% for station in stations %}
+                        <option value="{{ station }}">{{ station }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Variables à comparer (max 10)</label>
+                    <div class="dropdown-container">
+                        <button type="button" class="dropdown-toggle" id="normVarToggle">
+                            <span id="normVarText">Sélectionner les variables</span>
+                        </button>
+                        <div class="dropdown-menu" id="normVarDropdown">
+                            {% for var in variables %}
+                            <div class="dropdown-item">
+                                <input type="checkbox" name="variables[]" value="{{ var }}" 
+                                       id="norm-var-{{ loop.index }}" class="mr-2 variable-check" 
+                                       data-max="10">
+                                <label for="norm-var-{{ loop.index }}" class="flex items-center cursor-pointer">
+                                    <span class="color-indicator" style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
+                                    <span>{{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}</span>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div id="normVarValidationMessage" class="validation-message"></div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2" for="normPeriodSelect">Période d'analyse</label>
+                    <select class="w-full px-3 py-2 border rounded" name="periode" id="normPeriodSelect" required>
+                        <option value="Brutes">Données Brutes</option>
+                        <option value="Journalière">Journalière</option>
+                        <option value="Hebdomadaire">Hebdomadaire</option>
+                        <option value="Mensuelle">Mensuelle</option>
+                        <option value="Annuelle">Annuelle</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded flex items-center justify-center">
+                    <i class="fas fa-play-circle mr-2"></i>Générer l'Analyse
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Message management system
-    const messageContainer = document.getElementById('messageContainer');
-    const messageContent = document.getElementById('messageContent');
-    const alertBox = messageContainer.querySelector('.alert');
+console.log('Script extra_js démarré.');
 
-    function showMessage(message, type = 'danger') {
-        // Configure style based on type
-        alertBox.className = `alert alert-${type} alert-dismissible fade show`;
-        
-        // Add message content
-        messageContent.innerHTML = message;
-        
-        // Show container
-        messageContainer.style.display = 'block';
-        
-        // Auto-hide after 5 seconds (except for success messages)
-        if (type !== 'success') {
-            setTimeout(() => {
-                const bsAlert = bootstrap.Alert.getOrCreateInstance(alertBox);
-                bsAlert.close();
-            }, 5000);
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM pleinement chargé. Démarrage des setups de dropdowns.');
+
+    // Fonction pour afficher un message de validation local (in-situ)
+    function showValidationMessage(messageElementId, message) {
+        const messageElement = document.getElementById(messageElementId);
+        if (messageElement) {
+            messageElement.textContent = message;
+            messageElement.classList.add('show');
+            // Cacher le message après un court délai pour les messages temporaires
+            // setTimeout(() => hideValidationMessage(messageElementId), 5000); 
         }
     }
 
-    // Close message handler
-    alertBox.addEventListener('closed.bs.alert', () => {
-        messageContainer.style.display = 'none';
-    });
+    // Fonction pour cacher un message de validation local
+    function hideValidationMessage(messageElementId) {
+        const messageElement = document.getElementById(messageElementId);
+        if (messageElement) {
+            messageElement.textContent = '';
+            messageElement.classList.remove('show');
+        }
+    }
 
-    // Initialize dropdown functionality for checkboxes
-    function initCheckboxDropdown(buttonId, checkboxesSelector) {
-        const dropdownButton = document.getElementById(buttonId);
-        const checkboxes = document.querySelectorAll(checkboxesSelector);
-        
-        checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const maxSelection = parseInt(this.dataset.max) || 5;
-                const selected = Array.from(document.querySelectorAll(`${checkboxesSelector}:checked`));
-                
-                // Enforce max selection
-                if (selected.length > maxSelection) {
-                    this.checked = false;
-                    showMessage(`Maximum ${maxSelection} variables autorisées`, 'warning');
-                    return;
-                }
-                
-                // Update button text
-                if (selected.length > 0) {
-                    const selectedNames = selected.map(cb => {
-                        return cb.nextElementSibling.querySelector('span').nextSibling.textContent.trim();
-                    });
-                    
-                    if (selectedNames.length > 2) {
-                        dropdownButton.innerHTML = `${selectedNames.length} variables sélectionnées`;
-                    } else {
-                        dropdownButton.innerHTML = selectedNames.join(', ');
-                    }
-                } else {
-                    dropdownButton.innerHTML = 'Sélectionner les variables';
-                }
-            });
+    // Fonction générique pour gérer un menu déroulant personnalisé (mono-choix ou multi-choix)
+    function setupCustomDropdown(toggleId, dropdownId, textId, inputName, isMultiSelect, validationMessageId, maxSelection = 1) {
+        console.log(`Tentative de setup du dropdown pour: ${toggleId}`);
+        const toggle = document.getElementById(toggleId);
+        const dropdown = document.getElementById(dropdownId);
+        const textElement = document.getElementById(textId);
+        const hiddenInput = isMultiSelect ? null : document.getElementById(toggleId.replace('Toggle', 'Input')); 
+
+        if (!toggle || !dropdown || !textElement || (!isMultiSelect && !hiddenInput)) {
+            console.error(`Erreur critique: Un élément clé manque pour le dropdown ${toggleId}.`);
+            return;
+        }
+
+        const items = dropdown.querySelectorAll('.dropdown-item');
+        const checkboxes = isMultiSelect ? dropdown.querySelectorAll('.variable-check') : null;
+
+        // Ouvrir/fermer le menu
+        toggle.addEventListener('click', function(e) {
+            console.log(`Clic sur le toggle ${toggleId}.`);
+            e.stopPropagation();
+            const isDropdownVisible = dropdown.style.display === 'block';
+            dropdown.style.display = isDropdownVisible ? 'none' : 'block';
+            toggle.classList.toggle('active', !isDropdownVisible);
+            hideValidationMessage(validationMessageId); // Cacher le message quand on ouvre le dropdown
         });
-    }
-    
-    // Initialize dropdown functionality for radio buttons
-    function initRadioDropdown(buttonId, radiosSelector) {
-        const dropdownButton = document.getElementById(buttonId);
-        const radios = document.querySelectorAll(radiosSelector);
-        
-        radios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                if (this.checked) {
-                    const selectedName = this.nextElementSibling.querySelector('span').nextSibling.textContent.trim();
-                    dropdownButton.innerHTML = selectedName;
-                }
-            });
-        });
-    }
-    
-    // Initialize all dropdowns
-    initCheckboxDropdown('mvVariableDropdown', '#mvVariableDropdown ~ .dropdown-menu .variable-check');
-    initCheckboxDropdown('normVariableDropdown', '#normVariableDropdown ~ .dropdown-menu .variable-check');
-    initRadioDropdown('statVariableDropdown', '#statVariableDropdown ~ .dropdown-menu .stat-variable-radio');
-    initRadioDropdown('compVariableDropdown', '#compVariableDropdown ~ .dropdown-menu .comp-variable-radio');
-    
-    // Form validation
-    document.querySelectorAll('form').forEach(form => {
-        form.addEventListener('submit', function(e) {
-            const checkboxes = this.querySelectorAll('input[name="variables[]"]:checked');
-            if (checkboxes.length === 0 && this.querySelector('input[name="variables[]"]')) {
-                e.preventDefault();
-                showMessage('Veuillez sélectionner au moins une variable', 'warning');
+
+        // Fermer quand on clique ailleurs sur le document, SAUF si le clic est à l'intérieur du dropdown-container
+        document.addEventListener('click', function(e) {
+            if (e.target !== toggle && !dropdown.contains(e.target) && !toggle.contains(e.target)) {
+                console.log(`Clic en dehors du dropdown ${toggleId}. Fermeture du menu.`);
+                dropdown.style.display = 'none';
+                toggle.classList.remove('active');
             }
         });
+
+        // Logique pour les éléments du dropdown
+        items.forEach(item => {
+            if (isMultiSelect) {
+                const checkbox = item.querySelector('.variable-check');
+                if (!checkbox) return; 
+
+                // Écouteur pour le changement d'état de la checkbox
+                checkbox.addEventListener('change', function(e) {
+                    e.stopPropagation(); 
+                    hideValidationMessage(validationMessageId); // Cacher le message quand une sélection change
+
+                    const selected = Array.from(checkboxes).filter(cb => cb.checked);
+                    if (selected.length > maxSelection) {
+                        this.checked = false;
+                        showValidationMessage(validationMessageId, `Vous ne pouvez sélectionner qu'un maximum de ${maxSelection} variables.`);
+                        return;
+                    }
+                    updateToggleText();
+                    item.classList.toggle('selected', this.checked); 
+                });
+
+                // Rendre le label cliquable pour cocher/décoccher
+                const label = item.querySelector('label');
+                if (label) {
+                    label.addEventListener('click', function(e) {
+                        if (e.target.tagName !== 'INPUT') { 
+                            const checkbox = this.previousElementSibling;
+                            if (checkbox) {
+                                checkbox.checked = !checkbox.checked;
+                                const changeEvent = new Event('change');
+                                checkbox.dispatchEvent(changeEvent); 
+                            }
+                        }
+                        e.stopPropagation(); 
+                    });
+                }
+
+            } else { // Mono-choix
+                item.addEventListener('click', function(e) {
+                    e.stopPropagation(); 
+                    hideValidationMessage(validationMessageId); // Cacher le message quand une sélection est faite
+
+                    // Désélectionner l'élément précédemment sélectionné
+                    const currentSelected = dropdown.querySelector('.dropdown-item.selected');
+                    if (currentSelected) {
+                        currentSelected.classList.remove('selected');
+                    }
+
+                    // Sélectionner le nouvel élément
+                    const value = this.dataset.value;
+                    const textContent = this.querySelector('span:last-child').textContent.trim();
+                    const color = this.querySelector('.color-indicator').style.backgroundColor;
+
+                    hiddenInput.value = value;
+                    textElement.innerHTML = `<span class="color-indicator" style="background-color: ${color};"></span>${textContent}`;
+                    this.classList.add('selected'); 
+
+                    dropdown.style.display = 'none'; 
+                    toggle.classList.remove('active');
+                    console.log(`Dropdown ${toggleId}: sélectionné ${value}`);
+                });
+            }
+        });
+
+        // Fonction pour mettre à jour le texte du bouton toggle (multi-choix uniquement)
+        function updateToggleText() {
+            if (!isMultiSelect) return; 
+
+            const selected = Array.from(checkboxes).filter(cb => cb.checked);
+            if (selected.length > 0) {
+                if (selected.length > 3) {
+                    textElement.textContent = `${selected.length} variables sélectionnées`;
+                } else {
+                    const selectedNames = selected.map(cb => {
+                        const labelSpan = cb.nextElementSibling ? cb.nextElementSibling.querySelector('span:last-child') : null;
+                        return labelSpan ? labelSpan.textContent.trim() : cb.value;
+                    });
+                    textElement.textContent = selectedNames.join(', ');
+                }
+            } else {
+                textElement.textContent = 'Sélectionner les variables';
+            }
+            console.log(`Texte du toggle ${toggleId} mis à jour: "${textElement.textContent}".`);
+        }
+
+        // Initialiser le texte et la sélection au chargement de la page
+        if (isMultiSelect) {
+            updateToggleText();
+        } else {
+            if (hiddenInput.value) { 
+                const initialSelected = dropdown.querySelector(`.dropdown-item[data-value="${hiddenInput.value}"]`);
+                if (initialSelected) {
+                    initialSelected.classList.add('selected');
+                    const textContent = initialSelected.querySelector('span:last-child').textContent.trim();
+                    const color = initialSelected.querySelector('.color-indicator').style.backgroundColor;
+                    textElement.innerHTML = `<span class="color-indicator" style="background-color: ${color};"></span>${textContent}`;
+                } else {
+                     textElement.innerHTML = 'Choisir une variable'; 
+                }
+            } else { 
+                 textElement.innerHTML = 'Choisir une variable';
+            }
+        }
+    }
+    
+    // Initialiser les dropdowns personnalisés
+    setupCustomDropdown('multiVarToggle', 'multiVarDropdown', 'multiVarText', 'variables[]', true, 'multiVarValidationMessage', 5);
+    setupCustomDropdown('normVarToggle', 'normVarDropdown', 'normVarText', 'variables[]', true, 'normVarValidationMessage', 10);
+    setupCustomDropdown('statVarToggle', 'statVarDropdown', 'statVarText', 'variable', false, 'statVarValidationMessage');
+    setupCustomDropdown('compVarToggle', 'compVarDropdown', 'compVarText', 'variable', false, 'compVarValidationMessage');
+    
+    // Gestion des soumissions de formulaires pour la validation (messages in-situ)
+    document.getElementById('multiVarForm').addEventListener('submit', function(e) {
+        const selected = this.querySelectorAll('input[name="variables[]"]:checked');
+        if (selected.length === 0) {
+            e.preventDefault();
+            showValidationMessage('multiVarValidationMessage', 'Veuillez sélectionner au moins une variable pour le graphique multi-variables.');
+        } else {
+            hideValidationMessage('multiVarValidationMessage');
+        }
+    });
+    
+    document.getElementById('normForm').addEventListener('submit', function(e) {
+        const selected = this.querySelectorAll('input[name="variables[]"]:checked');
+        if (selected.length === 0) {
+            e.preventDefault();
+            showValidationMessage('normVarValidationMessage', 'Veuillez sélectionner au moins une variable pour l\'analyse normalisée.');
+        } else {
+            hideValidationMessage('normVarValidationMessage');
+        }
     });
 
-    // Reset data button handling
-    document.getElementById('resetBtn').addEventListener('click', function(e) {
-        e.preventDefault();
-        
-        // Create confirmation message
-        const confirmMessage = document.createElement('div');
-        confirmMessage.innerHTML = `
-            <p class="mb-3">Êtes-vous sûr de vouloir réinitialiser toutes les données ?</p>
-            <div class="d-flex justify-content-center gap-3">
-                <button class="btn btn-secondary" id="cancelReset">Annuler</button>
-                <button class="btn btn-danger" id="confirmReset">Confirmer</button>
-            </div>
-        `;
-        
-        showMessage(confirmMessage.innerHTML, 'warning');
-        
-        // Handle button clicks
-        document.getElementById('cancelReset').addEventListener('click', () => {
-            const bsAlert = bootstrap.Alert.getOrCreateInstance(alertBox);
-            bsAlert.close();
-        });
-        
-        document.getElementById('confirmReset').addEventListener('click', () => {
-            // Show processing message
-            showMessage('<i class="fas fa-spinner fa-spin me-2"></i> Réinitialisation en cours...', 'info');
-            
-            // Submit the reset request
-            fetch("{{ url_for('reset_data') }}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showMessage(`<i class="fas fa-check-circle me-2"></i> ${data.message || 'Réinitialisation réussie'}`, 'success');
-                    // Reload after 2 seconds
-                    setTimeout(() => window.location.reload(), 2000);
-                } else {
-                    showMessage(`<i class="fas fa-exclamation-circle me-2"></i> ${data.message || 'Erreur lors de la réinitialisation'}`, 'danger');
-                }
-            })
-            .catch(error => {
-                showMessage(`<i class="fas fa-exclamation-circle me-2"></i> Erreur: ${error.message}`, 'danger');
-            });
-        });
+    document.getElementById('statVarForm').addEventListener('submit', function(e) {
+        const selectedValue = document.getElementById('statVarInput').value;
+        if (!selectedValue) {
+            e.preventDefault();
+            showValidationMessage('statVarValidationMessage', 'Veuillez sélectionner une variable pour les statistiques.');
+        } else {
+            hideValidationMessage('statVarValidationMessage');
+        }
     });
+
+    document.getElementById('compVarForm').addEventListener('submit', function(e) {
+        const selectedValue = document.getElementById('compVarInput').value;
+        if (!selectedValue) {
+            e.preventDefault();
+            showValidationMessage('compVarValidationMessage', 'Veuillez sélectionner une variable pour la comparaison.');
+        } else {
+            hideValidationMessage('compVarValidationMessage');
+        }
+    });
+    
+    // Gestion du bouton de réinitialisation (utilisant les messages flash de Flask)
+    const resetBtn = document.getElementById('resetBtn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if(confirm('Êtes-vous sûr de vouloir réinitialiser toutes les données ? Cette action est irréversible.')) {
+                fetch("{{ url_for('reset_data') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json', // Nous envoyons du JSON, mais la réponse attendue est une redirection
+                    }
+                })
+                .then(response => {
+                    // Cette partie est cruciale. Flask devrait rediriger, et le navigateur suivra cette redirection.
+                    // Flask doit flasher le message AVANT la redirection.
+                    if (response.redirected) {
+                        window.location.href = response.url; // Le navigateur suit la redirection
+                    } else {
+                        // Si Flask ne redirige pas, cela signifie qu'il y a peut-être eu une erreur ou une réponse inattendue.
+                        // Nous ne devrions pas nous attendre à un JSON ici si Flask redirige correctement.
+                        // Pour le débogage, on peut logguer le problème.
+                        console.error('La requête de réinitialisation n\'a pas abouti à une redirection. Statut:', response.status);
+                        // Fallback très léger si aucune redirection n'est détectée
+                        // window.location.reload(); // Recharger quand même si Flask n'a pas redirigé pour tenter d'afficher le flash si présent
+                        // Ou mieux, un message d'erreur si on n'a pas pu rediriger
+                        alert('Une erreur inattendue est survenue lors de la réinitialisation des données. Veuillez vérifier le serveur.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur réseau lors de la réinitialisation:', error);
+                    // Si une erreur réseau se produit (pas de réponse du serveur du tout), nous affichons un alert de secours.
+                    alert('Impossible de communiquer avec le serveur pour réinitialiser les données. Veuillez réessayer.');
+                });
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

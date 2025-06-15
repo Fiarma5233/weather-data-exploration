@@ -1,0 +1,41 @@
+<footer class="bg-gray-800 text-white py-8 mt-12">
+    <div class="max-w-6xl mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+                <h3 class="text-xl font-semibold mb-4">Analyse Météo</h3>
+                <p class="text-gray-400">
+                    Plateforme d'analyse et de visualisation des données météorologiques.
+                </p>
+            </div>
+            
+            <div>
+                <h4 class="text-lg font-medium mb-4">Navigation</h4>
+                <ul class="space-y-2">
+                    <li><a href="{{ url_for('index') }}" class="text-gray-400 hover:text-white transition">Accueil</a></li>
+                    {% if not GLOBAL_PROCESSED_DATA_DF.empty %}
+                    <li><a href="{{ url_for('data_preview') }}" class="text-gray-400 hover:text-white transition">Données</a></li>
+                    <li><a href="{{ url_for('visualisations_options') }}" class="text-gray-400 hover:text-white transition">Visualisations</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+            
+            <div>
+                <h4 class="text-lg font-medium mb-4">Contact</h4>
+                <ul class="space-y-2">
+                    <li class="flex items-center">
+                        <i class="fas fa-envelope mr-2 text-gray-400"></i>
+                        <a href="mailto:fiarmafiarma@gmail.com" class="text-gray-400 hover:text-white transition">fiarmafiarma@gmail.com</a>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fas fa-phone mr-2 text-gray-400"></i>
+                        <span class="text-gray-400">+226 67 48 91 87 / 52 33 61 52</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
+            <p>&copy; {{ now.year }} Analyse Météo. Tous droits réservés.</p>
+        </div>
+    </div>
+</footer>

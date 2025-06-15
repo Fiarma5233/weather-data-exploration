@@ -1,70 +1,112 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container mt-4">
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h2><i class="fas fa-table me-2"></i>Aperçu des Données</h2>
-        </div>
-        
-        <div class="card-body">
-            <!-- Informations résumées -->
-            <div class="alert alert-info mb-4">
-                <h4><i class="fas fa-info-circle me-2"></i>Résumé</h4>
-                <p><strong>Mode d'affichage :</strong> {{ preview_type }}</p>
-                <p><strong>Dimensions :</strong> {{ dataset_shape }}</p>
-                <p><strong>Nombre de stations :</strong> {{ stations_count }}</p>
-            </div>
+{% block title %}Aperçu des Données{% endblock %}
 
-            <!-- Tableau des données -->
-            <div class="table-responsive">
-                {% if preview_table %}
-                    {{ preview_table|safe }}
-                {% else %}
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Aucune donnée à afficher
-                    </div>
-                {% endif %}
-            </div>
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <!-- En-tête avec boutons -->
+        <div class="px-6 py-4 border-b flex justify-between items-center">
+            <a href="{{ url_for('index') }}" 
+               class="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-sm font-medium text-blue-600 bg-white hover:bg-blue-600 hover:text-white transition-colors duration-200">
+                <i class="fas fa-arrow-left mr-2"></i> Retour
+            </a>
+            
+            <h2 class="text-xl font-semibold text-gray-800 text-center">
+                <i class="fas fa-table mr-2 text-blue-500"></i>Aperçu des Données
+            </h2>
+            
+            {% if data_available %}
+            <a href="{{ url_for('visualisations_options') }}" 
+               class="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-sm font-medium text-blue-600 bg-white hover:bg-blue-600 hover:text-white transition-colors duration-200">
+                <i class="fas fa-chart-line mr-2"></i> Visualiser
+            </a>
+            {% else %}
+            <div class="w-24"></div>
+            {% endif %}
         </div>
-        
-        <div class="card-footer bg-light">
-            <div class="d-flex justify-content-between">
-                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i> Retour
-                </a>
-                <div>
-                    <a href="{{ url_for('visualisations_options') }}" class="btn btn-success">
-                        <i class="fas fa-chart-line me-1"></i> Visualiser
-                    </a>
+
+        <!-- Bloc d'informations -->
+        <div class="px-6 py-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <span class="font-medium block text-blue-600">Mode:</span>
+                    <span class="text-gray-700">{{ preview_type }}</span>
+                </div>
+                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <span class="font-medium block text-blue-600">Dimensions:</span>
+                    <span class="text-gray-700">{{ dataset_shape }}</span>
+                </div>
+                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <span class="font-medium block text-blue-600">Stations:</span>
+                    <span class="text-gray-700">{{ stations_count }}</span>
+                </div>
+                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <span class="font-medium block text-blue-600">Lignes:</span>
+                    <span class="text-gray-700">{{ GLOBAL_PROCESSED_DATA_DF.shape[0]|number_format }}</span>
                 </div>
             </div>
+        </div>
+
+        <!-- Séparateur -->
+        <hr class="border-gray-200 mx-6 my-2">
+
+        <!-- Tableau élargi -->
+        <div class="w-full overflow-x-auto px-1">
+            {% if preview_table %}
+            <div class="min-w-full max-w-none">
+                {{ preview_table|safe }}
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-exclamation-triangle text-yellow-400 text-2xl mb-2"></i>
+                <p class="text-lg">Aucune donnée à afficher</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
 <style>
-    /* Styles optimisés */
-    .table {
-        width: 100%;
-        font-size: 0.9rem;
+    /* Styles pour le tableau élargi */
+    table {
+        width: 100% !important;
+        max-width: none !important;
+        table-layout: auto;
+        border-collapse: separate;
+        border-spacing: 0;
     }
-    .table th {
-        background-color: #f8f9fa;
+    th, td {
+        padding: 0.75rem 1.25rem;
+        white-space: nowrap;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+        background-color: #f7fafc;
         font-weight: 600;
+        text-align: left;
         position: sticky;
         top: 0;
+        color: #1e40af;
     }
-    .table td {
-        vertical-align: middle;
+    tr:hover td {
+        background-color: #f8fafc;
     }
-    .card {
-        border-radius: 8px;
+    .table-striped tbody tr:nth-child(odd) td {
+        background-color: #f7fafc;
     }
-    .alert-info {
-        background-color: #f0f7ff;
-        border-color: #cce5ff;
+    
+    /* Effet de survol amélioré */
+    a:hover i {
+        color: white !important;
+        transition: color 0.2s ease;
+    }
+    
+    /* Largeur maximale supprimée */
+    .container {
+        max-width: none;
+        padding-left: 2rem;
+        padding-right: 2rem;
     }
 </style>
 {% endblock %}

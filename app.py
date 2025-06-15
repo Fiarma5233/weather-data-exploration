@@ -7731,21 +7731,580 @@
 #     app.run(debug=True)
 
 
+# import os
+# import pandas as pd
+# from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+# import plotly.graph_objects as go
+# import plotly.express as px
+# from plotly.subplots import make_subplots
+# import json
+# import io
+# import base64
+# import numpy as np
+# import matplotlib
+# matplotlib.use('Agg')  # Important pour Flask
+# import matplotlib.pyplot as plt
+# import traceback
+# from werkzeug.utils import secure_filename
+# from datetime import datetime
+# from datetime import datetime
+
+
+# # Importations des fonctions de traitement
+# from data_processing import (
+#     create_datetime,
+#     interpolation,
+#     _load_and_prepare_gps_data,
+#     gestion_doublons,
+#     calculate_daily_summary_table,
+#     generer_graphique_par_variable_et_periode,
+#     generer_graphique_comparatif,
+#     generate_multi_variable_station_plot,
+#     generate_variable_summary_plots_for_web,
+#     apply_station_specific_preprocessing,
+#     generate_stats_plots,
+#     generate_daily_stats_plot_plotly
+# )
+
+# from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTENSIONS, STATIONS_BY_BASSIN, PALETTE_COULEUR, CUSTOM_STATION_COLORS
+
+# app = Flask(__name__)
+# app.secret_key = 'votre_cle_secrete_ici'
+# app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024
+# app.config['UPLOAD_FOLDER'] = 'uploads'
+# app.config['STATIC_FOLDER'] = 'static'
+
+# # Variables globales
+# GLOBAL_PROCESSED_DATA_DF = pd.DataFrame()
+# GLOBAL_GPS_DATA_DF = pd.DataFrame()
+
+# # Chargement des données GPS
+# with app.app_context():
+#     GLOBAL_GPS_DATA_DF = _load_and_prepare_gps_data()
+
+
+
+# @app.context_processor
+# def inject_globals():
+#     return {
+#         'GLOBAL_PROCESSED_DATA_DF': GLOBAL_PROCESSED_DATA_DF,
+#         'GLOBAL_GPS_DATA_DF': GLOBAL_GPS_DATA_DF,
+#         'data_available': not GLOBAL_PROCESSED_DATA_DF.empty,
+#         'now': datetime.now()
+#     }
+
+
+# # Après les imports et la création de l'app Flask
+# @app.template_filter('number_format')
+# def number_format(value):
+#     """
+#     Formatte un nombre avec des espaces comme séparateurs de milliers
+#     Ex: 1000000 -> 1 000 000
+#     """
+#     try:
+#         return "{:,}".format(int(value)).replace(",", " ")
+#     except (ValueError, TypeError):
+#         return str(value)
+
+
+
+
+# def allowed_file(filename):
+#     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# @app.route('/')
+# def index():
+#     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+#     return render_template('index.html', 
+#                          bassins=sorted(STATIONS_BY_BASSIN.keys()),
+#                          stations_by_bassin=STATIONS_BY_BASSIN)
+
+# @app.route('/upload', methods=['POST'])
+# def upload_file():
+#     """Traite les fichiers météo uploadés et les intègre au DataFrame global"""
+#     global GLOBAL_PROCESSED_DATA_DF
+
+#     if not request.files:
+#         flash('Aucun fichier reçu', 'error')
+#         return redirect(url_for('index'))
+
+#     uploaded_files = request.files.getlist('file[]')
+#     stations = [
+#         request.form.get(f'station_{i}') 
+#         for i in range(len(uploaded_files)) 
+#         if request.form.get(f'station_{i}')
+#     ]
+
+#     if len(uploaded_files) != len(stations):
+#         flash('Nombre de fichiers et de stations incompatible', 'error')
+#         return redirect(url_for('index'))
+
+#     batch_dfs = []
+    
+#     for file, station in zip(uploaded_files, stations):
+#         if not file or not allowed_file(file.filename):
+#             continue
+            
+#         try:
+#             filename = secure_filename(file.filename)
+#             temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#             file.save(temp_path)
+            
+#             if filename.lower().endswith('.csv'):
+#                 df = pd.read_csv(temp_path, encoding_errors='replace')
+#             else:
+#                 df = pd.read_excel(temp_path)
+            
+#             df['Station'] = station
+#             df = apply_station_specific_preprocessing(df, station)
+#             batch_dfs.append(df)
+            
+#             os.unlink(temp_path)
+            
+#         except Exception as e:
+#             flash(f"Erreur traitement {file.filename}: {str(e)}", 'error')
+#             continue
+
+#     if not batch_dfs:
+#         flash('Aucune donnée valide traitée', 'error')
+#         return redirect(url_for('index'))
+
+#     try:
+#         batch_df = pd.concat(batch_dfs, ignore_index=True)
+#         batch_df = create_datetime(batch_df)
+#         batch_df = gestion_doublons(batch_df)
+#         batch_df = batch_df.set_index('Datetime').sort_index()
+        
+#         if GLOBAL_PROCESSED_DATA_DF.empty:
+#             GLOBAL_PROCESSED_DATA_DF = batch_df
+#         else:
+#             stations_to_update = batch_df['Station'].unique()
+#             GLOBAL_PROCESSED_DATA_DF = GLOBAL_PROCESSED_DATA_DF[
+#                 ~GLOBAL_PROCESSED_DATA_DF['Station'].isin(stations_to_update)
+#             ]
+#             GLOBAL_PROCESSED_DATA_DF = pd.concat(
+#                 [GLOBAL_PROCESSED_DATA_DF, batch_df]
+#             ).sort_index()
+        
+#         GLOBAL_PROCESSED_DATA_DF = interpolation(
+#             GLOBAL_PROCESSED_DATA_DF, 
+#             DATA_LIMITS, 
+#             GLOBAL_GPS_DATA_DF
+#         )
+        
+#         new_rows = len(batch_df)
+#         stations_added = ', '.join(batch_df['Station'].unique())
+#         flash(
+#             f"{new_rows} nouvelles lignes traitées pour {stations_added}", 
+#             'success'
+#         )
+        
+#         return redirect(url_for('data_preview'))
+        
+#     except Exception as e:
+#         app.logger.error(f"Erreur traitement global: {str(e)}")
+#         flash('Erreur critique lors du traitement des données', 'error')
+#         return redirect(url_for('index'))
+
+# @app.route('/preview')
+# def data_preview():
+#     """Affiche l'aperçu des données"""
+#     try:
+#         if GLOBAL_PROCESSED_DATA_DF.empty:
+#             flash('Aucune donnée disponible. Veuillez uploader des fichiers d\'abord.', 'error')
+#             return redirect(url_for('index'))
+        
+#         stations = GLOBAL_PROCESSED_DATA_DF['Station'].unique()
+        
+#         if len(stations) == 1:
+#             preview_df = GLOBAL_PROCESSED_DATA_DF.head(20).reset_index()
+#             preview_type = "20 premières lignes"
+#         else:
+#             preview_dfs = []
+#             for station in stations:
+#                 station_df = GLOBAL_PROCESSED_DATA_DF[GLOBAL_PROCESSED_DATA_DF['Station'] == station].head(10).reset_index()
+#                 preview_dfs.append(station_df)
+#             preview_df = pd.concat(preview_dfs)
+#             preview_type = f"10 lignes × {len(stations)} stations"
+        
+#         preview_html = preview_df.to_html(
+#             classes='table table-striped table-hover',
+#             index=False,
+#             border=0,
+#             justify='left',
+#             na_rep='NaN',
+#             max_rows=None
+#         )
+        
+#         return render_template('preview.html',
+#                             preview_table=preview_html,
+#                             preview_type=preview_type,
+#                             dataset_shape=f"{GLOBAL_PROCESSED_DATA_DF.shape[0]} lignes × {GLOBAL_PROCESSED_DATA_DF.shape[1]} colonnes",
+#                             stations_count=len(stations))
+    
+#     except Exception as e:
+#         flash(f'Erreur lors de la préparation de l\'aperçu: {str(e)}', 'error')
+#         return redirect(url_for('index'))
+
+# @app.route('/visualisations_options')
+# def visualisations_options():
+#     if GLOBAL_PROCESSED_DATA_DF.empty:
+#         flash('Veuillez uploader des fichiers d\'abord', 'error')
+#         return redirect(url_for('index'))
+
+#     excluded_cols = {'Station', 'Is_Daylight', 'Daylight_Duration',
+#                    'Year', 'Month', 'Day', 'Hour', 'Minute', 'Date', 'Rain_01_mm', 'Rain_02_mm'}
+    
+#     available_vars = [
+#         col for col in GLOBAL_PROCESSED_DATA_DF.columns
+#         if col not in excluded_cols and pd.api.types.is_numeric_dtype(GLOBAL_PROCESSED_DATA_DF[col])
+#     ]
+
+#     daily_stats_df = calculate_daily_summary_table(GLOBAL_PROCESSED_DATA_DF)
+#     daily_stats_html = daily_stats_df.to_html(classes='table table-striped', index=False)
+
+#     return render_template('visualisations_options.html',
+#                         stations=sorted(GLOBAL_PROCESSED_DATA_DF['Station'].unique()),
+#                         variables=sorted(available_vars),
+#                         METADATA_VARIABLES=METADATA_VARIABLES,
+#                         PALETTE_DEFAUT=PALETTE_DEFAUT,
+#                         daily_stats_table=daily_stats_html)
+
+# # @app.route('/generate_plot', methods=['POST'])
+# # def generate_plot():
+# #     try:
+# #         station = request.form.get('station')
+# #         variable = request.form.get('variable')
+# #         periode = request.form.get('periode')
+# #         is_comparative = 'comparative' in request.form
+
+# #         if not variable or not periode:
+# #             flash('Veuillez sélectionner une variable et une période', 'error')
+# #             return redirect(url_for('visualisations_options'))
+
+# #         if not is_comparative and not station:
+# #             flash('Veuillez sélectionner une station', 'error')
+# #             return redirect(url_for('visualisations_options'))
+
+# #         # if is_comparative:
+# #         #     fig = generer_graphique_comparatif(
+# #         #         df=GLOBAL_PROCESSED_DATA_DF,
+# #         #         variable=variable,
+# #         #         periode=periode,
+# #         #         colors=PALETTE_DEFAUT,
+# #         #         metadata=METADATA_VARIABLES
+# #         #     )
+
+# #         # Dans la route generate_plot
+# #         if is_comparative:
+# #             fig = generer_graphique_comparatif(
+# #                 df=GLOBAL_PROCESSED_DATA_DF,
+# #                 variable=variable,
+# #                 periode=periode,
+# #                 colors=CUSTOM_STATION_COLORS,
+# #                 metadata=METADATA_VARIABLES
+# #             )
+# #             title = f"Comparaison de {METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} ({periode})"
+# #         else:
+# #             # fig = generer_graphique_par_variable_et_periode(
+# #             #     df=GLOBAL_PROCESSED_DATA_DF,
+# #             #     station=station,
+# #             #     variable=variable,
+# #             #     periode=periode,
+# #             #     colors=PALETTE_DEFAUT,
+# #             #     metadata=METADATA_VARIABLES
+# #             # )
+
+# #             fig = generer_graphique_par_variable_et_periode(
+# #                 df=GLOBAL_PROCESSED_DATA_DF,
+# #                 station=station,
+# #                 variable=variable,
+# #                 periode=periode,
+# #                 colors=PALETTE_DEFAUT,
+# #                 metadata=METADATA_VARIABLES
+# #             )
+
+# #             title = f"{METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} à {station} ({periode})"
+
+# #         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+# #         return render_template('plot_display.html',
+# #                             plot_html=plot_html,
+# #                             title=title)
+
+# #     except Exception as e:
+# #         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
+# #         return redirect(url_for('visualisations_options'))
+
+# # @app.route('/generate_plot', methods=['POST'])
+# # def generate_plot():
+# #     try:
+# #         station = request.form.get('station')
+# #         variables = request.form.getlist('variables[]')  # Maintenant une liste de variables
+# #         periode = request.form.get('periode')
+# #         is_comparative = 'comparative' in request.form
+
+# #         if not variables or not periode:
+# #             flash('Veuillez sélectionner au moins une variable et une période', 'error')
+# #             return redirect(url_for('visualisations_options'))
+
+# #         if is_comparative:
+# #             fig = generer_graphique_comparatif(
+# #                 df=GLOBAL_PROCESSED_DATA_DF,
+# #                 variable=variables[0],  # Pour la comparaison, on prend la première variable
+# #                 periode=periode,
+# #                 colors=CUSTOM_STATION_COLORS,
+# #                 metadata=METADATA_VARIABLES
+# #             )
+# #             title = f"Comparaison de {METADATA_VARIABLES.get(variables[0], {}).get('Nom', variables[0])} ({periode})"
+# #         else:
+# #             fig = generer_graphique_par_variable_et_periode(
+# #                 df=GLOBAL_PROCESSED_DATA_DF,
+# #                 station=station,
+# #                 variables=variables,  # Liste des variables sélectionnées
+# #                 periode=periode,
+# #                 colors=PALETTE_DEFAUT,  # Palette par variable
+# #                 metadata=METADATA_VARIABLES
+# #             )
+# #             title = f"Évolution des variables pour {station} ({periode})"
+
+# #         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+# #         return render_template('plot_display.html',
+# #                             plot_html=plot_html,
+# #                             title=title)
+
+# #     except Exception as e:
+# #         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
+# #         return redirect(url_for('visualisations_options'))
+
+# @app.route('/generate_plot', methods=['POST'])
+# def generate_plot():
+#     try:
+#         is_comparative = 'comparative' in request.form
+#         periode = request.form.get('periode')
+
+#         # Validation de base commune
+#         if not periode:
+#             flash('Veuillez sélectionner une période', 'error')
+#             return redirect(url_for('visualisations_options'))
+
+#         if is_comparative:
+#             # Validation spécifique pour le mode comparatif
+#             variable = request.form.get('variable')
+#             if not variable:
+#                 flash('Veuillez sélectionner une variable pour la comparaison', 'error')
+#                 return redirect(url_for('visualisations_options'))
+
+#             fig = generer_graphique_comparatif(
+#                 df=GLOBAL_PROCESSED_DATA_DF,
+#                 variable=variable,
+#                 periode=periode,
+#                 colors=CUSTOM_STATION_COLORS,
+#                 metadata=METADATA_VARIABLES
+#             )
+#             title = f"Comparaison de {METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} ({periode})"
+            
+#         else:
+#             # Validation spécifique pour le mode normal
+#             station = request.form.get('station')
+#             variables = request.form.getlist('variables[]')
+            
+#             if not station:
+#                 flash('Veuillez sélectionner une station', 'error')
+#                 return redirect(url_for('visualisations_options'))
+                
+#             if not variables:
+#                 flash('Veuillez sélectionner au moins une variable', 'error')
+#                 return redirect(url_for('visualisations_options'))
+
+#             fig = generer_graphique_par_variable_et_periode(
+#                 df=GLOBAL_PROCESSED_DATA_DF,
+#                 station=station,
+#                 variables=variables,
+#                 periode=periode,
+#                 colors=PALETTE_DEFAUT,
+#                 metadata=METADATA_VARIABLES
+#             )
+#             title = f"Évolution des variables pour {station} ({periode})"
+
+#         # Génération du graphique
+#         if not fig.data:
+#             flash('Aucune donnée disponible pour les critères sélectionnés', 'warning')
+#             return redirect(url_for('visualisations_options'))
+
+#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+#         return render_template('plot_display.html',
+#                             plot_html=plot_html,
+#                             title=title)
+
+#     except Exception as e:
+#         app.logger.error(f"Erreur generate_plot: {str(e)}", exc_info=True)
+#         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
+#         return redirect(url_for('visualisations_options'))
+    
+# # @app.route('/generate_multi_variable_plot', methods=['POST'])
+# # def generate_multi_variable_plot_route():
+# #     try:
+# #         station = request.form['station']
+# #         variables = request.form.getlist('variables[]')
+        
+# #         if not station or not variables:
+# #             flash('Veuillez sélectionner une station et au moins une variable', 'error')
+# #             return redirect(url_for('visualisations_options'))
+
+# #         # fig = generate_multi_variable_station_plot(
+# #         #     df=GLOBAL_PROCESSED_DATA_DF,
+# #         #     station=station,
+# #         #     colors=PALETTE_DEFAUT,
+# #         #     metadata=METADATA_VARIABLES
+# #         # )
+
+# #         # Dans la route generate_multi_variable_plot_route
+# #         fig = generate_multi_variable_station_plot(
+# #             df=GLOBAL_PROCESSED_DATA_DF,
+# #             station=station,
+# #             colors=PALETTE_DEFAUT,
+# #             metadata=METADATA_VARIABLES
+# #         )
+        
+# #         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+        
+# #         return render_template('plot_display.html',
+# #                             plot_html=plot_html,
+# #                             title=f"Graphique multi-variables pour {station}")
+    
+# #     except Exception as e:
+# #         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
+# #         return redirect(url_for('visualisations_options'))
+
+# @app.route('/generate_multi_variable_plot_route', methods=['POST'])
+# def generate_multi_variable_plot_route():
+#     try:
+#         station = request.form['station']
+#         variables = request.form.getlist('variables[]')
+#         periode = request.form.get('periode', 'Brutes')  # Par défaut 'Brutes' si non spécifié
+        
+#         fig = generate_multi_variable_station_plot(
+#             df=GLOBAL_PROCESSED_DATA_DF,
+#             station=station,
+#             variables=variables,
+#             periode=periode,
+#             colors=PALETTE_DEFAUT,
+#             metadata=METADATA_VARIABLES
+#         )
+        
+#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+        
+#         return render_template('plot_display.html',
+#                             plot_html=plot_html,
+#                             title=f"Analyse Multi-Variables Normalisées - {station} ({periode})")
+    
+#     except Exception as e:
+#         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
+#         return redirect(url_for('visualisations_options'))
+    
+# @app.route('/reset_data', methods=['POST'])
+# def reset_data():
+#     global GLOBAL_PROCESSED_DATA_DF
+#     GLOBAL_PROCESSED_DATA_DF = pd.DataFrame()
+    
+#     upload_folder = app.config['UPLOAD_FOLDER']
+#     for filename in os.listdir(upload_folder):
+#         file_path = os.path.join(upload_folder, filename)
+#         try:
+#             if os.path.isfile(file_path):
+#                 os.unlink(file_path)
+#         except Exception as e:
+#             flash(f"Erreur lors de la suppression de {file_path}: {str(e)}", 'warning')
+    
+#     flash('Données réinitialisées avec succès', 'success')
+#     return redirect(url_for('index'))
+
+
+
+# # @app.route('/statistiques')
+# # def statistiques():
+# #     try:
+# #         variable = request.args.get('variable')
+        
+# #         if not variable or variable not in GLOBAL_PROCESSED_DATA_DF.columns:
+# #             flash('Variable invalide', 'error')
+# #             return redirect(url_for('visualisations_options'))
+
+# #         # Génération de la figure avec Plotly
+# #         fig = generate_daily_stats_plot_plotly(GLOBAL_PROCESSED_DATA_DF, variable)
+        
+# #         if not fig:
+# #             flash('Erreur lors de la génération des statistiques', 'error')
+# #             return redirect(url_for('visualisations_options'))
+
+# #         # Conversion en HTML
+# #         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+# #         var_meta = METADATA_VARIABLES.get(variable, {'Nom': variable, 'Unite': ''})
+# #         return render_template('statistiques.html',
+# #                             variable_name=var_meta.get('Nom', variable),
+# #                             unit=var_meta.get('Unite', ''),
+# #                             plot_html=plot_html)
+
+# #     except Exception as e:
+# #         app.logger.error(f"ERREUR dans /statistiques: {str(e)}")
+# #         traceback.print_exc()
+# #         flash('Erreur technique lors de la génération des statistiques', 'error')
+# #         return redirect(url_for('visualisations_options'))
+
+
+# @app.route('/statistiques')
+# def statistiques():
+#     try:
+#         variable = request.args.get('variable')
+        
+#         if not variable or variable not in GLOBAL_PROCESSED_DATA_DF.columns:
+#             flash('Variable invalide', 'error')
+#             return redirect(url_for('visualisations_options'))
+
+#         # Génération de la figure avec Plotly en passant CUSTOM_STATION_COLORS
+#         fig = generate_daily_stats_plot_plotly(
+#             df=GLOBAL_PROCESSED_DATA_DF, 
+#             variable=variable,
+#             station_colors=CUSTOM_STATION_COLORS
+#         )
+        
+#         if not fig:
+#             flash('Erreur lors de la génération des statistiques', 'error')
+#             return redirect(url_for('visualisations_options'))
+
+#         # Conversion en HTML
+#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+
+#         var_meta = METADATA_VARIABLES.get(variable, {'Nom': variable, 'Unite': ''})
+#         return render_template('statistiques.html',
+#                             variable_name=var_meta.get('Nom', variable),
+#                             unit=var_meta.get('Unite', ''),
+#                             plot_html=plot_html)
+
+#     except Exception as e:
+#         app.logger.error(f"ERREUR dans /statistiques: {str(e)}")
+#         traceback.print_exc()
+#         flash('Erreur technique lors de la génération des statistiques', 'error')
+#         return redirect(url_for('visualisations_options'))
+    
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
+
+
 import os
 import pandas as pd
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import json
-import io
-import base64
-import numpy as np
-import matplotlib
-matplotlib.use('Agg')  # Important pour Flask
-import matplotlib.pyplot as plt
 import traceback
 from werkzeug.utils import secure_filename
+from datetime import datetime
 
 # Importations des fonctions de traitement
 from data_processing import (
@@ -7763,7 +8322,7 @@ from data_processing import (
     generate_daily_stats_plot_plotly
 )
 
-from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTENSIONS, STATIONS_BY_BASSIN, PALETTE_COULEUR, CUSTOM_STATION_COLORS
+from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTENSIONS, STATIONS_BY_BASSIN, CUSTOM_STATION_COLORS
 
 app = Flask(__name__)
 app.secret_key = 'votre_cle_secrete_ici'
@@ -7779,6 +8338,22 @@ GLOBAL_GPS_DATA_DF = pd.DataFrame()
 with app.app_context():
     GLOBAL_GPS_DATA_DF = _load_and_prepare_gps_data()
 
+@app.context_processor
+def inject_globals():
+    return {
+        'GLOBAL_PROCESSED_DATA_DF': GLOBAL_PROCESSED_DATA_DF,
+        'GLOBAL_GPS_DATA_DF': GLOBAL_GPS_DATA_DF,
+        'data_available': not GLOBAL_PROCESSED_DATA_DF.empty,
+        'now': datetime.now()
+    }
+
+@app.template_filter('number_format')
+def number_format(value):
+    try:
+        return "{:,}".format(int(value)).replace(",", " ")
+    except (ValueError, TypeError):
+        return str(value)
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -7791,7 +8366,6 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    """Traite les fichiers météo uploadés et les intègre au DataFrame global"""
     global GLOBAL_PROCESSED_DATA_DF
 
     if not request.files:
@@ -7878,7 +8452,6 @@ def upload_file():
 
 @app.route('/preview')
 def data_preview():
-    """Affiche l'aperçu des données"""
     try:
         if GLOBAL_PROCESSED_DATA_DF.empty:
             flash('Aucune donnée disponible. Veuillez uploader des fichiers d\'abord.', 'error')
@@ -7933,120 +8506,22 @@ def visualisations_options():
     daily_stats_df = calculate_daily_summary_table(GLOBAL_PROCESSED_DATA_DF)
     daily_stats_html = daily_stats_df.to_html(classes='table table-striped', index=False)
 
+    # Récupérer les paramètres pour pré-remplir les champs
+    variable_selectionnee = request.args.get('variable')
+    variables_selectionnees = request.args.getlist('variables[]')
+    station_selectionnee = request.args.get('station')
+    periode_selectionnee = request.args.get('periode')
+
     return render_template('visualisations_options.html',
                         stations=sorted(GLOBAL_PROCESSED_DATA_DF['Station'].unique()),
                         variables=sorted(available_vars),
                         METADATA_VARIABLES=METADATA_VARIABLES,
                         PALETTE_DEFAUT=PALETTE_DEFAUT,
-                        daily_stats_table=daily_stats_html)
-
-# @app.route('/generate_plot', methods=['POST'])
-# def generate_plot():
-#     try:
-#         station = request.form.get('station')
-#         variable = request.form.get('variable')
-#         periode = request.form.get('periode')
-#         is_comparative = 'comparative' in request.form
-
-#         if not variable or not periode:
-#             flash('Veuillez sélectionner une variable et une période', 'error')
-#             return redirect(url_for('visualisations_options'))
-
-#         if not is_comparative and not station:
-#             flash('Veuillez sélectionner une station', 'error')
-#             return redirect(url_for('visualisations_options'))
-
-#         # if is_comparative:
-#         #     fig = generer_graphique_comparatif(
-#         #         df=GLOBAL_PROCESSED_DATA_DF,
-#         #         variable=variable,
-#         #         periode=periode,
-#         #         colors=PALETTE_DEFAUT,
-#         #         metadata=METADATA_VARIABLES
-#         #     )
-
-#         # Dans la route generate_plot
-#         if is_comparative:
-#             fig = generer_graphique_comparatif(
-#                 df=GLOBAL_PROCESSED_DATA_DF,
-#                 variable=variable,
-#                 periode=periode,
-#                 colors=CUSTOM_STATION_COLORS,
-#                 metadata=METADATA_VARIABLES
-#             )
-#             title = f"Comparaison de {METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} ({periode})"
-#         else:
-#             # fig = generer_graphique_par_variable_et_periode(
-#             #     df=GLOBAL_PROCESSED_DATA_DF,
-#             #     station=station,
-#             #     variable=variable,
-#             #     periode=periode,
-#             #     colors=PALETTE_DEFAUT,
-#             #     metadata=METADATA_VARIABLES
-#             # )
-
-#             fig = generer_graphique_par_variable_et_periode(
-#                 df=GLOBAL_PROCESSED_DATA_DF,
-#                 station=station,
-#                 variable=variable,
-#                 periode=periode,
-#                 colors=PALETTE_DEFAUT,
-#                 metadata=METADATA_VARIABLES
-#             )
-
-#             title = f"{METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} à {station} ({periode})"
-
-#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
-
-#         return render_template('plot_display.html',
-#                             plot_html=plot_html,
-#                             title=title)
-
-#     except Exception as e:
-#         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
-#         return redirect(url_for('visualisations_options'))
-
-# @app.route('/generate_plot', methods=['POST'])
-# def generate_plot():
-#     try:
-#         station = request.form.get('station')
-#         variables = request.form.getlist('variables[]')  # Maintenant une liste de variables
-#         periode = request.form.get('periode')
-#         is_comparative = 'comparative' in request.form
-
-#         if not variables or not periode:
-#             flash('Veuillez sélectionner au moins une variable et une période', 'error')
-#             return redirect(url_for('visualisations_options'))
-
-#         if is_comparative:
-#             fig = generer_graphique_comparatif(
-#                 df=GLOBAL_PROCESSED_DATA_DF,
-#                 variable=variables[0],  # Pour la comparaison, on prend la première variable
-#                 periode=periode,
-#                 colors=CUSTOM_STATION_COLORS,
-#                 metadata=METADATA_VARIABLES
-#             )
-#             title = f"Comparaison de {METADATA_VARIABLES.get(variables[0], {}).get('Nom', variables[0])} ({periode})"
-#         else:
-#             fig = generer_graphique_par_variable_et_periode(
-#                 df=GLOBAL_PROCESSED_DATA_DF,
-#                 station=station,
-#                 variables=variables,  # Liste des variables sélectionnées
-#                 periode=periode,
-#                 colors=PALETTE_DEFAUT,  # Palette par variable
-#                 metadata=METADATA_VARIABLES
-#             )
-#             title = f"Évolution des variables pour {station} ({periode})"
-
-#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
-
-#         return render_template('plot_display.html',
-#                             plot_html=plot_html,
-#                             title=title)
-
-#     except Exception as e:
-#         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
-#         return redirect(url_for('visualisations_options'))
+                        daily_stats_table=daily_stats_html,
+                        variable_selectionnee=variable_selectionnee,
+                        variables_selectionnees=variables_selectionnees,
+                        station_selectionnee=station_selectionnee,
+                        periode_selectionnee=periode_selectionnee)
 
 @app.route('/generate_plot', methods=['POST'])
 def generate_plot():
@@ -8054,13 +8529,11 @@ def generate_plot():
         is_comparative = 'comparative' in request.form
         periode = request.form.get('periode')
 
-        # Validation de base commune
         if not periode:
             flash('Veuillez sélectionner une période', 'error')
             return redirect(url_for('visualisations_options'))
 
         if is_comparative:
-            # Validation spécifique pour le mode comparatif
             variable = request.form.get('variable')
             if not variable:
                 flash('Veuillez sélectionner une variable pour la comparaison', 'error')
@@ -8076,7 +8549,6 @@ def generate_plot():
             title = f"Comparaison de {METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} ({periode})"
             
         else:
-            # Validation spécifique pour le mode normal
             station = request.form.get('station')
             variables = request.form.getlist('variables[]')
             
@@ -8098,7 +8570,6 @@ def generate_plot():
             )
             title = f"Évolution des variables pour {station} ({periode})"
 
-        # Génération du graphique
         if not fig.data:
             flash('Aucune donnée disponible pour les critères sélectionnés', 'warning')
             return redirect(url_for('visualisations_options'))
@@ -8113,47 +8584,12 @@ def generate_plot():
         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
         return redirect(url_for('visualisations_options'))
     
-# @app.route('/generate_multi_variable_plot', methods=['POST'])
-# def generate_multi_variable_plot_route():
-#     try:
-#         station = request.form['station']
-#         variables = request.form.getlist('variables[]')
-        
-#         if not station or not variables:
-#             flash('Veuillez sélectionner une station et au moins une variable', 'error')
-#             return redirect(url_for('visualisations_options'))
-
-#         # fig = generate_multi_variable_station_plot(
-#         #     df=GLOBAL_PROCESSED_DATA_DF,
-#         #     station=station,
-#         #     colors=PALETTE_DEFAUT,
-#         #     metadata=METADATA_VARIABLES
-#         # )
-
-#         # Dans la route generate_multi_variable_plot_route
-#         fig = generate_multi_variable_station_plot(
-#             df=GLOBAL_PROCESSED_DATA_DF,
-#             station=station,
-#             colors=PALETTE_DEFAUT,
-#             metadata=METADATA_VARIABLES
-#         )
-        
-#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
-        
-#         return render_template('plot_display.html',
-#                             plot_html=plot_html,
-#                             title=f"Graphique multi-variables pour {station}")
-    
-#     except Exception as e:
-#         flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
-#         return redirect(url_for('visualisations_options'))
-
 @app.route('/generate_multi_variable_plot_route', methods=['POST'])
 def generate_multi_variable_plot_route():
     try:
         station = request.form['station']
         variables = request.form.getlist('variables[]')
-        periode = request.form.get('periode', 'Brutes')  # Par défaut 'Brutes' si non spécifié
+        periode = request.form.get('periode', 'Brutes')
         
         fig = generate_multi_variable_station_plot(
             df=GLOBAL_PROCESSED_DATA_DF,
@@ -8189,52 +8625,17 @@ def reset_data():
             flash(f"Erreur lors de la suppression de {file_path}: {str(e)}", 'warning')
     
     flash('Données réinitialisées avec succès', 'success')
-    return redirect(url_for('index'))
+    return jsonify({'status': 'success'})
 
-
-
-# @app.route('/statistiques')
-# def statistiques():
-#     try:
-#         variable = request.args.get('variable')
-        
-#         if not variable or variable not in GLOBAL_PROCESSED_DATA_DF.columns:
-#             flash('Variable invalide', 'error')
-#             return redirect(url_for('visualisations_options'))
-
-#         # Génération de la figure avec Plotly
-#         fig = generate_daily_stats_plot_plotly(GLOBAL_PROCESSED_DATA_DF, variable)
-        
-#         if not fig:
-#             flash('Erreur lors de la génération des statistiques', 'error')
-#             return redirect(url_for('visualisations_options'))
-
-#         # Conversion en HTML
-#         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
-
-#         var_meta = METADATA_VARIABLES.get(variable, {'Nom': variable, 'Unite': ''})
-#         return render_template('statistiques.html',
-#                             variable_name=var_meta.get('Nom', variable),
-#                             unit=var_meta.get('Unite', ''),
-#                             plot_html=plot_html)
-
-#     except Exception as e:
-#         app.logger.error(f"ERREUR dans /statistiques: {str(e)}")
-#         traceback.print_exc()
-#         flash('Erreur technique lors de la génération des statistiques', 'error')
-#         return redirect(url_for('visualisations_options'))
-
-
-@app.route('/statistiques')
+@app.route('/statistiques', methods=['GET', 'POST'])
 def statistiques():
     try:
-        variable = request.args.get('variable')
+        variable = request.args.get('variable') if request.method == 'GET' else request.form.get('variable')
         
         if not variable or variable not in GLOBAL_PROCESSED_DATA_DF.columns:
             flash('Variable invalide', 'error')
             return redirect(url_for('visualisations_options'))
 
-        # Génération de la figure avec Plotly en passant CUSTOM_STATION_COLORS
         fig = generate_daily_stats_plot_plotly(
             df=GLOBAL_PROCESSED_DATA_DF, 
             variable=variable,
@@ -8245,21 +8646,20 @@ def statistiques():
             flash('Erreur lors de la génération des statistiques', 'error')
             return redirect(url_for('visualisations_options'))
 
-        # Conversion en HTML
         plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
 
         var_meta = METADATA_VARIABLES.get(variable, {'Nom': variable, 'Unite': ''})
         return render_template('statistiques.html',
                             variable_name=var_meta.get('Nom', variable),
                             unit=var_meta.get('Unite', ''),
-                            plot_html=plot_html)
+                            plot_html=plot_html,
+                            variable_selectionnee=variable)
 
     except Exception as e:
         app.logger.error(f"ERREUR dans /statistiques: {str(e)}")
         traceback.print_exc()
         flash('Erreur technique lors de la génération des statistiques', 'error')
         return redirect(url_for('visualisations_options'))
-    
-    
+
 if __name__ == '__main__':
     app.run(debug=True)
