@@ -385,6 +385,15 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Crée le conteneur pour les messages JS dynamiques si ce n'est pas déjà fait
+    // Assurez-vous que cet ID n'est pas déjà utilisé pour les messages flash de Flask
+    let jsMessageContainer = document.getElementById('jsMessageContainer');
+    if (!jsMessageContainer) {
+        jsMessageContainer = document.createElement('div');
+        jsMessageContainer.id = 'jsMessageContainer';
+        document.body.prepend(jsMessageContainer);
+    }
+
     // Fonction pour les messages de validation
     function showValidationMessage(elementId, message) {
         const element = document.getElementById(elementId);
@@ -421,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Gestion des dropdowns personnalisés
-    function setupCustomDropdown(toggleId, dropdownId, textId, inputName, isMultiSelect, validationMessageId) { // maxSelection supprimé
+    function setupCustomDropdown(toggleId, dropdownId, textId, inputName, isMultiSelect, validationMessageId) { 
         const toggle = document.getElementById(toggleId);
         const dropdown = document.getElementById(dropdownId);
         const textElement = document.getElementById(textId);
@@ -455,9 +464,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 checkbox.addEventListener('change', function(e) {
                     e.stopPropagation();
                     hideValidationMessage(validationMessageId);
-
-                    // Logique de validation de la limite maxSelection supprimée
-                    
                     updateToggleText();
                     item.classList.toggle('selected', this.checked);
                 });
@@ -536,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Initialisation des dropdowns personnalisés (maxSelection retiré)
+    // Initialisation des dropdowns personnalisés
     setupCustomDropdown('multiVarToggle', 'multiVarDropdown', 'multiVarText', 'variables[]', true, 'multiVarValidationMessage');
     setupCustomDropdown('normVarToggle', 'normVarDropdown', 'normVarText', 'variables[]', true, 'normVarValidationMessage');
     setupCustomDropdown('statVarToggle', 'statVarDropdown', 'statVarText', 'variable', false, 'statVarValidationMessage');
@@ -556,7 +562,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             showValidationMessage('multiVarValidationMessage', 'Sélectionnez au moins une variable');
         }
-        // Pas de vérification de limite maximale ici
     });
 
     document.getElementById('normForm')?.addEventListener('submit', function(e) {
@@ -565,7 +570,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             showValidationMessage('normVarValidationMessage', 'Sélectionnez au moins une variable');
         }
-        // Pas de vérification de limite maximale ici
     });
 
     document.getElementById('statVarForm')?.addEventListener('submit', function(e) {
@@ -582,53 +586,51 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Gestion du bouton de réinitialisation
-    // *** MODIFICATION CLÉ ICI : Utiliser 'systemMessages' au lieu de 'jsMessageContainer' ***
-    // 'systemMessages' est le conteneur de messages déjà défini dans base.html
-    const jsMessageContainer = document.getElementById('systemMessages');
-
-    // J'ai intégré la fonction showDynamicMessage directement, mais vous pouvez aussi utiliser la fonction showMessage de base.html si elle est suffisante.
-    // Pour les besoins de la confirmation et du spinner, une fonction dédiée ici est plus pratique.
-    function showDynamicMessage(message, type = 'danger') {
+    // Fonction pour afficher des messages dynamiques (utilisée pour la confirmation et les messages de fetch)
+    function showDynamicMessage(messageHtml, type = 'info', autoHide = true) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
-        messageDiv.innerHTML = `
-            <span>${message}</span>
-            <span class="message-close" onclick="this.parentElement.remove()">&times;</span>
-        `;
-        // Utilise prepend pour que les nouveaux messages s'affichent en haut
+        messageDiv.innerHTML = `<div class="message-content">${messageHtml}</div><span class="message-close">&times;</span>`;
+        
+        const closeButton = messageDiv.querySelector('.message-close');
+        if (closeButton) {
+            closeButton.addEventListener('click', () => messageDiv.remove());
+        }
+
         jsMessageContainer.prepend(messageDiv); 
 
-        // Auto-fermeture pour les messages d'info/danger/success, mais pas pour la confirmation
-        if (type !== 'warning') { // La confirmation est de type 'warning' et gère sa propre fermeture
+        if (autoHide && type !== 'warning') { // 'warning' type is for confirmation and manually closed
             setTimeout(() => {
-                if (messageDiv.parentElement) {
-                    messageDiv.remove();
-                }
-            }, 5000);
+                messageDiv.style.opacity = 0;
+                messageDiv.style.transform = 'translateY(-20px)';
+                messageDiv.addEventListener('transitionend', () => messageDiv.remove(), {once: true});
+            }, 5000); // Message disappears after 5 seconds
         }
-        return messageDiv; // Retourne l'élément créé pour pouvoir le manipuler (ex: le supprimer)
+        return messageDiv;
     }
 
+    // Gère le clic sur le bouton de réinitialisation
     document.getElementById('resetBtn')?.addEventListener('click', function(e) {
         e.preventDefault();
         
-        // Supprime les confirmations existantes pour éviter les doublons si on clique plusieurs fois
+        // Supprime les confirmations existantes pour éviter les doublons
         const existingConfirmations = jsMessageContainer.querySelectorAll('.message.warning');
         existingConfirmations.forEach(msg => msg.remove());
 
-        // Affiche la confirmation en utilisant la fonction showDynamicMessage
+        // Affiche la boîte de dialogue de confirmation (avec des boutons dans le message HTML)
         const confirmationMessageDiv = showDynamicMessage(
             `<p class="text-base font-medium text-gray-700">Êtes-vous sûr de vouloir réinitialiser toutes les données ? Cette action est irréversible.</p>
             <div class="mt-4 flex justify-end gap-3">
                 <button class="px-3 py-1 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="cancelReset">Annuler</button>
                 <button class="px-3 py-1 text-sm font-medium rounded-md border border-transparent bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" id="confirmReset">Confirmer</button>
             </div>`,
-            'warning' // Utilise le type 'warning' pour la confirmation
+            'warning', // Utilise le type 'warning' pour une confirmation, ne s'auto-ferme pas
+            false // Important: ne s'auto-ferme PAS
         );
 
-        // Les écouteurs d'événements doivent être attachés *après* que les boutons sont dans le DOM
-        setTimeout(() => { // Un petit délai pour s'assurer que les boutons sont rendus
+        // Attache les écouteurs d'événements aux boutons de la confirmation
+        // Un petit délai est ajouté pour s'assurer que les boutons sont bien dans le DOM
+        setTimeout(() => { 
             const cancelReset = confirmationMessageDiv.querySelector('#cancelReset');
             const confirmReset = confirmationMessageDiv.querySelector('#confirmReset');
             
@@ -641,36 +643,51 @@ document.addEventListener('DOMContentLoaded', function() {
             if (confirmReset) {
                 confirmReset.addEventListener('click', () => {
                     confirmationMessageDiv.remove(); // Supprime le message de confirmation
-                    const loadingMessageDiv = showDynamicMessage('<i class="fas fa-spinner fa-spin mr-2"></i> Réinitialisation en cours...', 'info');
+                    // Affiche le message de chargement
+                    const loadingMessageDiv = showDynamicMessage('<i class="fas fa-spinner fa-spin mr-2"></i> Réinitialisation en cours...', 'info', false);
 
                     fetch("{{ url_for('reset_data') }}", {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest' // Indique que c'est une requête AJAX
                         }
                     })
                     .then(response => {
                         loadingMessageDiv.remove(); // Supprime le message de chargement
+
+                        // Si le serveur a initié une redirection HTTP 302/303 (rare pour AJAX, mais géré)
                         if (response.redirected) {
-                            window.location.href = response.url; // Redirection si le backend le demande
-                        } else {
-                            // Si ce n'est pas une redirection, attendez une réponse JSON
-                            return response.json().then(data => {
-                                if (response.ok) { // Vérifie si la réponse HTTP est OK (2xx)
-                                    showDynamicMessage(data.message || 'Données réinitialisées avec succès.', 'success');
-                                    // Optionnel: Recharger la page après un succès sans redirection explicite
-                                    // setTimeout(() => window.location.reload(), 1500); 
-                                } else {
-                                    throw new Error(data.message || 'Erreur lors de la réinitialisation.');
-                                }
-                            }).catch(jsonError => {
-                                // Gère les erreurs de parsing JSON ou les erreurs de logique du backend
-                                showDynamicMessage(`Erreur de traitement: ${jsonError.message}`, 'danger');
-                            });
+                            console.log("Server initiated HTTP redirection. Following response.url:", response.url);
+                            showDynamicMessage('Redirection automatique en cours...', 'info'); 
+                            setTimeout(() => {
+                                window.location.href = response.url;
+                            }, 500); // Laisse 0.5s pour voir le message
+                            return; // Arrête le traitement de la promesse
                         }
+
+                        // Tente de parser la réponse JSON du serveur
+                        return response.json().then(data => {
+                            if (response.ok) { // Vérifie le statut HTTP (200-299) pour le succès
+                                showDynamicMessage(data.message || 'Données réinitialisées avec succès.', 'success');
+                                // REDIRECTION PRINCIPALE : Après un succès, redirige TOUJOURS vers l'index
+                                setTimeout(() => {
+                                    window.location.href = data.redirect_url || "{{ url_for('index') }}";
+                                }, 1500); // Laisse 1.5 secondes pour que l'utilisateur voie le message de succès
+                            } else {
+                                // Si le statut HTTP indique une erreur (ex: 4xx, 5xx)
+                                throw new Error(data.message || 'Une erreur est survenue lors de la réinitialisation.');
+                            }
+                        }).catch(jsonError => {
+                            // Erreur lors du parsing JSON ou erreur lancée depuis le bloc .then(data => ...)
+                            console.error('JSON parse or logic error:', jsonError);
+                            showDynamicMessage(`Erreur de traitement: ${jsonError.message}`, 'danger');
+                        });
                     })
                     .catch(error => {
-                        loadingMessageDiv.remove(); // S'assure que le message de chargement est supprimé en cas d'erreur réseau
+                        // Gère les erreurs réseau (pas de connexion, timeout, etc.)
+                        loadingMessageDiv.remove(); // S'assure que le message de chargement est supprimé
+                        console.error('Fetch network error:', error);
                         showDynamicMessage(`Échec de la réinitialisation: ${error.message}`, 'danger');
                     });
                 });
