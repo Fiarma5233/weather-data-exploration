@@ -2,11 +2,10 @@
 
 {% block extra_css %}
 <style>
-    /* Nouveau style pour le conteneur principal en pleine largeur */
     .container-fluid {
         width: 100%;
-        padding-right: 15px; /* Ajoutez un peu de padding si nécessaire */
-        padding-left: 15px;  /* Ajoutez un peu de padding si nécessaire */
+        padding-right: 15px;
+        padding-left: 15px;
         margin-right: auto;
         margin-left: auto;
     }
@@ -20,8 +19,7 @@
         flex-shrink: 0;
     }
     
-    /* Styles pour les selects standard avec flèche ▼ (via JS maintenant) */
-    .custom-select-wrapper { /* Nouveau wrapper ajouté par JS */
+    .custom-select-wrapper {
         position: relative;
         width: 100%;
     }
@@ -31,7 +29,7 @@
         -webkit-appearance: none;
         -moz-appearance: none;
         width: 100%;
-        padding: 0.5rem 2.5rem 0.5rem 1rem; /* Espace pour la flèche */
+        padding: 0.5rem 2.5rem 0.5rem 1rem;
         background: white;
         border: 1px solid #d1d5db;
         border-radius: 0.375rem;
@@ -39,14 +37,14 @@
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
 
-    .custom-select-wrapper .select-arrow { /* Flèche ajoutée par JS */
+    .custom-select-wrapper .select-arrow {
         position: absolute;
         right: 0.75rem;
         top: 50%;
         transform: translateY(-50%);
-        pointer-events: none; /* Important pour que le clic passe au select */
-        color: #6b7280; /* Couleur de la flèche */
-        font-size: 0.75rem; /* Taille de la flèche */
+        pointer-events: none;
+        color: #6b7280;
+        font-size: 0.75rem;
     }
     
     .dropdown-container {
@@ -67,7 +65,6 @@
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
     
-    /* Flèche ▼ pour les dropdowns personnalisés */
     .dropdown-toggle:after {
         content: "▼"; 
         font-size: 0.75rem;
@@ -139,27 +136,10 @@
         border-radius: 0.375rem 0.375rem 0 0;
         color: white;
     }
-    
-    .message {
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        animation: fadeIn 0.3s ease-out;
-        display: flex;
-        flex-direction: column;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
 </style>
 {% endblock %}
 
 {% block content %}
-{# Changement de 'container mx-auto' à 'container-fluid' #}
 <div class="container-fluid px-4 py-6">
     <div class="flex justify-between mb-6">
         <a href="{{ url_for('data_preview') }}" class="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-600 rounded hover:bg-blue-600 hover:text-white transition">
@@ -176,7 +156,6 @@
         </h1>
     </div>
 
-    {# La grille prendra automatiquement toute la largeur disponible #}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="bg-white rounded-lg shadow-md p-4">
             <div class="card-header bg-blue-600">
@@ -229,7 +208,7 @@
                 </div>
                 
                 <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2">Variables à visualiser</label> {# "max 5" supprimé #}
+                    <label class="block text-sm font-medium mb-2">Variables à visualiser</label>
                     <div class="dropdown-container">
                         <button type="button" class="dropdown-toggle" id="multiVarToggle">
                             <span id="multiVarText">Sélectionner les variables</span>
@@ -238,7 +217,7 @@
                             {% for var in variables %}
                             <div class="dropdown-item">
                                 <input type="checkbox" name="variables[]" value="{{ var }}" 
-                                       id="mv-var-{{ loop.index }}" class="mr-2 variable-check"> {# data-max="5" supprimé #}
+                                       id="mv-var-{{ loop.index }}" class="mr-2 variable-check">
                                 <label for="mv-var-{{ loop.index }}" class="flex items-center cursor-pointer">
                                     <span class="color-indicator" style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
                                     <span>{{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}</span>
@@ -338,7 +317,7 @@
                 </div>
                 
                 <div class="mb-4">
-                    <label class="block text-sm font-medium mb-2">Variables à comparer</label> {# "max 10" supprimé #}
+                    <label class="block text-sm font-medium mb-2">Variables à comparer</label>
                     <div class="dropdown-container">
                         <button type="button" class="dropdown-toggle" id="normVarToggle">
                             <span id="normVarText">Sélectionner les variables</span>
@@ -347,7 +326,7 @@
                             {% for var in variables %}
                             <div class="dropdown-item">
                                 <input type="checkbox" name="variables[]" value="{{ var }}" 
-                                       id="norm-var-{{ loop.index }}" class="mr-2 variable-check"> {# data-max="10" supprimé #}
+                                       id="norm-var-{{ loop.index }}" class="mr-2 variable-check">
                                 <label for="norm-var-{{ loop.index }}" class="flex items-center cursor-pointer">
                                     <span class="color-indicator" style="background-color: {{ PALETTE_DEFAUT.get(var, '#666') }}"></span>
                                     <span>{{ METADATA_VARIABLES[var]['Nom'] if var in METADATA_VARIABLES else var }}</span>
@@ -385,15 +364,6 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Crée le conteneur pour les messages JS dynamiques si ce n'est pas déjà fait
-    // Assurez-vous que cet ID n'est pas déjà utilisé pour les messages flash de Flask
-    let jsMessageContainer = document.getElementById('jsMessageContainer');
-    if (!jsMessageContainer) {
-        jsMessageContainer = document.createElement('div');
-        jsMessageContainer.id = 'jsMessageContainer';
-        document.body.prepend(jsMessageContainer);
-    }
-
     // Fonction pour les messages de validation
     function showValidationMessage(elementId, message) {
         const element = document.getElementById(elementId);
@@ -414,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fonction pour ajouter un wrapper et une flèche à un <select> standard
     function wrapSelectWithArrow(selectElementId) {
         const selectElement = document.getElementById(selectElementId);
-        if (selectElement && !selectElement.closest('.custom-select-wrapper')) { // Check if already wrapped
+        if (selectElement && !selectElement.closest('.custom-select-wrapper')) {
             const wrapper = document.createElement('div');
             wrapper.className = 'custom-select-wrapper';
             selectElement.parentNode.insertBefore(wrapper, selectElement);
@@ -423,7 +393,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const arrowSpan = document.createElement('span');
             arrowSpan.className = 'select-arrow';
             const arrowIcon = document.createElement('i');
-            arrowIcon.className = 'fas fa-caret-down'; // Font Awesome icon for down arrow
+            arrowIcon.className = 'fas fa-caret-down';
             arrowSpan.appendChild(arrowIcon);
             wrapper.appendChild(arrowSpan);
         }
@@ -586,113 +556,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Fonction pour afficher des messages dynamiques (utilisée pour la confirmation et les messages de fetch)
-    function showDynamicMessage(messageHtml, type = 'info', autoHide = true) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}`;
-        messageDiv.innerHTML = `<div class="message-content">${messageHtml}</div><span class="message-close">&times;</span>`;
-        
-        const closeButton = messageDiv.querySelector('.message-close');
-        if (closeButton) {
-            closeButton.addEventListener('click', () => messageDiv.remove());
-        }
-
-        jsMessageContainer.prepend(messageDiv); 
-
-        if (autoHide && type !== 'warning') { // 'warning' type is for confirmation and manually closed
-            setTimeout(() => {
-                messageDiv.style.opacity = 0;
-                messageDiv.style.transform = 'translateY(-20px)';
-                messageDiv.addEventListener('transitionend', () => messageDiv.remove(), {once: true});
-            }, 5000); // Message disappears after 5 seconds
-        }
-        return messageDiv;
-    }
-
-    // Gère le clic sur le bouton de réinitialisation
+    // Gestion du bouton de réinitialisation utilisant le système centralisé
     document.getElementById('resetBtn')?.addEventListener('click', function(e) {
         e.preventDefault();
-        
-        // Supprime les confirmations existantes pour éviter les doublons
-        const existingConfirmations = jsMessageContainer.querySelectorAll('.message.warning');
-        existingConfirmations.forEach(msg => msg.remove());
-
-        // Affiche la boîte de dialogue de confirmation (avec des boutons dans le message HTML)
-        const confirmationMessageDiv = showDynamicMessage(
-            `<p class="text-base font-medium text-gray-700">Êtes-vous sûr de vouloir réinitialiser toutes les données ? Cette action est irréversible.</p>
-            <div class="mt-4 flex justify-end gap-3">
-                <button class="px-3 py-1 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="cancelReset">Annuler</button>
-                <button class="px-3 py-1 text-sm font-medium rounded-md border border-transparent bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" id="confirmReset">Confirmer</button>
-            </div>`,
-            'warning', // Utilise le type 'warning' pour une confirmation, ne s'auto-ferme pas
-            false // Important: ne s'auto-ferme PAS
-        );
-
-        // Attache les écouteurs d'événements aux boutons de la confirmation
-        // Un petit délai est ajouté pour s'assurer que les boutons sont bien dans le DOM
-        setTimeout(() => { 
-            const cancelReset = confirmationMessageDiv.querySelector('#cancelReset');
-            const confirmReset = confirmationMessageDiv.querySelector('#confirmReset');
-            
-            if (cancelReset) {
-                cancelReset.addEventListener('click', () => {
-                    confirmationMessageDiv.remove(); // Supprime le message de confirmation
-                });
-            }
-
-            if (confirmReset) {
-                confirmReset.addEventListener('click', () => {
-                    confirmationMessageDiv.remove(); // Supprime le message de confirmation
-                    // Affiche le message de chargement
-                    const loadingMessageDiv = showDynamicMessage('<i class="fas fa-spinner fa-spin mr-2"></i> Réinitialisation en cours...', 'info', false);
-
-                    fetch("{{ url_for('reset_data') }}", {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest' // Indique que c'est une requête AJAX
-                        }
-                    })
-                    .then(response => {
-                        loadingMessageDiv.remove(); // Supprime le message de chargement
-
-                        // Si le serveur a initié une redirection HTTP 302/303 (rare pour AJAX, mais géré)
-                        if (response.redirected) {
-                            console.log("Server initiated HTTP redirection. Following response.url:", response.url);
-                            showDynamicMessage('Redirection automatique en cours...', 'info'); 
-                            setTimeout(() => {
-                                window.location.href = response.url;
-                            }, 500); // Laisse 0.5s pour voir le message
-                            return; // Arrête le traitement de la promesse
-                        }
-
-                        // Tente de parser la réponse JSON du serveur
-                        return response.json().then(data => {
-                            if (response.ok) { // Vérifie le statut HTTP (200-299) pour le succès
-                                showDynamicMessage(data.message || 'Données réinitialisées avec succès.', 'success');
-                                // REDIRECTION PRINCIPALE : Après un succès, redirige TOUJOURS vers l'index
-                                setTimeout(() => {
-                                    window.location.href = data.redirect_url || "{{ url_for('index') }}";
-                                }, 1500); // Laisse 1.5 secondes pour que l'utilisateur voie le message de succès
-                            } else {
-                                // Si le statut HTTP indique une erreur (ex: 4xx, 5xx)
-                                throw new Error(data.message || 'Une erreur est survenue lors de la réinitialisation.');
-                            }
-                        }).catch(jsonError => {
-                            // Erreur lors du parsing JSON ou erreur lancée depuis le bloc .then(data => ...)
-                            console.error('JSON parse or logic error:', jsonError);
-                            showDynamicMessage(`Erreur de traitement: ${jsonError.message}`, 'danger');
-                        });
-                    })
-                    .catch(error => {
-                        // Gère les erreurs réseau (pas de connexion, timeout, etc.)
-                        loadingMessageDiv.remove(); // S'assure que le message de chargement est supprimé
-                        console.error('Fetch network error:', error);
-                        showDynamicMessage(`Échec de la réinitialisation: ${error.message}`, 'danger');
-                    });
-                });
-            }
-        }, 50); // Petit délai pour s'assurer que les boutons sont dans le DOM avant d'attacher les écouteurs
+        MessageSystem.confirmReset(resetData);
     });
 });
 </script>

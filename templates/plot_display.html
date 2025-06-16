@@ -2,61 +2,9 @@
 
 {% block extra_css %}
 <style>
-    /* Style minimal pour les messages */
-    .message {
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        animation: fadeIn 0.3s ease-out;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        align-items: flex-start;
-        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
-        max-width: 350px;
-        width: 100%;
-    }
-
-    .message.success {
-        background-color: #d1e7dd;
-        border-color: #28a745;
-        color: #155724;
-    }
-    .message.error, .message.danger {
-        background-color: #f8d7da;
-        border-color: #dc3545;
-        color: #721c24;
-    }
-    .message.info {
-        background-color: #cce5ff;
-        border-color: #007bff;
-        color: #004085;
-    }
-    .message.warning {
-        background-color: #fff3cd;
-        border-color: #ffc107;
-        color: #856404;
-    }
-
-    .message-content {
-        flex-grow: 1;
-    }
-
-    .message-close {
-        cursor: pointer;
-        align-self: flex-start;
-        font-size: 1.2rem;
-        line-height: 1;
-        margin-left: auto;
-        color: inherit;
-        padding-left: 0.5rem;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
+    /* Style spécifique pour le conteneur du graphique */
+    #plotContainer {
+        min-height: 500px;
     }
 </style>
 {% endblock %}
@@ -82,7 +30,7 @@
     </div>
 
     <div id="plotContainer" class="flex-grow bg-white rounded-lg p-4 md:p-6 lg:p-8 overflow-hidden">
-        <div class="w-full h-full" style="min-height: 500px;">
+        <div class="w-full h-full">
             {{ plot_html|safe }}
         </div>
     </div>
@@ -92,119 +40,32 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // On utilise le conteneur #systemMessages défini dans base.html, pour un affichage centré
-    const jsMessageContainer = document.getElementById('systemMessages');
-
-    // Fonction pour afficher des messages dynamiques centrés
-    function showDynamicMessage(messageHtml, type = 'info', autoHide = true) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}`;
-        messageDiv.innerHTML = `<div class="message-content">${messageHtml}</div><span class="message-close">&times;</span>`;
-        
-        const closeButton = messageDiv.querySelector('.message-close');
-        if (closeButton) {
-            closeButton.addEventListener('click', () => messageDiv.remove());
-        }
-
-        // Ajout du message en haut de la liste (prepend)
-        jsMessageContainer.prepend(messageDiv);
-
-        if (autoHide && type !== 'warning') {
-            setTimeout(() => {
-                messageDiv.style.opacity = 0;
-                messageDiv.style.transform = 'translateY(-20px)';
-                messageDiv.addEventListener('transitionend', () => messageDiv.remove(), {once: true});
-            }, 5000);
-        }
-        return messageDiv;
-    }
-
-    // Gestion du bouton Réinitialiser
+    // Gestion du bouton Réinitialiser utilisant le système centralisé
     document.getElementById('resetBtn')?.addEventListener('click', function(e) {
         e.preventDefault();
-
-        // Supprime les anciennes confirmations
-        const existingConfirmations = jsMessageContainer.querySelectorAll('.message.warning');
-        existingConfirmations.forEach(msg => msg.remove());
-
-        // Affiche confirmation de réinitialisation
-        const confirmationMessageDiv = showDynamicMessage(
-            `<p class="text-base font-medium text-gray-700">Êtes-vous sûr de vouloir réinitialiser toutes les données ? Cette action est irréversible.</p>
-            <div class="mt-4 flex justify-end gap-3">
-                <button class="px-3 py-1 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="cancelReset">Annuler</button>
-                <button class="px-3 py-1 text-sm font-medium rounded-md border border-transparent bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" id="confirmReset">Confirmer</button>
-            </div>`,
-            'warning', 
-            false
-        );
-
-        setTimeout(() => {
-            const cancelResetBtn = confirmationMessageDiv.querySelector('#cancelReset');
-            const confirmResetBtn = confirmationMessageDiv.querySelector('#confirmReset');
-
-            if (cancelResetBtn) {
-                cancelResetBtn.addEventListener('click', () => confirmationMessageDiv.remove());
-            }
-
-            if (confirmResetBtn) {
-                confirmResetBtn.addEventListener('click', () => {
-                    confirmationMessageDiv.remove();
-                    const loadingMessageDiv = showDynamicMessage('<i class="fas fa-spinner fa-spin mr-2"></i> Réinitialisation en cours...', 'info', false);
-
-                    fetch("{{ url_for('reset_data') }}", {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => {
-                        loadingMessageDiv.remove();
-
-                        if (response.redirected) {
-                            showDynamicMessage('Redirection automatique en cours...', 'info');
-                            setTimeout(() => window.location.href = response.url, 500);
-                            return;
-                        }
-
-                        return response.json().then(data => {
-                            if (response.ok) {
-                                showDynamicMessage(data.message || 'Données réinitialisées avec succès.', 'success');
-                                setTimeout(() => {
-                                    window.location.href = data.redirect_url || "{{ url_for('index') }}";
-                                }, 1500);
-                            } else {
-                                throw new Error(data.message || 'Erreur lors de la réinitialisation.');
-                            }
-                        }).catch(err => {
-                            showDynamicMessage(`Erreur : ${err.message}`, 'danger');
-                        });
-                    })
-                    .catch(err => {
-                        loadingMessageDiv.remove();
-                        showDynamicMessage(`Échec : ${err.message}`, 'danger');
-                    });
-                });
-            }
-        }, 50);
+        MessageSystem.confirmReset(resetData);
     });
 
     // Gestion redimensionnement Plotly
     const plotContainer = document.getElementById('plotContainer');
     const plotlyGraphDiv = plotContainer.querySelector('.js-plotly-plot');
+    
     if (plotlyGraphDiv) {
         let resizeTimeout;
         window.addEventListener('resize', function() {
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(function() {
-                Plotly.relayout(plotlyGraphDiv.id, {
-                    'autosize': true,
-                    'width': plotContainer.offsetWidth,
-                    'height': plotContainer.offsetHeight
-                });
+                if (typeof Plotly !== 'undefined') {
+                    Plotly.relayout(plotlyGraphDiv.id, {
+                        'autosize': true,
+                        'width': plotContainer.offsetWidth,
+                        'height': plotContainer.offsetHeight
+                    });
+                }
             }, 250);
         });
 
+        // Redimensionnement initial
         if (typeof Plotly !== 'undefined') {
             Plotly.relayout(plotlyGraphDiv.id, {
                 'autosize': true,

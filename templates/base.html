@@ -8,25 +8,37 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* Styles de base pour les messages */
+        /* Styles unifiés pour les messages */
+        #systemMessages {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: 100%;
+            max-width: 600px;
+            pointer-events: none;
+        }
+
         .message {
             padding: 1rem;
-            margin-bottom: 1rem;
+            margin: 0.5rem;
             border-radius: 0.5rem;
             border-left: 4px solid;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             animation: fadeIn 0.3s ease-out;
             display: flex;
             flex-direction: column;
-            max-width: 500px;
-            margin-left: auto;
-            margin-right: auto;
+            pointer-events: auto;
+            width: calc(100% - 1rem);
+            box-sizing: border-box;
         }
         
         .message-close {
             cursor: pointer;
             margin-left: auto;
             font-weight: bold;
+            padding-left: 0.5rem;
         }
         
         .message.error { background-color: #fee2e2; border-color: #ef4444; color: #b91c1c; }
@@ -35,8 +47,25 @@
         .message.info { background-color: #dbeafe; border-color: #3b82f6; color: #1e40af; }
         
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
+            from { opacity: 0; transform: translateY(-20px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        .fade-out {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+
+        /* Style spécifique pour la confirmation de réinitialisation */
+        .reset-confirmation-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
         }
     </style>
     
@@ -48,21 +77,8 @@
     {% endblock %}
 
     <div class="p-4">
-        <!-- Messages centrés -->
-        <div id="systemMessages" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 space-y-2 text-center">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="message {{ category }}" data-autoclose>
-                            <div class="flex justify-between items-start">
-                                <div>{{ message|safe }}</div>
-                                <span class="message-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
-                            </div>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        </div>
+        <!-- Conteneur central pour tous les messages -->
+        <div id="systemMessages"></div>
 
         {% block content %}{% endblock %}
     </div>
@@ -72,62 +88,149 @@
     {% endblock %}
 
     <script>
-    // Fonction JS pour afficher dynamiquement un message
-    function showMessage(message, category = 'info', autoClose = true) {
-        const container = document.getElementById('systemMessages');
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${category}`;
-        if (autoClose) messageDiv.dataset.autoclose = true;
+    // Système centralisé de gestion des messages
+    const MessageSystem = {
+        /**
+         * Affiche un message
+         * @param {string} content - Contenu du message
+         * @param {string} category - Type de message (info, success, warning, error)
+         * @param {boolean} autoClose - Si true, le message se ferme automatiquement après 5s
+         */
+        show: function(content, category = 'info', autoClose = true) {
+            const container = document.getElementById('systemMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${category}`;
+            
+            messageDiv.innerHTML = `
+                <div class="flex justify-between items-start">
+                    <div>${content}</div>
+                    <span class="message-close" onclick="MessageSystem.close(this.parentElement.parentElement)">&times;</span>
+                </div>
+            `;
+            
+            container.appendChild(messageDiv);
 
-        messageDiv.innerHTML = `
-            <div class="flex justify-between items-start">
-                <div>${message}</div>
-                <span class="message-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
-            </div>
-        `;
-        container.prepend(messageDiv);
+            if (autoClose) {
+                setTimeout(() => {
+                    MessageSystem.close(messageDiv);
+                }, 5000);
+            }
+            
+            return messageDiv;
+        },
 
-        if (autoClose) {
-            setTimeout(() => {
-                if (messageDiv.parentNode) {
-                    messageDiv.remove();
-                }
-            }, 5000);
+        /**
+         * Affiche une confirmation de réinitialisation
+         * @param {function} confirmCallback - Fonction à exécuter lors de la confirmation
+         */
+        confirmReset: function(confirmCallback) {
+            const container = document.getElementById('systemMessages');
+            
+            // Supprime les confirmations existantes
+            const existing = container.querySelectorAll('.reset-confirmation');
+            existing.forEach(el => MessageSystem.close(el));
+
+            const confirmationDiv = document.createElement('div');
+            confirmationDiv.className = 'message warning reset-confirmation';
+            
+            confirmationDiv.innerHTML = `
+                <div class="text-center">
+                    <p class="font-medium">Êtes-vous sûr de vouloir réinitialiser toutes les données ?</p>
+                    <p class="text-sm mt-1">Cette action est irréversible.</p>
+                    <div class="reset-confirmation-buttons">
+                        <button id="cancelResetBtn" class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 transition">
+                            Annuler
+                        </button>
+                        <button id="confirmResetBtn" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition">
+                            Confirmer
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(confirmationDiv);
+
+            // Gestion des événements
+            document.getElementById('cancelResetBtn').addEventListener('click', () => {
+                MessageSystem.close(confirmationDiv);
+            });
+
+            document.getElementById('confirmResetBtn').addEventListener('click', () => {
+                MessageSystem.close(confirmationDiv);
+                confirmCallback();
+            });
+        },
+
+        /**
+         * Ferme un message avec animation
+         * @param {HTMLElement} element - Élément message à fermer
+         */
+        close: function(element) {
+            if (element && element.parentNode) {
+                element.classList.add('fade-out');
+                setTimeout(() => {
+                    if (element.parentNode) {
+                        element.remove();
+                    }
+                }, 500);
+            }
         }
-    }
+    };
 
-    // Fonction pour afficher une confirmation
-    function showConfirmation(message, confirmCallback, cancelCallback = null) {
-        const container = document.getElementById('systemMessages');
-        const existingConfirmations = container.querySelectorAll('.message.warning');
-        existingConfirmations.forEach(msg => msg.remove());
-
-        const confirmationDiv = document.createElement('div');
-        confirmationDiv.className = 'message warning';
-        
-        confirmationDiv.innerHTML = `
-            <div class="mb-2">${message}</div>
-            <div class="flex justify-end gap-2 mt-2">
-                <button onclick="this.closest('.message').remove(); ${cancelCallback ? cancelCallback : ''}" 
-                        class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">
-                    Annuler
-                </button>
-                <button onclick="this.closest('.message').remove(); ${confirmCallback}" 
-                        class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
-                    Confirmer
-                </button>
-            </div>
-        `;
-        
-        container.prepend(confirmationDiv);
-    }
-
-    // Supprimer automatiquement tous les messages après 5 secondes
-    document.querySelectorAll('.message[data-autoclose]').forEach((msg) => {
-        setTimeout(() => {
-            msg.remove();
-        }, 5000);
+    // Affiche les messages flash au chargement de la page
+    document.addEventListener('DOMContentLoaded', function() {
+        const messages = {{ get_flashed_messages(with_categories=true)|tojson|safe }};
+        messages.forEach(([category, message]) => {
+            MessageSystem.show(message, category);
+        });
     });
+
+    /**
+     * Fonction standard de réinitialisation à utiliser dans les templates
+     */
+    window.resetData = function() {
+        const loadingMessage = MessageSystem.show(
+            '<i class="fas fa-spinner fa-spin mr-2"></i> Réinitialisation en cours...', 
+            'info', 
+            false
+        );
+        
+        fetch("{{ url_for('reset_data') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (response.redirected) {
+                MessageSystem.show('Redirection en cours...', 'info');
+                setTimeout(() => window.location.href = response.url, 500);
+                return;
+            }
+            
+            return response.json().then(data => {
+                if (response.ok) {
+                    MessageSystem.show(
+                        data.message || 'Données réinitialisées avec succès', 
+                        'success'
+                    );
+                    setTimeout(() => {
+                        window.location.href = data.redirect_url || "{{ url_for('index') }}";
+                    }, 1500);
+                } else {
+                    throw new Error(data.message || 'Erreur lors de la réinitialisation');
+                }
+            });
+        })
+        .catch(error => {
+            MessageSystem.close(loadingMessage);
+            MessageSystem.show(
+                'Échec de la réinitialisation: ' + error.message, 
+                'error'
+            );
+        });
+    };
     </script>
 
     {% block extra_js %}{% endblock %}
