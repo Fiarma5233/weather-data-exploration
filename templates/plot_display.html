@@ -1,7 +1,68 @@
 {% extends "base.html" %}
 
+{% block extra_css %}
+<style>
+    /* Style minimal pour les messages */
+    .message {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        animation: fadeIn 0.3s ease-out;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: flex-start;
+        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        max-width: 350px;
+        width: 100%;
+    }
+
+    .message.success {
+        background-color: #d1e7dd;
+        border-color: #28a745;
+        color: #155724;
+    }
+    .message.error, .message.danger {
+        background-color: #f8d7da;
+        border-color: #dc3545;
+        color: #721c24;
+    }
+    .message.info {
+        background-color: #cce5ff;
+        border-color: #007bff;
+        color: #004085;
+    }
+    .message.warning {
+        background-color: #fff3cd;
+        border-color: #ffc107;
+        color: #856404;
+    }
+
+    .message-content {
+        flex-grow: 1;
+    }
+
+    .message-close {
+        cursor: pointer;
+        align-self: flex-start;
+        font-size: 1.2rem;
+        line-height: 1;
+        margin-left: auto;
+        color: inherit;
+        padding-left: 0.5rem;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="h-full flex flex-col"> {# Main container now takes full height and is a flex column #}
+<div class="h-full flex flex-col">
     <div class="flex items-center justify-between flex-wrap gap-4 mb-4 px-4 sm:px-6 lg:px-8">
         <div class="flex-shrink-0">
             <a href="{{ url_for('visualisations_options') }}"
@@ -20,91 +81,117 @@
         <h2 class="text-2xl font-semibold text-gray-800">{{ title }}</h2>
     </div>
 
-    <div id="plotContainer" class="flex-grow bg-white rounded-lg p-4 md:p-6 lg:p-8 overflow-hidden"> {# 'flex-grow' to take remaining space #}
-        {# The Plotly plot itself will handle its dimensions based on its container, which is now full width and adapts height #}
-        <div class="w-full h-full" style="min-height: 500px;"> {# Changed to h-full #}
+    <div id="plotContainer" class="flex-grow bg-white rounded-lg p-4 md:p-6 lg:p-8 overflow-hidden">
+        <div class="w-full h-full" style="min-height: 500px;">
             {{ plot_html|safe }}
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const messageContainer = document.getElementById('jsMessageContainer');
-    const plotContainer = document.getElementById('plotContainer');
+    // On utilise le conteneur #systemMessages défini dans base.html, pour un affichage centré
+    const jsMessageContainer = document.getElementById('systemMessages');
 
-    function showDynamicMessage(message, type = 'danger') {
+    // Fonction pour afficher des messages dynamiques centrés
+    function showDynamicMessage(messageHtml, type = 'info', autoHide = true) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
-        messageDiv.innerHTML = `
-            <span>${message}</span>
-            <span class="message-close" onclick="this.parentElement.remove()">&times;</span>
-        `;
-        messageContainer.appendChild(messageDiv);
+        messageDiv.innerHTML = `<div class="message-content">${messageHtml}</div><span class="message-close">&times;</span>`;
+        
+        const closeButton = messageDiv.querySelector('.message-close');
+        if (closeButton) {
+            closeButton.addEventListener('click', () => messageDiv.remove());
+        }
 
-        setTimeout(() => {
-            if (messageDiv.parentElement) {
-                messageDiv.remove();
-            }
-        }, 5000);
+        // Ajout du message en haut de la liste (prepend)
+        jsMessageContainer.prepend(messageDiv);
+
+        if (autoHide && type !== 'warning') {
+            setTimeout(() => {
+                messageDiv.style.opacity = 0;
+                messageDiv.style.transform = 'translateY(-20px)';
+                messageDiv.addEventListener('transitionend', () => messageDiv.remove(), {once: true});
+            }, 5000);
+        }
+        return messageDiv;
     }
 
-    document.getElementById('resetBtn').addEventListener('click', function() {
-        showDynamicMessage(`
-            <p class="text-base font-medium text-gray-700">Êtes-vous sûr de vouloir réinitialiser toutes les données ?</p>
+    // Gestion du bouton Réinitialiser
+    document.getElementById('resetBtn')?.addEventListener('click', function(e) {
+        e.preventDefault();
+
+        // Supprime les anciennes confirmations
+        const existingConfirmations = jsMessageContainer.querySelectorAll('.message.warning');
+        existingConfirmations.forEach(msg => msg.remove());
+
+        // Affiche confirmation de réinitialisation
+        const confirmationMessageDiv = showDynamicMessage(
+            `<p class="text-base font-medium text-gray-700">Êtes-vous sûr de vouloir réinitialiser toutes les données ? Cette action est irréversible.</p>
             <div class="mt-4 flex justify-end gap-3">
                 <button class="px-3 py-1 text-sm font-medium rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="cancelReset">Annuler</button>
                 <button class="px-3 py-1 text-sm font-medium rounded-md border border-transparent bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" id="confirmReset">Confirmer</button>
-            </div>
-        `, 'warning');
+            </div>`,
+            'warning', 
+            false
+        );
 
         setTimeout(() => {
-            const cancelResetBtn = document.getElementById('cancelReset');
-            const confirmResetBtn = document.getElementById('confirmReset');
+            const cancelResetBtn = confirmationMessageDiv.querySelector('#cancelReset');
+            const confirmResetBtn = confirmationMessageDiv.querySelector('#confirmReset');
 
             if (cancelResetBtn) {
-                cancelResetBtn.addEventListener('click', () => {
-                    messageContainer.lastChild.remove();
-                });
+                cancelResetBtn.addEventListener('click', () => confirmationMessageDiv.remove());
             }
 
             if (confirmResetBtn) {
                 confirmResetBtn.addEventListener('click', () => {
-                    messageContainer.lastChild.remove();
-                    showDynamicMessage('<i class="fas fa-spinner fa-spin mr-2"></i> Réinitialisation en cours...', 'info');
+                    confirmationMessageDiv.remove();
+                    const loadingMessageDiv = showDynamicMessage('<i class="fas fa-spinner fa-spin mr-2"></i> Réinitialisation en cours...', 'info', false);
 
                     fetch("{{ url_for('reset_data') }}", {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (messageContainer.lastChild && messageContainer.lastChild.querySelector('.fa-spinner')) {
-                             messageContainer.lastChild.remove();
+                    .then(response => {
+                        loadingMessageDiv.remove();
+
+                        if (response.redirected) {
+                            showDynamicMessage('Redirection automatique en cours...', 'info');
+                            setTimeout(() => window.location.href = response.url, 500);
+                            return;
                         }
 
-                        if(data.success) {
-                            showDynamicMessage(`<i class="fas fa-check-circle mr-2"></i> ${data.message || 'Réinitialisation réussie'}`, 'success');
-                            setTimeout(() => window.location.reload(), 2000);
-                        } else {
-                            showDynamicMessage(`<i class="fas fa-exclamation-circle mr-2"></i> ${data.message || 'Erreur lors de la réinitialisation'}`, 'danger');
-                        }
+                        return response.json().then(data => {
+                            if (response.ok) {
+                                showDynamicMessage(data.message || 'Données réinitialisées avec succès.', 'success');
+                                setTimeout(() => {
+                                    window.location.href = data.redirect_url || "{{ url_for('index') }}";
+                                }, 1500);
+                            } else {
+                                throw new Error(data.message || 'Erreur lors de la réinitialisation.');
+                            }
+                        }).catch(err => {
+                            showDynamicMessage(`Erreur : ${err.message}`, 'danger');
+                        });
                     })
-                    .catch(error => {
-                        if (messageContainer.lastChild && messageContainer.lastChild.querySelector('.fa-spinner')) {
-                             messageContainer.lastChild.remove();
-                        }
-                        showDynamicMessage(`<i class="fas fa-exclamation-circle mr-2"></i> Erreur réseau: ${error.message}`, 'danger');
+                    .catch(err => {
+                        loadingMessageDiv.remove();
+                        showDynamicMessage(`Échec : ${err.message}`, 'danger');
                     });
                 });
             }
-        }, 10);
+        }, 50);
     });
 
+    // Gestion redimensionnement Plotly
+    const plotContainer = document.getElementById('plotContainer');
     const plotlyGraphDiv = plotContainer.querySelector('.js-plotly-plot');
-
     if (plotlyGraphDiv) {
         let resizeTimeout;
         window.addEventListener('resize', function() {
@@ -113,16 +200,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 Plotly.relayout(plotlyGraphDiv.id, {
                     'autosize': true,
                     'width': plotContainer.offsetWidth,
-                    'height': plotContainer.offsetHeight // Also pass the height
+                    'height': plotContainer.offsetHeight
                 });
             }, 250);
         });
-        // Initial resize on load
-        Plotly.relayout(plotlyGraphDiv.id, {
-            'autosize': true,
-            'width': plotContainer.offsetWidth,
-            'height': plotContainer.offsetHeight // Initial height
-        });
+
+        if (typeof Plotly !== 'undefined') {
+            Plotly.relayout(plotlyGraphDiv.id, {
+                'autosize': true,
+                'width': plotContainer.offsetWidth,
+                'height': plotContainer.offsetHeight
+            });
+        } else {
+            console.warn("Plotly non défini, vérifiez l'ordre de chargement.");
+        }
     }
 });
 </script>

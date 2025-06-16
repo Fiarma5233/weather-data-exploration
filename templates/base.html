@@ -18,6 +18,9 @@
             animation: fadeIn 0.3s ease-out;
             display: flex;
             flex-direction: column;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
         }
         
         .message-close {
@@ -45,7 +48,8 @@
     {% endblock %}
 
     <div class="p-4">
-        <div id="systemMessages" class="fixed top-4 right-4 z-50 space-y-2"> 
+        <!-- Messages centrés -->
+        <div id="systemMessages" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 space-y-2 text-center">
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
@@ -68,21 +72,21 @@
     {% endblock %}
 
     <script>
-    // Fonctions de base pour la gestion des messages
+    // Fonction JS pour afficher dynamiquement un message
     function showMessage(message, category = 'info', autoClose = true) {
         const container = document.getElementById('systemMessages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${category}`;
         if (autoClose) messageDiv.dataset.autoclose = true;
-        
+
         messageDiv.innerHTML = `
             <div class="flex justify-between items-start">
                 <div>${message}</div>
                 <span class="message-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
             </div>
         `;
-        container.prepend(messageDiv); // Utilise prepend pour que les nouveaux messages soient en haut
-        
+        container.prepend(messageDiv);
+
         if (autoClose) {
             setTimeout(() => {
                 if (messageDiv.parentNode) {
@@ -92,9 +96,9 @@
         }
     }
 
+    // Fonction pour afficher une confirmation
     function showConfirmation(message, confirmCallback, cancelCallback = null) {
         const container = document.getElementById('systemMessages');
-        // Supprime les confirmations existantes pour éviter les doublons
         const existingConfirmations = container.querySelectorAll('.message.warning');
         existingConfirmations.forEach(msg => msg.remove());
 
@@ -117,6 +121,13 @@
         
         container.prepend(confirmationDiv);
     }
+
+    // Supprimer automatiquement tous les messages après 5 secondes
+    document.querySelectorAll('.message[data-autoclose]').forEach((msg) => {
+        setTimeout(() => {
+            msg.remove();
+        }, 5000);
+    });
     </script>
 
     {% block extra_js %}{% endblock %}
