@@ -32,7 +32,7 @@ from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTE
 
 app = Flask(__name__)
 app.secret_key = 'votre_cle_secrete_ici' # Utilisez une clé secrète forte en production
-app.config['MAX_CONTENT_LENGTH'] = 1000 * 1024 * 1024 # Limite de taille des fichiers à 64 Mo
+app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024 # Limite de taille des fichiers à 64 Mo
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['STATIC_FOLDER'] = 'static'
 
