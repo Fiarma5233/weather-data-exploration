@@ -80,24 +80,24 @@
     <!-- Barre d'en-tête avec boutons -->
     <div class="flex items-center justify-between flex-wrap gap-4 mb-4">
         <!-- Bouton Retour -->
-        <a href="{{ url_for('visualisations_options') }}" 
+        <a href="{{ url_for('visualisations_options') }}"
            class="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-600 rounded-md shadow-sm text-sm font-medium hover:bg-blue-600 hover:text-white transition-colors duration-200 ease-in-out">
             <i class="fas fa-arrow-left mr-2"></i>
-            <span class="ml-1 hidden sm:inline">Retour</span>
+            <span class="ml-1 hidden sm:inline">{{ _('Retour') }}</span>
         </a>
-        
+
         <!-- Bouton Réinitialiser -->
-        <button id="reset-btn" 
+        <button id="reset-btn"
                 class="inline-flex items-center px-4 py-2 border border-red-600 text-red-600 rounded-md shadow-sm text-sm font-medium hover:bg-red-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200 ease-in-out">
             <i class="fas fa-redo mr-2"></i>
-            <span class="ml-1 hidden sm:inline">Réinitialiser</span>
+            <span class="ml-1 hidden sm:inline">{{ _('Réinitialiser') }}</span>
         </button>
     </div>
 
     <!-- Titre principal -->
     <div class="text-center mb-6">
         <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
-            <i class="fas fa-chart-line mr-2"></i>Statistiques : {{ variable_name }}
+            <i class="fas fa-chart-line mr-2"></i>{{ _('Statistiques :') }} {{ variable_name }}
         </h1>
     </div>
 
@@ -110,8 +110,8 @@
                 <div class="no-data-alert">
                     <i class="fas fa-exclamation-triangle mr-3 text-2xl"></i>
                     <div>
-                        <h5 class="font-bold mb-1">Aucune donnée disponible</h5>
-                        <p class="text-sm">Il n'y a pas de données à afficher pour cette variable.</p>
+                        <h5 class="font-bold mb-1">{{ _('Aucune donnée disponible') }}</h5>
+                        <p class="text-sm">{{ _('Il n\'y a pas de données à afficher pour cette variable.') }}</p>
                     </div>
                 </div>
             </div>
@@ -124,26 +124,26 @@
         <div class="stats-card">
             <div class="stats-header">
                 <h5 class="text-lg font-semibold text-gray-700">
-                    <i class="fas fa-calculator mr-2"></i>Statistiques descriptives
+                    <i class="fas fa-calculator mr-2"></i>{{ _('Statistiques descriptives') }}
                 </h5>
-                <p class="text-gray-500 text-sm">Unité: {{ unit }}</p>
+                <p class="text-gray-500 text-sm">{{ _('Unité :') }} {{ unit }}</p>
             </div>
             <div class="p-6">
                 <div class="stats-grid divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
                     <div class="stat-item">
-                        <h6 class="stat-label">Moyenne</h6>
+                        <h6 class="stat-label">{{ _('Moyenne') }}</h6>
                         <p class="stat-value">{{ stats.mean|round(2) }}</p>
                     </div>
                     <div class="stat-item">
-                        <h6 class="stat-label">Médiane</h6>
+                        <h6 class="stat-label">{{ _('Médiane') }}</h6>
                         <p class="stat-value">{{ stats.median|round(2) }}</p>
                     </div>
                     <div class="stat-item">
-                        <h6 class="stat-label">Écart-type</h6>
+                        <h6 class="stat-label">{{ _('Écart-type') }}</h6>
                         <p class="stat-value">{{ stats.std|round(2) }}</p>
                     </div>
                     <div class="stat-item">
-                        <h6 class="stat-label">Valeurs</h6>
+                        <h6 class="stat-label">{{ _('Valeurs') }}</h6>
                         <p class="stat-value">{{ stats.count }}</p>
                     </div>
                 </div>
@@ -160,12 +160,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const plotContainer = document.querySelector('.plot-container');
 
     // Gestion du clic sur le bouton Réinitialiser
-    document.getElementById('reset-btn')?.addEventListener('click', function(e) {
-        e.preventDefault();
-        MessageSystem.confirmReset(resetData);
-    });
+    const resetButton = document.getElementById('reset-btn');
+    if (resetButton) {
+        resetButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            const message = "{{ _('Voulez-vous vraiment réinitialiser les données ?') }}";
+            MessageSystem.confirmReset(resetData, message);
+        });
+    }
 
-    // Redimensionnement dynamique de Plotly
+    // Redimensionnement dynamique du graphique Plotly
     const plotlyGraphDiv = plotContainer.querySelector('.js-plotly-plot');
     if (plotlyGraphDiv) {
         let resizeTimeout;

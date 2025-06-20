@@ -1,0 +1,624 @@
+# Translations template for PROJECT.
+# Copyright (C) 2025 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-06-20 01:27+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: app.py:1584
+msgid "Aucun fichier reçu."
+msgstr ""
+
+#: app.py:1596
+msgid "Veuillez sélectionner une station pour chaque fichier."
+msgstr ""
+
+#: app.py:1601
+msgid "Nombre de fichiers et de stations incompatible."
+msgstr ""
+
+#: app.py:1609
+#, python-format
+msgid "Fichier '%s' invalide ou non autorisé."
+msgstr ""
+
+#: app.py:1634
+#, python-format
+msgid "Erreur lors du traitement du fichier '%s': %s"
+msgstr ""
+
+#: app.py:1639
+msgid "Aucune donnée valide traitée. Veuillez vérifier vos fichiers."
+msgstr ""
+
+#: app.py:1673
+#, python-format
+msgid ""
+"%(new_rows)s nouvelles lignes traitées pour les stations : "
+"%(stations_added)s"
+msgstr ""
+
+#: app.py:1682
+#, python-format
+msgid "Erreur critique lors du traitement des données : %s"
+msgstr ""
+
+#: app.py:1690 app.py:1866 app.py:1950 app.py:2033
+msgid "Aucune donnée disponible. Veuillez télécharger des fichiers d'abord."
+msgstr ""
+
+#: app.py:1698
+msgid "20 premières lignes"
+msgstr ""
+
+#: app.py:1707
+#, python-format
+msgid "10 lignes × %(stations_count)s stations"
+msgstr ""
+
+#: app.py:1723
+#, python-format
+msgid "%(rows)s lignes × %(cols)s colonnes"
+msgstr ""
+
+#: app.py:1729
+#, python-format
+msgid "Erreur lors de la préparation de l'aperçu : %s"
+msgstr ""
+
+#: app.py:1737
+msgid "Veuillez télécharger des fichiers d'abord pour accéder aux visualisations."
+msgstr ""
+
+#: app.py:1873
+msgid "Veuillez sélectionner une période d'analyse."
+msgstr ""
+
+#: app.py:1882
+msgid "Veuillez sélectionner une variable pour la comparaison."
+msgstr ""
+
+#: app.py:1897
+#, python-format
+msgid "Comparaison de %(variable_name)s (%(period)s)"
+msgstr ""
+
+#: app.py:1908
+msgid "Veuillez sélectionner une station."
+msgstr ""
+
+#: app.py:1912
+msgid "Veuillez sélectionner au moins une variable à visualiser."
+msgstr ""
+
+#: app.py:1924
+#, python-format
+msgid "Évolution des variables pour %(station)s (%(period)s)"
+msgstr ""
+
+#: app.py:1931 app.py:1974
+msgid ""
+"Aucune donnée disponible pour les critères sélectionnés. Veuillez affiner"
+" votre sélection."
+msgstr ""
+
+#: app.py:1941
+#, python-format
+msgid "Erreur lors de la génération du graphique : %s"
+msgstr ""
+
+#: app.py:1959
+msgid ""
+"Veuillez sélectionner une station et au moins une variable pour l'analyse"
+" normalisée."
+msgstr ""
+
+#: app.py:1982
+#, python-format
+msgid "Analyse multi-variables normalisée - %(station)s (%(period)s)"
+msgstr ""
+
+#: app.py:1990
+#, python-format
+msgid "Erreur lors de la génération du graphique normalisé : %s"
+msgstr ""
+
+#: app.py:2014
+msgid ""
+"Toutes les données ont été réinitialisées avec succès. Vous pouvez "
+"maintenant télécharger de nouveaux jeux de données."
+msgstr ""
+
+#: app.py:2022
+#, python-format
+msgid "Erreur lors de la réinitialisation des données : %s"
+msgstr ""
+
+#: app.py:2025
+#, python-format
+msgid "Erreur interne lors de la réinitialisation : %s"
+msgstr ""
+
+#: app.py:2040
+msgid ""
+"Variable invalide ou introuvable. Veuillez sélectionner une variable "
+"valide."
+msgstr ""
+
+#: app.py:2052
+msgid ""
+"Aucune statistique disponible pour cette variable. Veuillez affiner votre"
+" sélection ou vérifier les données."
+msgstr ""
+
+#: app.py:2072
+msgid "Erreur technique lors de la génération des statistiques."
+msgstr ""
+
+#: data_processing.py:7901
+msgid "Le DataFrame doit avoir un DatetimeIndex pour générer le graphique."
+msgstr ""
+
+#: data_processing.py:7975
+#, python-format
+msgid "Évolution des variables pour %(station)s (%(periode)s)"
+msgstr ""
+
+#: data_processing.py:7976 data_processing.py:8049 data_processing.py:8130
+#: data_processing.py:8150
+msgid "Date"
+msgstr ""
+
+#: data_processing.py:7977 templates/statistiques.html:146
+msgid "Valeurs"
+msgstr ""
+
+#: data_processing.py:7979
+msgid "Variables"
+msgstr ""
+
+#: data_processing.py:7995
+msgid ""
+"Le DataFrame doit avoir un DatetimeIndex pour générer le graphique "
+"comparatif."
+msgstr ""
+
+#: data_processing.py:8001
+msgid ""
+"Moins de 2 stations disponibles pour la comparaison. Le graphique "
+"comparatif ne sera pas généré."
+msgstr ""
+
+#: data_processing.py:8048
+#, python-format
+msgid "Comparaison de %(var_label)s (%(var_unit)s) entre stations (%(periode)s)"
+msgstr ""
+
+#: data_processing.py:8052
+msgid "Stations"
+msgstr ""
+
+#: data_processing.py:8062
+msgid "Le DataFrame doit avoir un DatetimeIndex"
+msgstr ""
+
+#: data_processing.py:8070
+msgid "Aucune variable numérique valide trouvée"
+msgstr ""
+
+#: data_processing.py:8131
+msgid "Valeur normalisée"
+msgstr ""
+
+#: data_processing.py:8132
+msgid "Valeur originale"
+msgstr ""
+
+#: data_processing.py:8149
+#, python-format
+msgid "Comparaison normalisée des variables - %(station)s (%(periode)s)"
+msgstr ""
+
+#: data_processing.py:8151
+msgid "Valeur normalisée (0-1)"
+msgstr ""
+
+#: data_processing.py:8175
+msgid "Tout afficher"
+msgstr ""
+
+#: data_processing.py:8180
+msgid "Tout masquer"
+msgstr ""
+
+#: templates/base.html:6 templates/partials/footer.html:5
+#: templates/partials/navbar.html:7
+msgid "Analyse Météo"
+msgstr ""
+
+#: templates/base.html:106
+msgid "Fermer le message"
+msgstr ""
+
+#: templates/base.html:136
+msgid "Êtes-vous sûr de vouloir réinitialiser toutes les données ?"
+msgstr ""
+
+#: templates/base.html:137
+msgid "Cette action est irréversible."
+msgstr ""
+
+#: templates/base.html:138 templates/visualisations_options.html:268
+msgid "Annuler"
+msgstr ""
+
+#: templates/base.html:139
+msgid "Confirmer"
+msgstr ""
+
+#: templates/base.html:199
+msgid "Réinitialisation en cours..."
+msgstr ""
+
+#: templates/base.html:213
+msgid "Redirection en cours..."
+msgstr ""
+
+#: templates/base.html:221
+msgid "Données réinitialisées avec succès"
+msgstr ""
+
+#: templates/base.html:228
+msgid "Erreur lors de la réinitialisation"
+msgstr ""
+
+#: templates/base.html:235
+msgid "Échec de la réinitialisation :"
+msgstr ""
+
+#: templates/index.html:3
+msgid "Accueil - Analyse Météo"
+msgstr ""
+
+#: templates/index.html:98
+msgid "Analyse de Données Météorologiques"
+msgstr ""
+
+#: templates/index.html:110
+msgid "Veuillez charger un ou plusieurs datasets pour commencer l'analyse."
+msgstr ""
+
+#: templates/index.html:119
+msgid "Datasets"
+msgstr ""
+
+#: templates/index.html:134
+msgid "Bassin"
+msgstr ""
+
+#: templates/index.html:138
+msgid "Sélectionnez un bassin"
+msgstr ""
+
+#: templates/index.html:148
+msgid "Station"
+msgstr ""
+
+#: templates/index.html:152 templates/index.html:219 templates/index.html:254
+msgid "Sélectionnez une station"
+msgstr ""
+
+#: templates/index.html:160
+msgid "Fichier de données"
+msgstr ""
+
+#: templates/index.html:172
+msgid "Ajouter un dataset"
+msgstr ""
+
+#: templates/index.html:181
+msgid "Traiter les données"
+msgstr ""
+
+#: templates/index.html:312
+msgid "Veuillez remplir tous les champs obligatoires pour chaque dataset."
+msgstr ""
+
+#: templates/plot_display.html:19 templates/statistiques.html:86
+msgid "Retour"
+msgstr ""
+
+#: templates/plot_display.html:24 templates/statistiques.html:93
+msgid "Réinitialiser"
+msgstr ""
+
+#: templates/plot_display.html:80
+msgid "Plotly non défini, vérifiez l'ordre de chargement."
+msgstr ""
+
+#: templates/preview.html:3
+msgid "Aperçu des Données"
+msgstr ""
+
+#: templates/preview.html:12
+msgid "Retour à l'accueil"
+msgstr ""
+
+#: templates/preview.html:16
+msgid "Aperçu des Données Météorologiques"
+msgstr ""
+
+#: templates/preview.html:22
+msgid "Passer à la visualisation"
+msgstr ""
+
+#: templates/preview.html:33
+msgid "Mode d'affichage:"
+msgstr ""
+
+#: templates/preview.html:37
+msgid "Dimensions du dataset:"
+msgstr ""
+
+#: templates/preview.html:41
+msgid "Nombre de stations:"
+msgstr ""
+
+#: templates/preview.html:45
+msgid "Nombre d'observations:"
+msgstr ""
+
+#: templates/preview.html:63
+msgid "Aucune donnée disponible pour affichage"
+msgstr ""
+
+#: templates/preview.html:64
+msgid "Veuillez charger des données valides pour visualiser le tableau"
+msgstr ""
+
+#: templates/statistiques.html:100
+msgid "Statistiques :"
+msgstr ""
+
+#: templates/statistiques.html:113
+msgid "Aucune donnée disponible"
+msgstr ""
+
+#: templates/statistiques.html:114
+msgid "Il n'y a pas de données à afficher pour cette variable."
+msgstr ""
+
+#: templates/statistiques.html:127
+msgid "Statistiques descriptives"
+msgstr ""
+
+#: templates/statistiques.html:129
+msgid "Unité :"
+msgstr ""
+
+#: templates/statistiques.html:134
+msgid "Moyenne"
+msgstr ""
+
+#: templates/statistiques.html:138
+msgid "Médiane"
+msgstr ""
+
+#: templates/statistiques.html:142
+msgid "Écart-type"
+msgstr ""
+
+#: templates/statistiques.html:167
+msgid "Voulez-vous vraiment réinitialiser les données ?"
+msgstr ""
+
+#: templates/visualisations_options.html:33
+msgid "Retour aux données"
+msgstr ""
+
+#: templates/visualisations_options.html:36
+msgid "Réinitialiser toutes les données"
+msgstr ""
+
+#: templates/visualisations_options.html:42
+msgid "Options de Visualisation"
+msgstr ""
+
+#: templates/visualisations_options.html:50
+msgid "Statistiques par Variable"
+msgstr ""
+
+#: templates/visualisations_options.html:55
+msgid "Variable à analyser"
+msgstr ""
+
+#: templates/visualisations_options.html:58
+#: templates/visualisations_options.html:154
+#: templates/visualisations_options.html:261
+msgid "Choisir une variable"
+msgstr ""
+
+#: templates/visualisations_options.html:74
+msgid "Générer les Statistiques"
+msgstr ""
+
+#: templates/visualisations_options.html:82
+msgid "Graphique Multi-Variables"
+msgstr ""
+
+#: templates/visualisations_options.html:87
+#: templates/visualisations_options.html:198
+msgid "Station météo"
+msgstr ""
+
+#: templates/visualisations_options.html:99
+msgid "Variables à visualiser"
+msgstr ""
+
+#: templates/visualisations_options.html:102
+#: templates/visualisations_options.html:213
+#: templates/visualisations_options.html:262
+msgid "Sélectionner les variables"
+msgstr ""
+
+#: templates/visualisations_options.html:122
+#: templates/visualisations_options.html:171
+#: templates/visualisations_options.html:233
+msgid "Période d'analyse"
+msgstr ""
+
+#: templates/visualisations_options.html:125
+#: templates/visualisations_options.html:174
+#: templates/visualisations_options.html:236
+msgid "Sélectionner une période"
+msgstr ""
+
+#: templates/visualisations_options.html:126
+#: templates/visualisations_options.html:175
+#: templates/visualisations_options.html:237
+msgid "Journalière"
+msgstr ""
+
+#: templates/visualisations_options.html:127
+#: templates/visualisations_options.html:176
+#: templates/visualisations_options.html:238
+msgid "Hebdomadaire"
+msgstr ""
+
+#: templates/visualisations_options.html:128
+#: templates/visualisations_options.html:177
+#: templates/visualisations_options.html:239
+msgid "Mensuelle"
+msgstr ""
+
+#: templates/visualisations_options.html:129
+#: templates/visualisations_options.html:178
+#: templates/visualisations_options.html:240
+msgid "Annuelle"
+msgstr ""
+
+#: templates/visualisations_options.html:136
+msgid "Générer le Graphique"
+msgstr ""
+
+#: templates/visualisations_options.html:144
+msgid "Comparaison entre Stations"
+msgstr ""
+
+#: templates/visualisations_options.html:151
+msgid "Variable à comparer"
+msgstr ""
+
+#: templates/visualisations_options.html:185
+msgid "Comparer les Stations"
+msgstr ""
+
+#: templates/visualisations_options.html:193
+msgid "Analyse Normalisée"
+msgstr ""
+
+#: templates/visualisations_options.html:210
+msgid "Variables à comparer"
+msgstr ""
+
+#: templates/visualisations_options.html:247
+msgid "Générer l'Analyse"
+msgstr ""
+
+#: templates/visualisations_options.html:259
+msgid "Veuillez sélectionner une variable."
+msgstr ""
+
+#: templates/visualisations_options.html:260
+msgid "Veuillez sélectionner au moins une variable."
+msgstr ""
+
+#: templates/visualisations_options.html:263
+msgid "1 variable sélectionnée"
+msgstr ""
+
+#: templates/visualisations_options.html:264
+msgid "variables sélectionnées"
+msgstr ""
+
+#: templates/visualisations_options.html:265
+msgid "Confirmer la réinitialisation"
+msgstr ""
+
+#: templates/visualisations_options.html:266
+msgid ""
+"Êtes-vous sûr de vouloir réinitialiser toutes les données ? Cette action "
+"est irréversible et supprimera toutes les données chargées."
+msgstr ""
+
+#: templates/visualisations_options.html:267
+msgid "Oui, réinitialiser"
+msgstr ""
+
+#: templates/partials/footer.html:7
+msgid "Plateforme d'analyse et de visualisation des données météorologiques."
+msgstr ""
+
+#: templates/partials/footer.html:12
+msgid "Navigation"
+msgstr ""
+
+#: templates/partials/footer.html:14 templates/partials/navbar.html:14
+#: templates/partials/navbar.html:87
+msgid "Accueil"
+msgstr ""
+
+#: templates/partials/footer.html:16 templates/partials/navbar.html:21
+#: templates/partials/navbar.html:93
+msgid "Données"
+msgstr ""
+
+#: templates/partials/footer.html:17 templates/partials/navbar.html:26
+#: templates/partials/navbar.html:97
+msgid "Visualisations"
+msgstr ""
+
+#: templates/partials/footer.html:23
+msgid "Liens utiles"
+msgstr ""
+
+#: templates/partials/footer.html:49
+msgid "Contact"
+msgstr ""
+
+#: templates/partials/footer.html:61
+msgid "Avenue Mouammar Kadhafi"
+msgstr ""
+
+#: templates/partials/footer.html:62
+msgid "Ouaga 2000"
+msgstr ""
+
+#: templates/partials/footer.html:63
+msgid "06BP9507, Ouagadougou."
+msgstr ""
+
+#: templates/partials/footer.html:64
+msgid "Burkina Faso"
+msgstr ""
+
+#: templates/partials/footer.html:71
+msgid "Analyse Météo. Tous droits réservés."
+msgstr ""
+
+#: templates/partials/navbar.html:31 templates/partials/navbar.html:102
+msgid "lignes de données"
+msgstr ""
+

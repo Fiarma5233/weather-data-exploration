@@ -4,70 +4,102 @@
             <div class="flex items-center space-x-4">
                 <a href="{{ url_for('index') }}" class="flex items-center">
                     <i class="fas fa-cloud-sun text-2xl"></i>
-                    <span class="ml-2 text-xl font-semibold">Analyse Météo</span>
+                    <span class="ml-2 text-xl font-semibold">{{ _('Analyse Météo') }}</span>
                 </a>
             </div>
-            
+
             <div class="hidden md:flex items-center space-x-8">
-                <a href="{{ url_for('index') }}" 
+                <a href="{{ url_for('index') }}"
                    class="py-2 px-3 rounded-md {% if request.path == url_for('index') %}bg-indigo-900{% else %}hover:bg-indigo-600{% endif %} transition">
-                    <i class="fas fa-home mr-1"></i> Accueil
+                    <i class="fas fa-home mr-1"></i> {{ _('Accueil') }}
                 </a>
-                
+
                 {% if data_available %}
 
-
-                
-                <a href="{{ url_for('data_preview') }}" 
+                <a href="{{ url_for('data_preview') }}"
                    class="py-2 px-3 rounded-md {% if request.path == url_for('data_preview') %}bg-indigo-900{% else %}hover:bg-indigo-600{% endif %} transition">
-                    <i class="fas fa-table mr-1"></i> Données
+                    <i class="fas fa-table mr-1"></i> {{ _('Données') }}
                 </a>
-                
-                
-                
-                <a href="{{ url_for('visualisations_options') }}" 
+
+                <a href="{{ url_for('visualisations_options') }}"
                    class="py-2 px-3 rounded-md {% if request.path == url_for('visualisations_options') %}bg-indigo-900{% else %}hover:bg-indigo-600{% endif %} transition">
-                    <i class="fas fa-chart-line mr-1"></i> Visualisations
+                    <i class="fas fa-chart-line mr-1"></i> {{ _('Visualisations') }}
                 </a>
-                
+
                 <span class="bg-indigo-800 px-3 py-1 rounded-full text-sm">
                     <i class="fas fa-database mr-1"></i>
-                    {{ GLOBAL_PROCESSED_DATA_DF.shape[0]|number_format }} données
+                    {{ GLOBAL_PROCESSED_DATA_DF.shape[0]|number_format }} {{ _('lignes de données') }}
                 </span>
                 {% endif %}
+
+                <!-- Sélecteur de langue -->
+                <div class="relative inline-block text-left">
+                    <div>
+                        <button type="button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-indigo-700 focus:ring-indigo-500" id="menu-button" aria-expanded="true" aria-haspopup="true">
+                            {{ babel_locale.upper() }}
+                            <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Dropdown menu, show/hide based on menu state. -->
+                    <div class="origin-top-right absolute right-0 mt-2 w-24 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="menu-button" tabindex="-1" id="language-dropdown">
+                        <div class="py-1" role="none">
+                            <a href="{{ url_for('set_language', lang='fr') }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1" id="menu-item-0">Français</a>
+                            <a href="{{ url_for('set_language', lang='en') }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1" id="menu-item-1">English</a>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
+
             <!-- Bouton mobile -->
-            <div class="md:hidden">
+            <div class="md:hidden flex items-center">
+                <!-- Sélecteur de langue mobile -->
+                <div class="relative inline-block text-left mr-4">
+                    <div>
+                        <button type="button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-indigo-700 focus:ring-indigo-500" id="mobile-lang-button" aria-expanded="true" aria-haspopup="true">
+                            {{ babel_locale.upper() }}
+                            <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="origin-top-right absolute right-0 mt-2 w-24 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none hidden" role="menu" aria-orientation="vertical" aria-labelledby="mobile-lang-button" tabindex="-1" id="mobile-language-dropdown">
+                        <div class="py-1" role="none">
+                            <a href="{{ url_for('set_language', lang='fr') }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">Français</a>
+                            <a href="{{ url_for('set_language', lang='en') }}" class="text-gray-700 block px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1">English</a>
+                        </div>
+                    </div>
+                </div>
+
                 <button id="mobile-menu-button" class="text-white focus:outline-none">
                     <i class="fas fa-bars text-2xl"></i>
                 </button>
             </div>
         </div>
     </div>
-    
+
     <!-- Menu mobile -->
     <div id="mobile-menu" class="hidden md:hidden bg-indigo-800 px-4 pb-4">
         <div class="flex flex-col space-y-2">
             <a href="{{ url_for('index') }}" class="py-2 px-3 rounded-md {% if request.path == url_for('index') %}bg-indigo-900{% endif %}">
-                <i class="fas fa-home mr-2"></i> Accueil
+                <i class="fas fa-home mr-2"></i> {{ _('Accueil') }}
             </a>
-            
+
             {% if data_available %}
 
-           
             <a href="{{ url_for('data_preview') }}" class="py-2 px-3 rounded-md {% if request.path == url_for('data_preview') %}bg-indigo-900{% endif %}">
-                <i class="fas fa-table mr-2"></i> Données
+                <i class="fas fa-table mr-2"></i> {{ _('Données') }}
             </a>
-            
-            
+
             <a href="{{ url_for('visualisations_options') }}" class="py-2 px-3 rounded-md {% if request.path == url_for('visualisations_options') %}bg-indigo-900{% endif %}">
-                <i class="fas fa-chart-line mr-2"></i> Visualisations
+                <i class="fas fa-chart-line mr-2"></i> {{ _('Visualisations') }}
             </a>
-            
+
             <div class="py-2 px-3 text-indigo-200">
                 <i class="fas fa-database mr-2"></i>
-                {{ GLOBAL_PROCESSED_DATA_DF.shape[0]|number_format }} données
+                {{ GLOBAL_PROCESSED_DATA_DF.shape[0]|number_format }} {{ _('lignes de données') }}
             </div>
             {% endif %}
         </div>
@@ -79,4 +111,38 @@
         const menu = document.getElementById('mobile-menu');
         menu.classList.toggle('hidden');
     });
+
+    // JavaScript pour le menu déroulant de langue (desktop)
+    const desktopLangButton = document.getElementById('menu-button');
+    const desktopLangDropdown = document.getElementById('language-dropdown');
+
+    if (desktopLangButton && desktopLangDropdown) {
+        desktopLangButton.addEventListener('click', function() {
+            desktopLangDropdown.classList.toggle('hidden');
+        });
+
+        // Cacher le dropdown si l'utilisateur clique en dehors
+        document.addEventListener('click', function(event) {
+            if (!desktopLangButton.contains(event.target) && !desktopLangDropdown.contains(event.target)) {
+                desktopLangDropdown.classList.add('hidden');
+            }
+        });
+    }
+
+    // JavaScript pour le menu déroulant de langue (mobile)
+    const mobileLangButton = document.getElementById('mobile-lang-button');
+    const mobileLangDropdown = document.getElementById('mobile-language-dropdown');
+
+    if (mobileLangButton && mobileLangDropdown) {
+        mobileLangButton.addEventListener('click', function() {
+            mobileLangDropdown.classList.toggle('hidden');
+        });
+
+        // Cacher le dropdown si l'utilisateur clique en dehors
+        document.addEventListener('click', function(event) {
+            if (!mobileLangButton.contains(event.target) && !mobileLangDropdown.contains(event.target)) {
+                mobileLangDropdown.classList.add('hidden');
+            }
+        });
+    }
 </script>

@@ -1,25 +1,25 @@
 {% extends "base.html" %}
 
-{% block title %}Aperçu des Données{% endblock %}
+{% block title %}{{ _('Aperçu des Données') }}{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-6">
     <div class="bg-white rounded-lg shadow overflow-hidden">
         <!-- En-tête avec boutons -->
         <div class="px-6 py-4 border-b flex justify-between items-center">
-            <a href="{{ url_for('index') }}" 
+            <a href="{{ url_for('index') }}"
                class="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-sm font-medium text-blue-600 bg-white hover:bg-blue-600 hover:text-white transition-colors duration-200">
-                <i class="fas fa-arrow-left mr-2"></i> Retour
+                <i class="fas fa-arrow-left mr-2"></i> {{ _('Retour à l\'accueil') }}
             </a>
-            
+
             <h2 class="text-xl font-semibold text-gray-800 text-center">
-                <i class="fas fa-table mr-2 text-blue-500"></i>Aperçu des Données
+                <i class="fas fa-table mr-2 text-blue-500"></i>{{ _('Aperçu des Données Météorologiques') }}
             </h2>
-            
+
             {% if data_available %}
-            <a href="{{ url_for('visualisations_options') }}" 
+            <a href="{{ url_for('visualisations_options') }}"
                class="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-sm font-medium text-blue-600 bg-white hover:bg-blue-600 hover:text-white transition-colors duration-200">
-                <i class="fas fa-chart-line mr-2"></i> Visualiser
+                <i class="fas fa-chart-line mr-2"></i> {{ _('Passer à la visualisation') }}
             </a>
             {% else %}
             <div class="w-24"></div>
@@ -30,19 +30,19 @@
         <div class="px-6 py-4">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                 <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <span class="font-medium block text-blue-600">Mode:</span>
+                    <span class="font-medium block text-blue-600">{{ _('Mode d\'affichage:') }}</span>
                     <span class="text-gray-700">{{ preview_type }}</span>
                 </div>
                 <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <span class="font-medium block text-blue-600">Dimensions:</span>
+                    <span class="font-medium block text-blue-600">{{ _('Dimensions du dataset:') }}</span>
                     <span class="text-gray-700">{{ dataset_shape }}</span>
                 </div>
                 <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <span class="font-medium block text-blue-600">Stations:</span>
+                    <span class="font-medium block text-blue-600">{{ _('Nombre de stations:') }}</span>
                     <span class="text-gray-700">{{ stations_count }}</span>
                 </div>
                 <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <span class="font-medium block text-blue-600">Lignes:</span>
+                    <span class="font-medium block text-blue-600">{{ _('Nombre d\'observations:') }}</span>
                     <span class="text-gray-700">{{ GLOBAL_PROCESSED_DATA_DF.shape[0]|number_format }}</span>
                 </div>
             </div>
@@ -60,7 +60,8 @@
             {% else %}
             <div class="text-center py-8 text-gray-500">
                 <i class="fas fa-exclamation-triangle text-yellow-400 text-2xl mb-2"></i>
-                <p class="text-lg">Aucune donnée à afficher</p>
+                <p class="text-lg">{{ _('Aucune donnée disponible pour affichage') }}</p>
+                <p class="text-sm mt-2">{{ _('Veuillez charger des données valides pour visualiser le tableau') }}</p>
             </div>
             {% endif %}
         </div>
@@ -95,18 +96,30 @@
     .table-striped tbody tr:nth-child(odd) td {
         background-color: #f7fafc;
     }
-    
+
     /* Effet de survol amélioré */
     a:hover i {
         color: white !important;
         transition: color 0.2s ease;
     }
-    
+
     /* Largeur maximale supprimée */
     .container {
         max-width: none;
         padding-left: 2rem;
         padding-right: 2rem;
+    }
+
+    /* Amélioration de la lisibilité */
+    td {
+        color: #4a5568;
+        font-size: 0.875rem;
+    }
+    
+    /* Style pour les cellules numériques */
+    td.numeric {
+        font-family: monospace;
+        text-align: right;
     }
 </style>
 {% endblock %}

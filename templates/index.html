@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Accueil - Analyse Météo{% endblock %}
+{% block title %}{{ _('Accueil - Analyse Météo') }}{% endblock %}
 
 {% block extra_css %}
 <style>
     /* Styles pour la flèche ▼ des selects standards */
-    .custom-select-wrapper { 
+    .custom-select-wrapper {
         position: relative;
         width: 100%;
     }
@@ -23,7 +23,7 @@
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
 
-    .custom-select-wrapper .select-arrow { 
+    .custom-select-wrapper .select-arrow {
         position: absolute;
         right: 0.75rem;
         top: 50%;
@@ -33,7 +33,7 @@
         font-size: 0.75rem; /* Taille de la flèche */
         z-index: 10; /* S'assurer qu'elle est au-dessus du select */
     }
-    
+
     /* Autres styles existants */
     .color-indicator {
         display: inline-block;
@@ -43,14 +43,14 @@
         margin-right: 10px;
         flex-shrink: 0;
     }
-    
+
     .validation-message {
         color: #dc3545;
         font-size: 0.875rem;
         margin-top: 0.5rem;
         display: none;
     }
-    
+
     .validation-message.show {
         display: block;
     }
@@ -58,12 +58,12 @@
     .bg-purple {
         background-color: #6f42c1;
     }
-    
+
     .btn-purple {
         background-color: #6f42c1;
         color: white;
     }
-    
+
     .btn-purple:hover {
         background-color: #5a32a3;
     }
@@ -74,7 +74,7 @@
         border-radius: 0.375rem 0.375rem 0 0;
         color: white;
     }
-    
+
     .message {
         padding: 1rem;
         margin-bottom: 1rem;
@@ -85,7 +85,7 @@
         display: flex;
         flex-direction: column;
     }
-    
+
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(-10px); }
         to { opacity: 1; transform: translateY(0); }
@@ -95,7 +95,7 @@
 
 {% block content %}
 <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 my-8">
-    <h1 class="text-3xl font-bold text-center text-indigo-700 mb-8">Analyse de Données Météorologiques</h1>
+    <h1 class="text-3xl font-bold text-center text-indigo-700 mb-8">{{ _('Analyse de Données Météorologiques') }}</h1>
 
     {% if not data_available %}
     <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
@@ -107,7 +107,7 @@
             </div>
             <div class="ml-3">
                 <p class="text-sm text-blue-700">
-                    Veuillez charger un ou plusieurs datasets pour commencer l'analyse.
+                    {{ _('Veuillez charger un ou plusieurs datasets pour commencer l\'analyse.') }}
                 </p>
             </div>
         </div>
@@ -116,7 +116,7 @@
 
     <form id="uploadForm" action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
         <div class="text-center">
-            <h2 class="text-lg font-medium text-gray-900 inline-block">Datasets (<span id="datasetCount" class="text-blue-600 font-bold">1</span>)</h2>
+            <h2 class="text-lg font-medium text-gray-900 inline-block">{{ _('Datasets') }} (<span id="datasetCount" class="text-blue-600 font-bold">1</span>)</h2>
         </div>
 
         <div id="inputGroupsContainer" class="space-y-4">
@@ -131,11 +131,11 @@
 
                 <div class="grid md:grid-cols-2 gap-4">
                     <div>
-                        <label for="bassin_0" class="block text-sm font-medium text-gray-700 mb-1">Bassin</label>
+                        <label for="bassin_0" class="block text-sm font-medium text-gray-700 mb-1">{{ _('Bassin') }}</label>
                         <div class="custom-select-wrapper"> {# Wrapper ajouté #}
-                            <select id="bassin_0" name="bassin_0" required onchange="updateStations(this)" 
+                            <select id="bassin_0" name="bassin_0" required onchange="updateStations(this)"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                                <option value="">Sélectionnez un bassin</option>
+                                <option value="">{{ _('Sélectionnez un bassin') }}</option>
                                 {% for bassin in bassins %}
                                     <option value="{{ bassin }}">{{ bassin }}</option>
                                 {% endfor %}
@@ -145,11 +145,11 @@
                     </div>
 
                     <div>
-                        <label for="station_0" class="block text-sm font-medium text-gray-700 mb-1">Station</label>
+                        <label for="station_0" class="block text-sm font-medium text-gray-700 mb-1">{{ _('Station') }}</label>
                         <div class="custom-select-wrapper"> {# Wrapper ajouté #}
                             <select id="station_0" name="station_0" required
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                                <option value="">Sélectionnez une station</option>
+                                <option value="">{{ _('Sélectionnez une station') }}</option>
                             </select>
                             <span class="select-arrow"><i class="fas fa-caret-down"></i></span> {# Flèche ajoutée #}
                         </div>
@@ -157,7 +157,7 @@
                 </div>
 
                 <div class="mt-4">
-                    <label for="file_0" class="block text-sm font-medium text-gray-700 mb-1">Fichier de données</label>
+                    <label for="file_0" class="block text-sm font-medium text-gray-700 mb-1">{{ _('Fichier de données') }}</label>
                     <input id="file_0" name="file[]" type="file" required accept=".csv,.xlsx,.xls"
                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                 </div>
@@ -169,7 +169,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
                 </svg>
-                Ajouter un dataset
+                {{ _('Ajouter un dataset') }}
             </button>
         </div>
 
@@ -178,11 +178,12 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
                 </svg>
-                Traiter les données
+                {{ _('Traiter les données') }}
             </button>
         </div>
     </form>
 </div>
+{% endblock %}
 
 {% block extra_js %}
 <script>
@@ -196,7 +197,7 @@
             wrapper.className = 'custom-select-wrapper';
             selectElement.parentNode.insertBefore(wrapper, selectElement);
             wrapper.appendChild(selectElement);
-            
+
             const arrowSpan = document.createElement('span');
             arrowSpan.className = 'select-arrow';
             const arrowIcon = document.createElement('i');
@@ -215,7 +216,7 @@
         const basin = selectElement.value;
         const stationSelect = document.getElementById(`station_${groupId}`);
 
-        stationSelect.innerHTML = '<option value="">Sélectionnez une station</option>';
+        stationSelect.innerHTML = `<option value="">{{ _('Sélectionnez une station') }}</option>`;
 
         if (basin && stationsData[basin]) {
             stationsData[basin].forEach(station => {
@@ -234,7 +235,7 @@
         const template = initialGroup.cloneNode(true); // Clone the initial structure
 
         template.dataset.groupId = newGroupId;
-        
+
         // Update IDs and names
         template.querySelectorAll('[id]').forEach(el => {
             el.id = el.id.replace(/\d+$/, newGroupId);
@@ -250,12 +251,12 @@
 
         // Reset values
         template.querySelector('select[name^="bassin"]').value = '';
-        template.querySelector('select[name^="station"]').innerHTML = '<option value="">Sélectionnez une station</option>';
+        template.querySelector('select[name^="station"]').innerHTML = `<option value="">{{ _('Sélectionnez une station') }}</option>`;
         template.querySelector('input[type="file"]').value = '';
-        
+
         // Show remove button
         template.querySelector('.remove-btn').classList.remove('hidden');
-        
+
         // Add event listener to the NEW basin select
         template.querySelector('select[name^="bassin"]').onchange = function() { updateStations(this); };
 
@@ -307,7 +308,8 @@
 
         if (!isValid) {
             e.preventDefault();
-            alert('Veuillez remplir tous les champs obligatoires pour chaque dataset');
+            // Utilisation du système de message centralisé au lieu d'alert()
+            MessageSystem.show('{{ _("Veuillez remplir tous les champs obligatoires pour chaque dataset.") }}', 'error');
         }
     });
 
@@ -321,5 +323,4 @@
         updateDatasetCount();
     });
 </script>
-{% endblock %}
 {% endblock %}

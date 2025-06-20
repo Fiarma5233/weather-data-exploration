@@ -2,54 +2,73 @@
     <div class="max-w-6xl mx-auto px-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
-                <h3 class="text-xl font-semibold mb-4">Analyse Météo</h3>
+                <h3 class="text-xl font-semibold mb-4">{{ _('Analyse Météo') }}</h3>
                 <p class="text-gray-400">
-                    Plateforme d'analyse et de visualisation des données météorologiques.
+                    {{ _('Plateforme d\'analyse et de visualisation des données météorologiques.') }}
                 </p>
             </div>
-            
+
             <div>
-                <h4 class="text-lg font-medium mb-4">Navigation</h4>
+                <h4 class="text-lg font-medium mb-4">{{ _('Navigation') }}</h4>
                 <ul class="space-y-2">
-                    <li><a href="{{ url_for('index') }}" class="text-gray-400 hover:text-white transition">Accueil</a></li>
+                    <li><a href="{{ url_for('index') }}" class="text-gray-400 hover:text-white transition">{{ _('Accueil') }}</a></li>
                     {% if not GLOBAL_PROCESSED_DATA_DF.empty %}
-                    <li><a href="{{ url_for('data_preview') }}" class="text-gray-400 hover:text-white transition">Données</a></li>
-                    <li><a href="{{ url_for('visualisations_options') }}" class="text-gray-400 hover:text-white transition">Visualisations</a></li>
+                    <li><a href="{{ url_for('data_preview') }}" class="text-gray-400 hover:text-white transition">{{ _('Données') }}</a></li>
+                    <li><a href="{{ url_for('visualisations_options') }}" class="text-gray-400 hover:text-white transition">{{ _('Visualisations') }}</a></li>
                     {% endif %}
                 </ul>
             </div>
 
             <div>
-                <h4 class="text-lg font-medium mb-4">Liens utiles</h4>
+                <h4 class="text-lg font-medium mb-4">{{ _('Liens utiles') }}</h4>
                 <ul class="space-y-2">
-                    <li><a href="https://drive.google.com/drive/u/1/folders/10vGw9vwreH_I4nYBm5jfXrKUQKxzZ1Yj" class="text-gray-400 hover:text-white transition">Donnees meteo</a></li>
-                    <li><a href="https://wascal.org/" target="_blank" class="text-gray-400 hover:text-white transition">WASCAL</a></li>
-                    <li><a href="https://uv.bf/" target="_blank" class="text-gray-400 hover:text-white transition">UV-BF</a></li>
-                    {# Vous pouvez ajouter d'autres liens ici si nécessaire #}
+                    <li class="flex items-center">
+                        <i class="fas fa-globe mr-2 text-gray-400"></i>
+                        <a href="https://wascal.org/" class="text-gray-400 hover:text-white transition">WASCAL</a>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fab fa-youtube mr-2 text-gray-400"></i>
+                        <a href="https://www.youtube.com/channel/UC4Gu3xoQxPEascDDwOd9-nA" target="_blank" class="text-gray-400 hover:text-white transition">WASCAL Climate</a>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fab fa-facebook mr-2 text-gray-400"></i>
+                        <a href="https://www.facebook.com/wascalclimate" target="_blank" class="text-gray-400 hover:text-white transition">WASCAL Climate</a>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fab fa-linkedin mr-2 text-gray-400"></i>
+                        <a href="https://www.linkedin.com/company/wascallinkedin/posts/?feedView=all" class="text-gray-400 hover:text-white transition">WASCAL Climate</a>
+                    </li>
+                    <li class="flex items-center">
+                        <i class="fab fa-twitter mr-2 text-gray-400"></i>
+                        <a href="https://x.com/wascalclimate" class="text-gray-400 hover:text-white transition">WASCAL Climate</a>
+                    </li>
                 </ul>
             </div>
-            
+
             <div>
-                <h4 class="text-lg font-medium mb-4">Contact</h4>
+                <h4 class="text-lg font-medium mb-4">{{ _('Contact') }}</h4>
                 <ul class="space-y-2">
                     <li class="flex items-center">
                         <i class="fas fa-envelope mr-2 text-gray-400"></i>
-                        <a href="mailto:fiarmafiarma@gmail.com" class="text-gray-400 hover:text-white transition">fiarmafiarma@gmail.com</a>
+                        <a href="mailto:secretariat_cc@wascal.org" class="text-gray-400 hover:text-white transition">secretariat_cc@wascal.org</a>
                     </li>
                     <li class="flex items-center">
                         <i class="fas fa-phone mr-2 text-gray-400"></i>
-                        <a href="tel:+22667489187" class="text-gray-400 hover:text-white transition"> +226 52 33 61 52 (Appel)</a>
+                        <a href="tel:+22667489187" class="text-gray-400 hover:text-white transition">+226 25 37 54 20</a>
                     </li>
                     <li class="flex items-center">
-                        <i class="fab fa-whatsapp mr-2 text-gray-400"></i>
-                        <a href="https://wa.me/22652336152" target="_blank" class="text-gray-400 hover:text-white transition">+226 67 48 91 87  (WhatsApp)</a>
+                        <i class="fas fa-map-marker-alt mr-2 text-gray-400"></i>
+                        <span class="text-gray-400">{{ _('Avenue Mouammar Kadhafi') }}<br>
+                        {{ _('Ouaga 2000') }}<br>
+                        {{ _('06BP9507, Ouagadougou.') }}<br>
+                        {{ _('Burkina Faso') }}</span>
                     </li>
                 </ul>
             </div>
         </div>
-        
+
         <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
-            <p>&copy; 2025 Analyse Météo. Tous droits réservés.</p>
+            <p>&copy; 2025 {{ _('Analyse Météo. Tous droits réservés.') }}</p>
         </div>
     </div>
 </footer>

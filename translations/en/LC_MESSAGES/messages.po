@@ -1,0 +1,631 @@
+# English translations for PROJECT.
+# Copyright (C) 2025 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2025-06-20 01:27+0000\n"
+"PO-Revision-Date: 2025-06-19 09:06+0000\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: app.py:1584
+msgid "Aucun fichier reçu."
+msgstr "No file received."
+
+#: app.py:1596
+msgid "Veuillez sélectionner une station pour chaque fichier."
+msgstr "Please select a station for each file."
+
+#: app.py:1601
+msgid "Nombre de fichiers et de stations incompatible."
+msgstr "Number of files and stations incompatible."
+
+#: app.py:1609
+#, python-format
+msgid "Fichier '%s' invalide ou non autorisé."
+msgstr "File '%s' invalid or unauthorized."
+
+#: app.py:1634
+#, python-format
+msgid "Erreur lors du traitement du fichier '%s': %s"
+msgstr "Error processing file '%s': %s"
+
+#: app.py:1639
+msgid "Aucune donnée valide traitée. Veuillez vérifier vos fichiers."
+msgstr "No valid data processed. Please check your files."
+
+#: app.py:1673
+#, python-format
+msgid ""
+"%(new_rows)s nouvelles lignes traitées pour les stations : "
+"%(stations_added)s"
+msgstr "%(new_rows)s new rows processed for stations: %(stations_added)s"
+
+#: app.py:1682
+#, python-format
+msgid "Erreur critique lors du traitement des données : %s"
+msgstr "Critical error during data processing: %s"
+
+#: app.py:1690 app.py:1866 app.py:1950 app.py:2033
+msgid "Aucune donnée disponible. Veuillez télécharger des fichiers d'abord."
+msgstr "No data available. Please upload files first."
+
+#: app.py:1698
+msgid "20 premières lignes"
+msgstr "First 20 rows"
+
+#: app.py:1707
+#, python-format
+msgid "10 lignes × %(stations_count)s stations"
+msgstr "10 rows × %(stations_count)s stations"
+
+#: app.py:1723
+#, python-format
+msgid "%(rows)s lignes × %(cols)s colonnes"
+msgstr "%(rows)s rows × %(cols)s columns"
+
+#: app.py:1729
+#, python-format
+msgid "Erreur lors de la préparation de l'aperçu : %s"
+msgstr "Error preparing preview: %s"
+
+#: app.py:1737
+msgid "Veuillez télécharger des fichiers d'abord pour accéder aux visualisations."
+msgstr "Please upload files first to access visualizations."
+
+#: app.py:1873
+msgid "Veuillez sélectionner une période d'analyse."
+msgstr "Please select an analysis period."
+
+#: app.py:1882
+msgid "Veuillez sélectionner une variable pour la comparaison."
+msgstr "Please select a variable for comparison."
+
+#: app.py:1897
+#, python-format
+msgid "Comparaison de %(variable_name)s (%(period)s)"
+msgstr "Comparison of %(variable_name)s (%(period)s)"
+
+#: app.py:1908
+msgid "Veuillez sélectionner une station."
+msgstr "Please select a station."
+
+#: app.py:1912
+msgid "Veuillez sélectionner au moins une variable à visualiser."
+msgstr "Please select at least one variable to visualize."
+
+#: app.py:1924
+#, python-format
+msgid "Évolution des variables pour %(station)s (%(period)s)"
+msgstr "Evolution of variables for %(station)s (%(period)s)"
+
+#: app.py:1931 app.py:1974
+msgid ""
+"Aucune donnée disponible pour les critères sélectionnés. Veuillez affiner"
+" votre sélection."
+msgstr "No data available for the selected criteria. Please refine your selection."
+
+#: app.py:1941
+#, python-format
+msgid "Erreur lors de la génération du graphique : %s"
+msgstr "Error generating plot: %s"
+
+#: app.py:1959
+msgid ""
+"Veuillez sélectionner une station et au moins une variable pour l'analyse"
+" normalisée."
+msgstr "Please select a station and at least one variable for normalized analysis."
+
+#: app.py:1982
+#, python-format
+msgid "Analyse multi-variables normalisée - %(station)s (%(period)s)"
+msgstr "Normalized Multi-Variable Analysis - %(station)s (%(period)s)"
+
+#: app.py:1990
+#, python-format
+msgid "Erreur lors de la génération du graphique normalisé : %s"
+msgstr "Error generating normalized plot: %s"
+
+#: app.py:2014
+msgid ""
+"Toutes les données ont été réinitialisées avec succès. Vous pouvez "
+"maintenant télécharger de nouveaux jeux de données."
+msgstr "All data has been successfully reset. You can now upload new datasets."
+
+#: app.py:2022
+#, python-format
+msgid "Erreur lors de la réinitialisation des données : %s"
+msgstr "Error during data reset: %s"
+
+#: app.py:2025
+#, python-format
+msgid "Erreur interne lors de la réinitialisation : %s"
+msgstr "Internal error during reset: %s"
+
+#: app.py:2040
+msgid ""
+"Variable invalide ou introuvable. Veuillez sélectionner une variable "
+"valide."
+msgstr "Invalid or variable not found. Please select a valid variable."
+
+#: app.py:2052
+msgid ""
+"Aucune statistique disponible pour cette variable. Veuillez affiner votre"
+" sélection ou vérifier les données."
+msgstr ""
+"No statistics available for this variable. Please refine your selection "
+"or check the data."
+
+#: app.py:2072
+msgid "Erreur technique lors de la génération des statistiques."
+msgstr "Technical error during statistics generation."
+
+#: data_processing.py:7901
+msgid "Le DataFrame doit avoir un DatetimeIndex pour générer le graphique."
+msgstr "The DataFrame must have a DatetimeIndex to generate the plot."
+
+#: data_processing.py:7975
+#, python-format
+msgid "Évolution des variables pour %(station)s (%(periode)s)"
+msgstr "Evolution of variables for %(station)s (%(periode)s)"
+
+#: data_processing.py:7976 data_processing.py:8049 data_processing.py:8130
+#: data_processing.py:8150
+msgid "Date"
+msgstr "Date"
+
+#: data_processing.py:7977 templates/statistiques.html:146
+msgid "Valeurs"
+msgstr "Values"
+
+#: data_processing.py:7979
+msgid "Variables"
+msgstr "Variables"
+
+#: data_processing.py:7995
+msgid ""
+"Le DataFrame doit avoir un DatetimeIndex pour générer le graphique "
+"comparatif."
+msgstr "The DataFrame must have a DatetimeIndex to generate the comparison chart."
+
+#: data_processing.py:8001
+msgid ""
+"Moins de 2 stations disponibles pour la comparaison. Le graphique "
+"comparatif ne sera pas généré."
+msgstr ""
+"Less than 2 stations available for comparison. The comparison chart will "
+"not be generated."
+
+#: data_processing.py:8048
+#, python-format
+msgid "Comparaison de %(var_label)s (%(var_unit)s) entre stations (%(periode)s)"
+msgstr "Comparison of %(var_label)s (%(var_unit)s) between stations (%(periode)s)"
+
+#: data_processing.py:8052
+msgid "Stations"
+msgstr "Stations"
+
+#: data_processing.py:8062
+msgid "Le DataFrame doit avoir un DatetimeIndex"
+msgstr "The DataFrame must have a DatetimeIndex"
+
+#: data_processing.py:8070
+msgid "Aucune variable numérique valide trouvée"
+msgstr "No valid numerical variable found"
+
+#: data_processing.py:8131
+msgid "Valeur normalisée"
+msgstr "Normalized Value"
+
+#: data_processing.py:8132
+msgid "Valeur originale"
+msgstr "Original Value"
+
+#: data_processing.py:8149
+#, python-format
+msgid "Comparaison normalisée des variables - %(station)s (%(periode)s)"
+msgstr "Normalized comparison of variables - %(station)s (%(periode)s)"
+
+#: data_processing.py:8151
+msgid "Valeur normalisée (0-1)"
+msgstr "Normalized Value (0-1)"
+
+#: data_processing.py:8175
+msgid "Tout afficher"
+msgstr "Show All"
+
+#: data_processing.py:8180
+msgid "Tout masquer"
+msgstr "Hide All"
+
+#: templates/base.html:6 templates/partials/footer.html:5
+#: templates/partials/navbar.html:7
+msgid "Analyse Météo"
+msgstr "Weather Analysis"
+
+#: templates/base.html:106
+msgid "Fermer le message"
+msgstr "Close message"
+
+#: templates/base.html:136
+msgid "Êtes-vous sûr de vouloir réinitialiser toutes les données ?"
+msgstr "Are you sure you want to reset all data?"
+
+#: templates/base.html:137
+msgid "Cette action est irréversible."
+msgstr "This action is irreversible."
+
+#: templates/base.html:138 templates/visualisations_options.html:268
+msgid "Annuler"
+msgstr "Cancel"
+
+#: templates/base.html:139
+msgid "Confirmer"
+msgstr "Confirm"
+
+#: templates/base.html:199
+msgid "Réinitialisation en cours..."
+msgstr "Resetting..."
+
+#: templates/base.html:213
+msgid "Redirection en cours..."
+msgstr "Redirecting..."
+
+#: templates/base.html:221
+msgid "Données réinitialisées avec succès"
+msgstr "Data reset successfully"
+
+#: templates/base.html:228
+msgid "Erreur lors de la réinitialisation"
+msgstr "Error during reset"
+
+#: templates/base.html:235
+msgid "Échec de la réinitialisation :"
+msgstr "Reset failed:"
+
+#: templates/index.html:3
+msgid "Accueil - Analyse Météo"
+msgstr "Home - Weather Analysis"
+
+#: templates/index.html:98
+msgid "Analyse de Données Météorologiques"
+msgstr "Meteorological Data Analysis"
+
+#: templates/index.html:110
+msgid "Veuillez charger un ou plusieurs datasets pour commencer l'analyse."
+msgstr "Please upload one or more datasets to begin analysis."
+
+#: templates/index.html:119
+msgid "Datasets"
+msgstr "Datasets"
+
+#: templates/index.html:134
+msgid "Bassin"
+msgstr "Basin"
+
+#: templates/index.html:138
+msgid "Sélectionnez un bassin"
+msgstr "Select a basin"
+
+#: templates/index.html:148
+msgid "Station"
+msgstr "Station"
+
+#: templates/index.html:152 templates/index.html:219 templates/index.html:254
+msgid "Sélectionnez une station"
+msgstr "Select a station"
+
+#: templates/index.html:160
+msgid "Fichier de données"
+msgstr "Data file"
+
+#: templates/index.html:172
+msgid "Ajouter un dataset"
+msgstr "Add dataset"
+
+#: templates/index.html:181
+msgid "Traiter les données"
+msgstr "Process data"
+
+#: templates/index.html:312
+msgid "Veuillez remplir tous les champs obligatoires pour chaque dataset."
+msgstr "Please fill in all required fields for each dataset."
+
+#: templates/plot_display.html:19 templates/statistiques.html:86
+msgid "Retour"
+msgstr "Back"
+
+#: templates/plot_display.html:24 templates/statistiques.html:93
+msgid "Réinitialiser"
+msgstr "Reset"
+
+#: templates/plot_display.html:80
+msgid "Plotly non défini, vérifiez l'ordre de chargement."
+msgstr "Plotly not defined, check loading order."
+
+#: templates/preview.html:3
+msgid "Aperçu des Données"
+msgstr "Data Preview"
+
+#: templates/preview.html:12
+msgid "Retour à l'accueil"
+msgstr "Back to home"
+
+#: templates/preview.html:16
+msgid "Aperçu des Données Météorologiques"
+msgstr "Meteorological Data Preview"
+
+#: templates/preview.html:22
+msgid "Passer à la visualisation"
+msgstr "Go to visualization"
+
+#: templates/preview.html:33
+msgid "Mode d'affichage:"
+msgstr "Display mode:"
+
+#: templates/preview.html:37
+msgid "Dimensions du dataset:"
+msgstr "Dataset dimensions:"
+
+#: templates/preview.html:41
+msgid "Nombre de stations:"
+msgstr "Number of stations:"
+
+#: templates/preview.html:45
+msgid "Nombre d'observations:"
+msgstr "Number of observations:"
+
+#: templates/preview.html:63
+msgid "Aucune donnée disponible pour affichage"
+msgstr "No data available for display"
+
+#: templates/preview.html:64
+msgid "Veuillez charger des données valides pour visualiser le tableau"
+msgstr "Please load valid data to view the table"
+
+#: templates/statistiques.html:100
+msgid "Statistiques :"
+msgstr "Statistics:"
+
+#: templates/statistiques.html:113
+msgid "Aucune donnée disponible"
+msgstr "No data available"
+
+#: templates/statistiques.html:114
+msgid "Il n'y a pas de données à afficher pour cette variable."
+msgstr "There is no data to display for this variable."
+
+#: templates/statistiques.html:127
+msgid "Statistiques descriptives"
+msgstr "Descriptive Statistics"
+
+#: templates/statistiques.html:129
+msgid "Unité :"
+msgstr "Unit:"
+
+#: templates/statistiques.html:134
+msgid "Moyenne"
+msgstr "Mean"
+
+#: templates/statistiques.html:138
+msgid "Médiane"
+msgstr "Median"
+
+#: templates/statistiques.html:142
+msgid "Écart-type"
+msgstr "Standard Deviation"
+
+#: templates/statistiques.html:167
+msgid "Voulez-vous vraiment réinitialiser les données ?"
+msgstr "Do you really want to reset the data?"
+
+#: templates/visualisations_options.html:33
+msgid "Retour aux données"
+msgstr "Back to data"
+
+#: templates/visualisations_options.html:36
+msgid "Réinitialiser toutes les données"
+msgstr "Reset all data"
+
+#: templates/visualisations_options.html:42
+msgid "Options de Visualisation"
+msgstr "Visualization Options"
+
+#: templates/visualisations_options.html:50
+msgid "Statistiques par Variable"
+msgstr "Statistics by Variable"
+
+#: templates/visualisations_options.html:55
+msgid "Variable à analyser"
+msgstr "Variable to analyze"
+
+#: templates/visualisations_options.html:58
+#: templates/visualisations_options.html:154
+#: templates/visualisations_options.html:261
+msgid "Choisir une variable"
+msgstr "Choose a variable"
+
+#: templates/visualisations_options.html:74
+msgid "Générer les Statistiques"
+msgstr "Generate Statistics"
+
+#: templates/visualisations_options.html:82
+msgid "Graphique Multi-Variables"
+msgstr "Multi-Variable Chart"
+
+#: templates/visualisations_options.html:87
+#: templates/visualisations_options.html:198
+msgid "Station météo"
+msgstr "Weather station"
+
+#: templates/visualisations_options.html:99
+msgid "Variables à visualiser"
+msgstr "Variables to visualize"
+
+#: templates/visualisations_options.html:102
+#: templates/visualisations_options.html:213
+#: templates/visualisations_options.html:262
+msgid "Sélectionner les variables"
+msgstr "Select variables"
+
+#: templates/visualisations_options.html:122
+#: templates/visualisations_options.html:171
+#: templates/visualisations_options.html:233
+msgid "Période d'analyse"
+msgstr "Analysis period"
+
+#: templates/visualisations_options.html:125
+#: templates/visualisations_options.html:174
+#: templates/visualisations_options.html:236
+msgid "Sélectionner une période"
+msgstr "Select a period"
+
+#: templates/visualisations_options.html:126
+#: templates/visualisations_options.html:175
+#: templates/visualisations_options.html:237
+msgid "Journalière"
+msgstr "Daily"
+
+#: templates/visualisations_options.html:127
+#: templates/visualisations_options.html:176
+#: templates/visualisations_options.html:238
+msgid "Hebdomadaire"
+msgstr "Weekly"
+
+#: templates/visualisations_options.html:128
+#: templates/visualisations_options.html:177
+#: templates/visualisations_options.html:239
+msgid "Mensuelle"
+msgstr "Monthly"
+
+#: templates/visualisations_options.html:129
+#: templates/visualisations_options.html:178
+#: templates/visualisations_options.html:240
+msgid "Annuelle"
+msgstr "Annual"
+
+#: templates/visualisations_options.html:136
+msgid "Générer le Graphique"
+msgstr "Generate Chart"
+
+#: templates/visualisations_options.html:144
+msgid "Comparaison entre Stations"
+msgstr "Comparison Between Stations"
+
+#: templates/visualisations_options.html:151
+msgid "Variable à comparer"
+msgstr "Variable to compare"
+
+#: templates/visualisations_options.html:185
+msgid "Comparer les Stations"
+msgstr "Compare Stations"
+
+#: templates/visualisations_options.html:193
+msgid "Analyse Normalisée"
+msgstr "Normalized Analysis"
+
+#: templates/visualisations_options.html:210
+msgid "Variables à comparer"
+msgstr "Variables to compare"
+
+#: templates/visualisations_options.html:247
+msgid "Générer l'Analyse"
+msgstr "Generate Analysis"
+
+#: templates/visualisations_options.html:259
+msgid "Veuillez sélectionner une variable."
+msgstr "Please select a variable."
+
+#: templates/visualisations_options.html:260
+msgid "Veuillez sélectionner au moins une variable."
+msgstr "Please select at least one variable."
+
+#: templates/visualisations_options.html:263
+msgid "1 variable sélectionnée"
+msgstr "1 variable selected"
+
+#: templates/visualisations_options.html:264
+msgid "variables sélectionnées"
+msgstr "variables selected"
+
+#: templates/visualisations_options.html:265
+msgid "Confirmer la réinitialisation"
+msgstr "Confirm reset"
+
+#: templates/visualisations_options.html:266
+msgid ""
+"Êtes-vous sûr de vouloir réinitialiser toutes les données ? Cette action "
+"est irréversible et supprimera toutes les données chargées."
+msgstr ""
+"Are you sure you want to reset all data? This action is irreversible and "
+"will delete all loaded data."
+
+#: templates/visualisations_options.html:267
+msgid "Oui, réinitialiser"
+msgstr "Yes, reset"
+
+#: templates/partials/footer.html:7
+msgid "Plateforme d'analyse et de visualisation des données météorologiques."
+msgstr "Meteorological data analysis and visualization platform."
+
+#: templates/partials/footer.html:12
+msgid "Navigation"
+msgstr "Navigation"
+
+#: templates/partials/footer.html:14 templates/partials/navbar.html:14
+#: templates/partials/navbar.html:87
+msgid "Accueil"
+msgstr "Home"
+
+#: templates/partials/footer.html:16 templates/partials/navbar.html:21
+#: templates/partials/navbar.html:93
+msgid "Données"
+msgstr "Data"
+
+#: templates/partials/footer.html:17 templates/partials/navbar.html:26
+#: templates/partials/navbar.html:97
+msgid "Visualisations"
+msgstr "Visualizations"
+
+#: templates/partials/footer.html:23
+msgid "Liens utiles"
+msgstr "Useful links"
+
+#: templates/partials/footer.html:49
+msgid "Contact"
+msgstr "Contact"
+
+#: templates/partials/footer.html:61
+msgid "Avenue Mouammar Kadhafi"
+msgstr "Mouammar Gaddafi Avenue"
+
+#: templates/partials/footer.html:62
+msgid "Ouaga 2000"
+msgstr "Ouaga 2000"
+
+#: templates/partials/footer.html:63
+msgid "06BP9507, Ouagadougou."
+msgstr "06BP9507, Ouagadougou."
+
+#: templates/partials/footer.html:64
+msgid "Burkina Faso"
+msgstr "Burkina Faso"
+
+#: templates/partials/footer.html:71
+msgid "Analyse Météo. Tous droits réservés."
+msgstr "Weather Analysis. All rights reserved."
+
+#: templates/partials/navbar.html:31 templates/partials/navbar.html:102
+msgid "lignes de données"
+msgstr "data rows"
+

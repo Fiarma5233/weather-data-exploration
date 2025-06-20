@@ -224,10 +224,123 @@
 #     "BP_mbar_Avg": "#e377c2"    # Rose
 # }
 
+# import pandas as pd
+# # Suppression de l'importation de _load_and_prepare_gps_data pour éviter l'importation circulaire.
+# # Cette fonction sera appelée directement dans app.py.
+# # from data_processing import _load_and_prepare_gps_data
+
+# # Dictionnaire des stations par bassin
+# STATIONS_BY_BASSIN = {
+#     'DANO': ['Dreyer Foundation', 'Lare', 'Bankandi', 'Wahablé', 'Fafo',
+#              'Yabogane', 'Tambiri 1', 'Tambiri 2'],
+#     'DASSARI': ['Pouri (Fandohoun)', 'Nagasséga', 'Koundri', 'Koupendri',
+#                 'Ouriyori 2', 'Ouriyori 1', 'Wantéhoun', 'Pouri', 'Fandohoun'],
+#     'VEA_SISSILI': ['Kayoro EC', 'Doninga ', 'Bongo Soe', 'Nabugubulle ', 'Gwosi',
+#                     'Bongo Atampisi', 'Manyoro', 'Aniabiisi', 'Nazinga EC', 'Oualem ',
+#                     'Nebou', 'Tabou ', 'Nazinga']
+# }
+
+# # Dictionnaire des limites pour chaque variable météorologique
+# # Ces limites sont utilisées pour le bornage des valeurs (capping)
+# DATA_LIMITS = {
+#     'Air_Temp_Deg_C': {'min': -20, 'max': 50},
+#     'Rel_H_%': {'min': 0, 'max': 100},
+#     'BP_mbar_Avg': {'min': 950, 'max': 1050},
+#     'Rain_01_mm': {'min': 0, 'max': 500},
+#     'Rain_02_mm': {'min': 0, 'max': 500},
+#     'Rain_mm': {'min': 0, 'max': 500},
+#     'Wind_Sp_m/sec': {'min': 0, 'max': 50},
+#     'Solar_R_W/m^2': {'min': 0, 'max': 2000},
+#     'Wind_Dir_Deg': {'min': 0, 'max': 360}
+# }
+
+# # GLOBAL_DF_GPS_INFO est initialisé comme None ici, il sera peuplé par app.py
+# # après l'initialisation de tous les modules.
+# GLOBAL_DF_GPS_INFO = None
+
+# # Extensions de fichier autorisées pour l'upload
+# ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'} # Ajouté pour résoudre l'ImportError
+
+# # Définition des métadonnées pour chaque variable météorologique
+# # 'Nom': Nom complet de la variable pour les titres de graphiques.
+# # 'Unite': Unité de mesure de la variable.
+# # 'agg_type': Type d'agrégation ('cumul' pour somme, 'moyenne' pour moyenne).
+# # 'is_rain': Indicateur si c'est une variable de pluie (pour agrégation spéciale).
+# METADATA_VARIABLES = {
+#     'Rain_mm': {'Nom': "Précipitation", 'Unite': "mm", 'agg_type': 'cumul', 'is_rain': True},
+#     'Air_Temp_Deg_C': {'Nom': "Température ", 'Unite': "°C", 'agg_type': 'moyenne', 'is_rain': False},
+#     'Rel_H_%': {'Nom': "Humidité Relative", 'Unite': "%", 'agg_type': 'moyenne', 'is_rain': False},
+#     'Solar_R_W/m^2': {'Nom': "Radiation Solaire", 'Unite': "W/m²", 'agg_type': 'moyenne', 'is_rain': False},
+#     'Wind_Sp_m/sec': {'Nom': "Vitesse du Vent", 'Unite': "m/s", 'agg_type': 'moyenne', 'is_rain': False},
+#     'Wind_Dir_Deg': {'Nom': "Direction du Vent", 'Unite': "°", 'agg_type': 'moyenne', 'is_rain': False},
+#     'BP_mbar_Avg': {'Nom': "Pression Atmospherique moyenne", 'Unite': "mbar", 'agg_type': 'moyenne', 'is_rain': False}
+# }
+
+
+# CUSTOM_STATION_COLORS = {
+#     # Bassin DANO (8 stations)
+#     'Dreyer Foundation': '#FF0000',  # Rouge vif
+#     'Lare': '#00AA00',       # Vert foncé
+#     'Bankandi': '#0000FF',   # Bleu pur
+#     'Wahablé': '#FF00FF',    # Magenta
+#     'Fafo': '#FFA500',       # Orange
+#     'Yabogane': '#00FFFF',   # Cyan
+#     'Tambiri 1': '#A52A2A',  # Marron
+#     'Tambiri 2': '#FFD700',  # Or
+    
+#     # Bassin DASSARI (9 stations)
+#     'Pouri (Fandohoun)': '#9400D3',  # Violet foncé
+#     'Nagasséga': '#008000',   # Vert sapin
+#     'Koundri': '#4B0082',     # Indigo
+#     'Koupendri': '#FF4500',   # Orange-rouge
+#     'Ouriyori 2': '#20B2AA',  # Vert mer clair
+#     'Ouriyori 1': '#9932CC',  # Orchidée foncée
+#     'Wantéhoun': '#8B0000',   # Rouge foncé
+#     'Pouri': '#000080',       # Bleu marine
+#     'Fandohoun': '#556B2F',   # Vert olive
+    
+#     # Bassin VEA_SISSILI (13 stations)
+#     'Kayoro EC': '#E60000',    # Rouge vif
+#     'Doninga ': '#00CED1',     # Bleu turquoise
+#     'Bongo Soe': '#32CD32',    # Vert lime
+#     'Nabugubulle ': '#8A2BE2', # Bleu violet
+#     'Gwosi': '#FF8C00',        # Orange foncé
+#     'Bongo Atampisi': '#EE82EE', # Violet clair
+#     'Manyoro': '#006400',      # Vert très foncé
+#     'Aniabiisi': '#800000',    # Rouge bordeaux
+#     'Nazinga EC': '#0000CD',   # Bleu moyen
+#     'Oualem ': '#FF69B4',      # Rose vif
+#     'Nebou': '#808000',        # Olive
+#     'Tabou ': '#7CFC00',       # Vert prairie
+#     'Nazinga': '#BA55D3'       # Violet moyen
+# }
+
+# # Palette de couleurs personnalisée pour les variables (DOIT ÊTRE UN DICTIONNAIRE)
+# PALETTE_DEFAUT = {
+#     "Air_Temp_Deg_C": "#1f77b4",  # Bleu
+#     "Rel_H_%": "#ff7f0e",       # Orange
+#     "Rain_mm": "#2ca02c",       # Vert
+#     "Solar_R_W/m^2": "#d62728", # Rouge
+#     "Wind_Sp_m/sec": "#9467bd", # Violet
+#     "Wind_Dir_Deg": "#8c564b",  # Marron
+#     "BP_mbar_Avg": "#e377c2"    # Rose
+# }
+
+# # Palette de couleurs pour les statistiques
+# PALETTE_COULEUR = {
+#     'Maximum': '#d62728', 
+#     'Minimum': '#1f77b4', 
+#     'Moyenne': '#2ca02c',
+#     'Mediane': '#ff7f0e', 
+#     'Cumul_Annuel': '#8c564b',
+#     'Moyenne_Jours_Pluvieux': '#9467bd', 
+#     'Moyenne_Saison_Pluvieuse': '#e377c2',
+#     'Duree_Saison_Pluvieuse_Jours': '#17becf',
+#     'Duree_Secheresse_Definie_Jours': '#bcbd22'
+# }
+
 import pandas as pd
-# Suppression de l'importation de _load_and_prepare_gps_data pour éviter l'importation circulaire.
-# Cette fonction sera appelée directement dans app.py.
-# from data_processing import _load_and_prepare_gps_data
+from flask_babel import lazy_gettext as _l # Importer lazy_gettext
 
 # Dictionnaire des stations par bassin
 STATIONS_BY_BASSIN = {
@@ -243,14 +356,14 @@ STATIONS_BY_BASSIN = {
 # Dictionnaire des limites pour chaque variable météorologique
 # Ces limites sont utilisées pour le bornage des valeurs (capping)
 DATA_LIMITS = {
-    'Air_Temp_Deg_C': {'min': -20, 'max': 50},
+    'Air_Temp_Deg_C': {'min': 0, 'max': 50},
     'Rel_H_%': {'min': 0, 'max': 100},
-    'BP_mbar_Avg': {'min': 950, 'max': 1050},
-    'Rain_01_mm': {'min': 0, 'max': 500},
-    'Rain_02_mm': {'min': 0, 'max': 500},
-    'Rain_mm': {'min': 0, 'max': 500},
-    'Wind_Sp_m/sec': {'min': 0, 'max': 50},
-    'Solar_R_W/m^2': {'min': 0, 'max': 2000},
+    'BP_mbar_Avg': {'min': 850, 'max': 1090},
+    'Rain_01_mm': {'min': 0, 'max': 60},
+    'Rain_02_mm': {'min': 0, 'max': 60},
+    'Rain_mm': {'min': 0, 'max': 60},
+    'Wind_Sp_m/sec': {'min': 0, 'max': 60},
+    'Solar_R_W/m^2': {'min': 0, 'max': 1300},
     'Wind_Dir_Deg': {'min': 0, 'max': 360}
 }
 
@@ -266,32 +379,17 @@ ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'} # Ajouté pour résoudre l'ImportErr
 # 'Unite': Unité de mesure de la variable.
 # 'agg_type': Type d'agrégation ('cumul' pour somme, 'moyenne' pour moyenne).
 # 'is_rain': Indicateur si c'est une variable de pluie (pour agrégation spéciale).
-METADATA_VARIABLES = {
-    'Rain_mm': {'Nom': "Précipitation", 'Unite': "mm", 'agg_type': 'cumul', 'is_rain': True},
-    'Air_Temp_Deg_C': {'Nom': "Température ", 'Unite': "°C", 'agg_type': 'moyenne', 'is_rain': False},
-    'Rel_H_%': {'Nom': "Humidité Relative", 'Unite': "%", 'agg_type': 'moyenne', 'is_rain': False},
-    'Solar_R_W/m^2': {'Nom': "Radiation Solaire", 'Unite': "W/m²", 'agg_type': 'moyenne', 'is_rain': False},
-    'Wind_Sp_m/sec': {'Nom': "Vitesse du Vent", 'Unite': "m/s", 'agg_type': 'moyenne', 'is_rain': False},
-    'Wind_Dir_Deg': {'Nom': "Direction du Vent", 'Unite': "°", 'agg_type': 'moyenne', 'is_rain': False},
-    'BP_mbar_Avg': {'Nom': "Pression Atmospherique moyenne", 'Unite': "mbar", 'agg_type': 'moyenne', 'is_rain': False}
-}
-
-# Palette de couleurs personnalisée pour les stations (DOIT ÊTRE UN DICTIONNAIRE)
-# Assurez-vous que les noms de stations ici correspondent EXACTEMENT à ceux de vos fichiers et de STATIONS_BY_BASSIN
-# CUSTOM_STATION_COLORS = {
-#     "Dreyer Foundation": "#1f77b4",
-#     "Fafo": "#ff7f0e",
-#     "Koundri": "#2ca02c",
-#     "Wantéhoun": "#d62728",
-#     "Lare": "#9467bd",
-#     "Bankandi": "#8c564b",
-#     "Ouriyori 1": "#e377c2",
-#     "Pouri": "#7f7f7f", # Exemple: Pouri
-#     "Fandohoun": "#bcbd22", # Exemple: Fandohoun
-#     "Nagasséga": "#17becf", # Exemple: Nagasséga
-#     "Kayoro EC": "#aec7e8", # Exemple: Kayoro EC
-#     # Ajoutez toutes les stations que vous utilisez avec une couleur unique
+# Utilisation de _l() pour marquer les chaînes à traduire
+# METADATA_VARIABLES = {
+#     'Rain_mm': {'Nom': _l("Précipitation"), 'Unite': _l("mm"), 'agg_type': 'cumul', 'is_rain': True},
+#     'Air_Temp_Deg_C': {'Nom': _l("Température"), 'Unite': _l("°C"), 'agg_type': 'moyenne', 'is_rain': False},
+#     'Rel_H_%': {'Nom': _l("Humidité Relative"), 'Unite': _l("%"), 'agg_type': 'moyenne', 'is_rain': False},
+#     'Solar_R_W/m^2': {'Nom': _l("Radiation Solaire"), 'Unite': _l("W/m²"), 'agg_type': 'moyenne', 'is_rain': False},
+#     'Wind_Sp_m/sec': {'Nom': _l("Vitesse du Vent"), 'Unite': _l("m/s"), 'agg_type': 'moyenne', 'is_rain': False},
+#     'Wind_Dir_Deg': {'Nom': _l("Direction du Vent"), 'Unite': _l("°"), 'agg_type': 'moyenne', 'is_rain': False},
+#     'BP_mbar_Avg': {'Nom': _l("Pression Atmospherique moyenne"), 'Unite': _l("mbar"), 'agg_type': 'moyenne', 'is_rain': False}
 # }
+
 
 CUSTOM_STATION_COLORS = {
     # Bassin DANO (8 stations)
@@ -332,25 +430,154 @@ CUSTOM_STATION_COLORS = {
 }
 
 # Palette de couleurs personnalisée pour les variables (DOIT ÊTRE UN DICTIONNAIRE)
+# Note: Les clés du dictionnaire (e.g., "Air_Temp_Deg_C") ne sont pas traduites car ce sont des identifiants techniques.
+# Seules les valeurs qui apparaissent dans l'interface utilisateur sont traduites.
 PALETTE_DEFAUT = {
-    "Air_Temp_Deg_C": "#1f77b4",  # Bleu
-    "Rel_H_%": "#ff7f0e",       # Orange
-    "Rain_mm": "#2ca02c",       # Vert
-    "Solar_R_W/m^2": "#d62728", # Rouge
-    "Wind_Sp_m/sec": "#9467bd", # Violet
-    "Wind_Dir_Deg": "#8c564b",  # Marron
-    "BP_mbar_Avg": "#e377c2"    # Rose
+    "Air_Temp_Deg_C": "#E63946",  # Bleu
+    "Rel_H_%": "#00A6FB",       # Orange
+    "Rain_mm": "#457B9D",       # Vert
+    "Solar_R_W/m^2": "#FFBE0B", # Rouge
+    "Wind_Sp_m/sec": "#7209B7", # Violet
+    "Wind_Dir_Deg": "#6A4C93",  # Marron
+    "BP_mbar_Avg": "#2A9D8F"    # Rose
 }
 
 # Palette de couleurs pour les statistiques
+# Si ces clés/valeurs sont affichées dans l'interface, elles devraient aussi être balisées avec _l()
 PALETTE_COULEUR = {
-    'Maximum': '#d62728', 
-    'Minimum': '#1f77b4', 
-    'Moyenne': '#2ca02c',
-    'Mediane': '#ff7f0e', 
-    'Cumul_Annuel': '#8c564b',
-    'Moyenne_Jours_Pluvieux': '#9467bd', 
-    'Moyenne_Saison_Pluvieuse': '#e377c2',
-    'Duree_Saison_Pluvieuse_Jours': '#17becf',
-    'Duree_Secheresse_Definie_Jours': '#bcbd22'
+    _l('Maximum'): '#d62728', 
+    _l('Minimum'): '#1f77b4', 
+    _l('Moyenne'): '#2ca02c',
+    _l('Médiane'): '#ff7f0e', 
+    _l('Cumul_Annuel'): '#8c564b', # Peut être laissé non traduit si c'est une clé interne
+    _l('Moyenne_Jours_Pluvieux'): '#9467bd', 
+    _l('Moyenne_Saison_Pluvieuse'): '#e377c2',
+    _l('Duree_Saison_Pluvieuse_Jours'): '#17becf', # Peut être laissé non traduit si c'est une clé interne
+    _l('Duree_Secheresse_Definie_Jours'): '#bcbd22' # Peut être laissé non traduit si c'est une clé interne
+}
+
+import pandas as pd
+from flask_babel import lazy_gettext as _l
+
+METADATA_VARIABLES = {
+    'Rain_mm': {
+        'Nom': {
+            'fr': _l("Précipitation"),
+            'en': _l("Precipitation")
+        },
+        'Unite': {
+            'fr': _l("mm"),
+            'en': _l("mm")
+        },
+        'agg_type': 'cumul',
+        'is_rain': True
+    },
+    'Air_Temp_Deg_C': {
+        'Nom': {
+            'fr': _l("Température"),
+            'en': _l("Temperature")
+        },
+        'Unite': {
+            'fr': _l("°C"),
+            'en': _l("°C")
+        },
+        'agg_type': 'moyenne',
+        'is_rain': False
+    },
+    'Rel_H_%': {
+        'Nom': {
+            'fr': _l("Humidité Relative"),
+            'en': _l("Relative Humidity")
+        },
+        'Unite': {
+            'fr': _l("%"),
+            'en': _l("%")
+        },
+        'agg_type': 'moyenne',
+        'is_rain': False
+    },
+    'Solar_R_W/m^2': {
+        'Nom': {
+            'fr': _l("Radiation Solaire"),
+            'en': _l("Solar Radiation")
+        },
+        'Unite': {
+            'fr': _l("W/m²"),
+            'en': _l("W/m²")
+        },
+        'agg_type': 'moyenne',
+        'is_rain': False
+    },
+    'Wind_Sp_m/sec': {
+        'Nom': {
+            'fr': _l("Vitesse du Vent"),
+            'en': _l("Wind Speed")
+        },
+        'Unite': {
+            'fr': _l("m/s"),
+            'en': _l("m/s")
+        },
+        'agg_type': 'moyenne',
+        'is_rain': False
+    },
+    'Wind_Dir_Deg': {
+        'Nom': {
+            'fr': _l("Direction du Vent"),
+            'en': _l("Wind Direction")
+        },
+        'Unite': {
+            'fr': _l("°"),
+            'en': _l("°")
+        },
+        'agg_type': 'moyenne',
+        'is_rain': False
+    },
+    'BP_mbar_Avg': {
+        'Nom': {
+            'fr': _l("Pression Atmospherique moyenne"),
+            'en': _l("Mean Atmospheric Pressure")
+        },
+        'Unite': {
+            'fr': _l("mbar"),
+            'en': _l("mbar")
+        },
+        'agg_type': 'moyenne',
+        'is_rain': False
+    }
+}
+
+# Define metric labels for translation
+METRIC_LABELS = {
+    'Maximum': {'fr': 'Maximum', 'en': 'Maximum'},
+    'Minimum': {'fr': 'Minimum', 'en': 'Minimum'},
+    'Mediane': {'fr': 'Médiane', 'en': 'Median'},
+    'Moyenne': {'fr': 'Moyenne', 'en': 'Average'},
+    'Cumul Annuel': {'fr': 'Cumul Annuel', 'en': 'Annual Accumulation'},
+    'Moyenne Jours Pluvieux': {'fr': 'Moyenne des Jours Pluvieux', 'en': 'Average Rainy Days'},
+    'Moyenne Saison Pluvieuse': {'fr': 'Moyenne Saison Pluvieuse', 'en': 'Average Rainy Season'},
+    'Début Saison Pluvieuse': {'fr': 'Début Saison Pluvieuse', 'en': 'Rainy Season Start'},
+    'Fin Saison Pluvieuse': {'fr': 'Fin Saison Pluvieuse', 'en': 'Rainy Season End'},
+    'Durée Saison Pluvieuse Jours': {'fr': 'Durée Saison Pluvieuse (Jours)', 'en': 'Rainy Season Duration (Days)'},
+    'Début Sécheresse Définie': {'fr': 'Début Sécheresse Définie', 'en': 'Defined Dry Spell Start'},
+    'Fin Sécheresse Définie': {'fr': 'Fin Sécheresse Définie', 'en': 'Defined Dry Spell End'},
+    'Durée Sécheresse Définie Jours': {'fr': 'Durée Sécheresse Définie (Jours)', 'en': 'Defined Dry Spell Duration (Days)'},
+    'Date Max': {'fr': 'Date Max', 'en': 'Max Date'},
+    'Date Min': {'fr': 'Date Min', 'en': 'Min Date'},
+    'Unknown date': {'fr': 'Date inconnue', 'en': 'Unknown date'},
+    'From {} to {}': {'fr': 'Du {} au {}', 'en': 'From {} to {}'},
+    'Duration: {} days': {'fr': 'Durée: {} jours', 'en': 'Duration: {} days'},
+    'Statistics of {} by Station': {'fr': 'Statistiques de {} par Station', 'en': 'Statistics of {} by Station'},
+    'Days': {'fr': 'Jours', 'en': 'Days'},
+    # Add any other hardcoded strings that appear as labels or titles in your plot
+    # and were previously wrapped in _() but are specific metric labels.
+}
+
+
+# Define period labels for translation
+PERIOD_LABELS = {
+    'Journalière': {'fr': 'Journalière', 'en': 'Daily'},
+    'Hebdomadaire': {'fr': 'Hebdomadaire', 'en': 'Weekly'},
+    'Mensuelle': {'fr': 'Mensuelle', 'en': 'Monthly'},
+    'Annuelle': {'fr': 'Annuelle', 'en': 'Annual'},
+    # Add any other periods you might use
 }

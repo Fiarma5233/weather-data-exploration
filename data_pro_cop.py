@@ -3582,140 +3582,140 @@ def daily_stats(df: pd.DataFrame) -> pd.DataFrame:
     return daily_stats_df
 
 #N4
-# def generate_stats_plots(df: pd.DataFrame, variable: str) -> plt.Figure:
-#     """
-#     Génère les graphiques statistiques pour une variable donnée.
+def generate_stats_plots(df: pd.DataFrame, variable: str) -> plt.Figure:
+    """
+    Génère les graphiques statistiques pour une variable donnée.
     
-#     Args:
-#         df (pd.DataFrame): DataFrame contenant les données météo
-#         variable (str): Variable à analyser
+    Args:
+        df (pd.DataFrame): DataFrame contenant les données météo
+        variable (str): Variable à analyser
         
-#     Returns:
-#         plt.Figure: Figure matplotlib contenant les graphiques
-#     """
-#     import matplotlib.pyplot as plt
-#     import seaborn as sns
-#     import numpy as np
-#     from config import METADATA_VARIABLES, PALETTE_COULEUR
+    Returns:
+        plt.Figure: Figure matplotlib contenant les graphiques
+    """
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    import numpy as np
+    from config import METADATA_VARIABLES, PALETTE_COULEUR
     
-#     try:
-#         # Vérification initiale
-#         if variable not in df.columns:
-#             raise ValueError(f"Variable '{variable}' non trouvée dans les données")
+    try:
+        # Vérification initiale
+        if variable not in df.columns:
+            raise ValueError(f"Variable '{variable}' non trouvée dans les données")
             
-#         if 'Station' not in df.columns:
-#             raise ValueError("Colonne 'Station' requise")
+        if 'Station' not in df.columns:
+            raise ValueError("Colonne 'Station' requise")
 
-#         # Préparation des données
-#         working_df = df.copy()
-#         if isinstance(working_df.index, pd.DatetimeIndex):
-#             working_df = working_df.reset_index()
+        # Préparation des données
+        working_df = df.copy()
+        if isinstance(working_df.index, pd.DatetimeIndex):
+            working_df = working_df.reset_index()
         
-#         # Gestion des dates
-#         if 'Datetime' not in working_df.columns:
-#             raise ValueError("Colonne 'Datetime' requise")
+        # Gestion des dates
+        if 'Datetime' not in working_df.columns:
+            raise ValueError("Colonne 'Datetime' requise")
             
-#         working_df['Datetime'] = pd.to_datetime(working_df['Datetime'], errors='coerce')
-#         working_df = working_df.dropna(subset=['Datetime', 'Station'])
+        working_df['Datetime'] = pd.to_datetime(working_df['Datetime'], errors='coerce')
+        working_df = working_df.dropna(subset=['Datetime', 'Station'])
 
-#         # Calcul des statistiques de base
-#         stats = working_df.groupby('Station')[variable].agg(
-#             Maximum='max',
-#             Minimum='min',
-#             Mediane='median',
-#             Moyenne='mean'
-#         ).reset_index()
+        # Calcul des statistiques de base
+        stats = working_df.groupby('Station')[variable].agg(
+            Maximum='max',
+            Minimum='min',
+            Mediane='median',
+            Moyenne='mean'
+        ).reset_index()
 
-#         # Gestion spéciale pour la pluie
-#         if variable == 'Rain_mm':
-#             stats['Cumul_Annuel'] = working_df.groupby('Station')['Rain_mm'].sum().values
+        # Gestion spéciale pour la pluie
+        if variable == 'Rain_mm':
+            stats['Cumul_Annuel'] = working_df.groupby('Station')['Rain_mm'].sum().values
 
-#         # Ajout des dates des extrêmes
-#         try:
-#             max_dates = working_df.loc[working_df.groupby('Station')[variable].idxmax()][['Station', 'Datetime']]
-#             min_dates = working_df.loc[working_df.groupby('Station')[variable].idxmin()][['Station', 'Datetime']]
+        # Ajout des dates des extrêmes
+        try:
+            max_dates = working_df.loc[working_df.groupby('Station')[variable].idxmax()][['Station', 'Datetime']]
+            min_dates = working_df.loc[working_df.groupby('Station')[variable].idxmin()][['Station', 'Datetime']]
             
-#             stats = stats.merge(
-#                 max_dates.rename(columns={'Datetime': 'Date_Max'}),
-#                 on='Station',
-#                 how='left'
-#             )
-#             stats = stats.merge(
-#                 min_dates.rename(columns={'Datetime': 'Date_Min'}),
-#                 on='Station',
-#                 how='left'
-#             )
-#         except:
-#             stats['Date_Max'] = pd.NaT
-#             stats['Date_Min'] = pd.NaT
+            stats = stats.merge(
+                max_dates.rename(columns={'Datetime': 'Date_Max'}),
+                on='Station',
+                how='left'
+            )
+            stats = stats.merge(
+                min_dates.rename(columns={'Datetime': 'Date_Min'}),
+                on='Station',
+                how='left'
+            )
+        except:
+            stats['Date_Max'] = pd.NaT
+            stats['Date_Min'] = pd.NaT
 
-#         # Configuration des graphiques
-#         if variable == 'Rain_mm':
-#             metrics = ['Maximum', 'Minimum', 'Mediane', 'Moyenne', 'Cumul_Annuel']
-#             nrows, ncols = 3, 2
-#         else:
-#             metrics = ['Maximum', 'Minimum', 'Moyenne', 'Mediane']
-#             nrows, ncols = 2, 2
+        # Configuration des graphiques
+        if variable == 'Rain_mm':
+            metrics = ['Maximum', 'Minimum', 'Mediane', 'Moyenne', 'Cumul_Annuel']
+            nrows, ncols = 3, 2
+        else:
+            metrics = ['Maximum', 'Minimum', 'Moyenne', 'Mediane']
+            nrows, ncols = 2, 2
 
-#         # Création de la figure
-#         fig, axes = plt.subplots(nrows, ncols, figsize=(15, 5*nrows))
-#         plt.subplots_adjust(hspace=0.4, wspace=0.3)
+        # Création de la figure
+        fig, axes = plt.subplots(nrows, ncols, figsize=(15, 5*nrows))
+        plt.subplots_adjust(hspace=0.4, wspace=0.3)
         
-#         if isinstance(axes, np.ndarray):
-#             axes = axes.flatten()
-#         else:
-#             axes = [axes]
+        if isinstance(axes, np.ndarray):
+            axes = axes.flatten()
+        else:
+            axes = [axes]
 
-#         # Titre principal
-#         var_meta = METADATA_VARIABLES.get(variable, {})
-#         fig.suptitle(f'Statistiques de {var_meta.get("Nom", variable)} par Station', 
-#                     fontsize=16, y=0.98)
+        # Titre principal
+        var_meta = METADATA_VARIABLES.get(variable, {})
+        fig.suptitle(f'Statistiques de {var_meta.get("Nom", variable)} par Station', 
+                    fontsize=16, y=0.98)
 
-#         # Génération des graphiques
-#         for i, metric in enumerate(metrics):
-#             if i >= len(axes):
-#                 break
+        # Génération des graphiques
+        for i, metric in enumerate(metrics):
+            if i >= len(axes):
+                break
                 
-#             ax = axes[i]
-#             color = PALETTE_COULEUR.get(metric, '#cccccc')
+            ax = axes[i]
+            color = PALETTE_COULEUR.get(metric, '#cccccc')
             
-#             sns.barplot(data=stats, x=metric, y='Station', ax=ax, color=color)
+            sns.barplot(data=stats, x=metric, y='Station', ax=ax, color=color)
             
-#             # Ajout des étiquettes
-#             for bar, (_, row) in zip(ax.patches, stats.iterrows()):
-#                 value = row[metric]
-#                 if pd.isna(value):
-#                     continue
+            # Ajout des étiquettes
+            for bar, (_, row) in zip(ax.patches, stats.iterrows()):
+                value = row[metric]
+                if pd.isna(value):
+                    continue
                     
-#                 unit = var_meta.get('Unite', '')
-#                 text = f"{value:.1f} {unit}"
+                unit = var_meta.get('Unite', '')
+                text = f"{value:.1f} {unit}"
                 
-#                 if metric in ['Maximum', 'Minimum']:
-#                     date_col = f'Date_{metric[:3]}'
-#                     if date_col in row and pd.notna(row[date_col]):
-#                         date_str = pd.to_datetime(row[date_col]).strftime('%d/%m/%Y')
-#                         text = f"{value:.1f}\n{date_str}"
+                if metric in ['Maximum', 'Minimum']:
+                    date_col = f'Date_{metric[:3]}'
+                    if date_col in row and pd.notna(row[date_col]):
+                        date_str = pd.to_datetime(row[date_col]).strftime('%d/%m/%Y')
+                        text = f"{value:.1f}\n{date_str}"
                             
-#                 ax.text(bar.get_width() + 0.05, 
-#                        bar.get_y() + bar.get_height()/2, 
-#                        text,
-#                        ha='left', va='center')
+                ax.text(bar.get_width() + 0.05, 
+                       bar.get_y() + bar.get_height()/2, 
+                       text,
+                       ha='left', va='center')
             
-#             ax.set_title(f"{var_meta.get('Nom', variable)} {metric}")
-#             ax.set_xlabel(unit)
-#             ax.set_ylabel('')
+            ax.set_title(f"{var_meta.get('Nom', variable)} {metric}")
+            ax.set_xlabel(unit)
+            ax.set_ylabel('')
 
-#         # Masquer les axes inutilisés
-#         for j in range(i+1, len(axes)):
-#             fig.delaxes(axes[j])
+        # Masquer les axes inutilisés
+        for j in range(i+1, len(axes)):
+            fig.delaxes(axes[j])
         
-#         plt.tight_layout()
-#         return fig
+        plt.tight_layout()
+        return fig
 
-#     except Exception as e:
-#         import traceback
-#         print(f"Erreur dans generate_stats_plots: {str(e)}")
-#         print(traceback.format_exc())
-#         if 'fig' in locals():
-#             plt.close(fig)
-#         return None
+    except Exception as e:
+        import traceback
+        print(f"Erreur dans generate_stats_plots: {str(e)}")
+        print(traceback.format_exc())
+        if 'fig' in locals():
+            plt.close(fig)
+        return None
