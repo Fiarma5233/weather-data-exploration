@@ -1,18 +1,19 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Analyse du prétraitement des données</h2>
+<div class="container my-5"> {# Increased top/bottom margin for more breathing room #}
+    <h2 class="mb-4 text-center text-primary-custom fw-bold display-5">Analyse du Prétraitement des Données</h2> {# Custom primary color, larger font #}
     
-    <div class="card mb-4">
-        <div class="card-header">
-            <h4>Sélection de la station</h4>
+    <div class="card shadow-lg mb-5 border-0"> {# Added larger shadow #}
+        <div class="card-header bg-white text-dark py-3 d-flex align-items-center justify-content-between"> {# Neutral background, dark text, more padding, flex for alignment #}
+            <h4 class="mb-0 text-dark-heading">Sélection de la Station</h4> {# Custom text color #}
+            <i class="bi bi-geo-alt-fill text-primary-custom fs-4"></i> {# Add an icon for visual interest #}
         </div>
         <div class="card-body">
-            <form method="get" class="form-inline">
-                <div class="form-group mr-3">
-                    <label for="station" class="mr-2">Station:</label>
-                    <select name="station" id="station" class="form-control" onchange="this.form.submit()">
+            <form method="get" class="d-flex align-items-center justify-content-center flex-wrap"> {# Centered and aligned items, allow wrapping #}
+                <div class="form-group d-flex align-items-center my-2"> {# Flex for label and select, add vertical margin #}
+                    <label for="station" class="me-3 fs-5 text-muted-custom">{% trans %}Station:{% endtrans %}</label> {# Increased font size, custom muted color #}
+                    <select name="station" id="station" class="form-select form-select-lg custom-select-focus" onchange="this.form.submit()"> {# Larger select, custom focus style #}
                         {% for station in stations %}
                             <option value="{{ station }}" {% if station == station_selected %}selected{% endif %}>
                                 {{ station }}
@@ -24,77 +25,131 @@
         </div>
     </div>
     
+    {# Section for "Before Processing" Data #}
+    <h3 class="mb-4 text-center text-primary-custom fw-bold display-6">Données Avant Traitement</h3>
+    
     <div class="row">
-        <div class="col-md-12">
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h4>Données manquantes - Avant traitement</h4>
+        <div class="col-12">
+            <div class="card shadow-sm mb-5 border-0">
+                <div class="card-header bg-gradient-primary text-white py-3 d-flex align-items-center justify-content-between"> {# Gradient background #}
+                    <h4 class="mb-0">{% trans %}Données Manquantes{% endtrans %}</h4>
+                    <i class="bi bi-question-circle-fill fs-4"></i> {# Icon #}
                 </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        {{ missing_before|safe }}
+                <div class="card-body p-0">
+                    <div class="chart-responsive-container">
+                        {% if missing_before %}
+                            {{ missing_before|safe }}
+                        {% else %}
+                            <p class="text-center text-muted-custom p-4">{% trans %}Aucune donnée sur les valeurs manquantes avant traitement.{% endtrans %}</p>
+                        {% endif %}
                     </div>
-                    <p class="mt-3 text-muted">
-                        Ce graphique montre le pourcentage de données manquantes pour chaque variable avant tout traitement.
-                        Les valeurs manquantes peuvent être dues à des problèmes de capteurs ou à des données invalides.
-                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Visualisation des Gaps Avant Traitement #}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm mb-5 border-0">
+                <div class="card-header bg-gradient-primary text-white py-3 d-flex align-items-center justify-content-between">
+                    <h4 class="mb-0">{% trans %}Visualisation des Gaps sur les Séries Temporelles{% endtrans %}</h4>
+                    <i class="bi bi-calendar-x-fill fs-4"></i> {# Icon #}
+                </div>
+                <div class="card-body p-0">
+                    <div class="chart-responsive-container">
+                        {% if gaps_before %}
+                            {{ gaps_before|safe }}
+                        {% else %}
+                            <p class="text-center text-muted-custom p-4">{% trans %}Aucune visualisation des gaps disponible avant traitement.{% endtrans %}</p>
+                        {% endif %}
+                    </div>
+                    <p class="text-center text-info-custom p-4 border-top border-light pt-3">{% trans %}Survolez les zones rouges pour voir les détails des périodes de données manquantes.{% endtrans %}</p> {# Info message with border #}
                 </div>
             </div>
         </div>
     </div>
     
     <div class="row">
-        <div class="col-md-12">
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h4>Valeurs hors limites - Avant traitement</h4>
+        <div class="col-12">
+            <div class="card shadow-sm mb-5 border-0">
+                <div class="card-header bg-gradient-primary text-white py-3 d-flex align-items-center justify-content-between">
+                    <h4 class="mb-0">{% trans %}Valeurs Hors Limites{% endtrans %}</h4>
+                    <i class="bi bi-exclamation-triangle-fill fs-4"></i> {# Icon #}
                 </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        {{ outliers_before|safe }}
+                <div class="card-body p-0">
+                    <div class="chart-responsive-container">
+                        {% if outliers_before %}
+                            {{ outliers_before|safe }}
+                        {% else %}
+                            <p class="text-center text-muted-custom p-4">{% trans %}Aucune donnée sur les valeurs hors limites avant traitement.{% endtrans %}</p>
+                        {% endif %}
                     </div>
-                    <p class="mt-3 text-muted">
-                        Ce graphique montre les valeurs détectées comme hors des limites acceptables avant traitement.
-                        Ces valeurs seront remplacées par NaN lors du prétraitement.
-                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {# Section for "After Processing" Data #}
+    <h3 class="mb-4 text-center text-success-custom fw-bold display-6 mt-5">Données Après Traitement</h3>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm mb-5 border-0">
+                <div class="card-header bg-gradient-success text-white py-3 d-flex align-items-center justify-content-between">
+                    <h4 class="mb-0">{% trans %}Données Manquantes{% endtrans %}</h4>
+                    <i class="bi bi-check-circle-fill fs-4"></i> {# Icon #}
+                </div>
+                <div class="card-body p-0">
+                    <div class="chart-responsive-container">
+                        {% if missing_after %}
+                            {{ missing_after|safe }}
+                        {% else %}
+                            <p class="text-center text-muted-custom p-4">{% trans %}Aucune donnée sur les valeurs manquantes après traitement.{% endtrans %}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Visualisation des Gaps Après Traitement #}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm mb-5 border-0">
+                <div class="card-header bg-gradient-success text-white py-3 d-flex align-items-center justify-content-between">
+                    <h4 class="mb-0">{% trans %}Visualisation des Gaps sur les Séries Temporelles{% endtrans %}</h4>
+                    <i class="bi bi-calendar-check-fill fs-4"></i> {# Icon #}
+                </div>
+                <div class="card-body p-0">
+                    <div class="chart-responsive-container">
+                        {% if gaps_after %}
+                            {{ gaps_after|safe }}
+                        {% else %}
+                            <p class="text-center text-muted-custom p-4">{% trans %}Aucune visualisation des gaps disponible après traitement.{% endtrans %}</p>
+                        {% endif %}
+                    </div>
+                    <p class="text-center text-info-custom p-4 border-top border-light pt-3">{% trans %}Note : Si l'interpolation a été réussie, il ne devrait pas y avoir de zones rouges ici.{% endtrans %}</p>
                 </div>
             </div>
         </div>
     </div>
     
     <div class="row">
-        <div class="col-md-12">
-            <div class="card mb-4">
-                <div class="card-header bg-success text-white">
-                    <h4>Données manquantes - Après traitement</h4>
+        <div class="col-12">
+            <div class="card shadow-sm mb-5 border-0">
+                <div class="card-header bg-gradient-success text-white py-3 d-flex align-items-center justify-content-between">
+                    <h4 class="mb-0">{% trans %}Valeurs Hors Limites{% endtrans %}</h4>
+                    <i class="bi bi-shield-check-fill fs-4"></i> {# Icon #}
                 </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        {{ missing_after|safe }}
+                <div class="card-body p-0">
+                    <div class="chart-responsive-container">
+                        {% if outliers_after %}
+                            {{ outliers_after|safe }}
+                        {% else %}
+                            <p class="text-center text-muted-custom p-4">{% trans %}Aucune donnée sur les valeurs hors limites après traitement.{% endtrans %}</p>
+                        {% endif %}
                     </div>
-                    <p class="mt-3 text-muted">
-                        Après interpolation, la plupart des valeurs manquantes devraient être complétées.
-                        Les valeurs restantes indiquent des périodes prolongées sans données.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card mb-4">
-                <div class="card-header bg-success text-white">
-                    <h4>Valeurs hors limites - Après traitement</h4>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        {{ outliers_after|safe }}
-                    </div>
-                    <p class="mt-3 text-muted">
-                        Après traitement, les valeurs hors limites ont été remplacées par des valeurs interpolées.
-                        Ce graphique montre les valeurs qui étaient hors limites avant traitement.
-                    </p>
                 </div>
             </div>
         </div>
@@ -102,27 +157,131 @@
 </div>
 
 <style>
-    .chart-container {
-        height: 500px;
+    /* Custom Color Palette */
+    :root {
+        --primary-custom: #2c3e50; /* Dark Blue Gray - Professional, calm */
+        --primary-light: #34495e; /* Slightly lighter for gradients */
+        --success-custom: #27ae60; /* Emerald Green - Clear, positive */
+        --success-light: #2ecc71; /* Slightly lighter for gradients */
+        --text-dark-heading: #34495e; /* Darker heading text */
+        --text-muted-custom: #7f8c8d; /* Muted gray for secondary text */
+        --info-custom: #3498db; /* Clear blue for informative notes */
+        --background-light: #ecf0f1; /* Light background for the page */
+        --card-bg: #ffffff; /* White background for cards */
+        --shadow-color: rgba(44, 62, 80, 0.15); /* Shadow matching primary color */
     }
+
+    /* Global styles for body and typography */
+    body {
+        font-family: 'Roboto', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; /* Prioritize Roboto if available */
+        background-color: var(--background-light);
+        color: #343a40; /* General body text color */
+    }
+
+    h2 {
+        color: var(--primary-custom);
+        font-weight: 700; /* Bolder for main title */
+        padding-top: 1rem; /* Space from top */
+    }
+
+    h3 {
+        color: var(--primary-custom);
+        font-weight: 600; /* Bolder for section titles */
+    }
+
+    h4 {
+        color: inherit; /* Inherit color from parent (card-header) */
+        font-weight: 500; /* Medium bold for card titles */
+    }
+
+    .text-primary-custom { color: var(--primary-custom) !important; }
+    .text-success-custom { color: var(--success-custom) !important; }
+    .text-dark-heading { color: var(--text-dark-heading) !important; }
+    .text-muted-custom { color: var(--text-muted-custom) !important; }
+    .text-info-custom { color: var(--info-custom) !important; }
+
+    /* Card styling */
     .card {
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        border-radius: 0.75rem;
+        overflow: hidden;
+        background-color: var(--card-bg);
+        box-shadow: 0 4px 12px var(--shadow-color); /* Lighter default shadow */
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Smoother transition */
     }
+
+    .card:hover {
+        transform: translateY(-7px); /* More pronounced lift effect on hover */
+        box-shadow: 0 10px 25px var(--shadow-color); /* Deeper shadow on hover */
+    }
+
     .card-header {
-        font-weight: bold;
+        border-bottom: none;
+        border-radius: 0.75rem 0.75rem 0 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between; /* Space out title and icon */
+        padding: 1rem 1.5rem; /* Consistent padding */
+        color: white; /* Text color for headers */
+    }
+
+    /* Gradient backgrounds for headers */
+    .bg-gradient-primary {
+        background: linear-gradient(45deg, var(--primary-custom) 0%, var(--primary-light) 100%) !important;
+    }
+
+    .bg-gradient-success {
+        background: linear-gradient(45deg, var(--success-custom) 0%, var(--success-light) 100%) !important;
+    }
+
+    .card-body {
+        padding: 1.5rem; /* Standardize padding inside card body */
+    }
+
+    /* Form specific styles */
+    .form-select-lg {
+        border-radius: 0.5rem;
+        border: 1px solid #ced4da;
+        box-shadow: none; /* Remove default focus glow */
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .form-select-lg:focus {
+        border-color: var(--primary-custom);
+        box-shadow: 0 0 0 0.25rem rgba(44, 62, 80, 0.25); /* Custom focus glow */
+        outline: 0;
+    }
+
+    /* Chart container for responsiveness */
+    .chart-responsive-container {
+        position: relative;
+        width: 100%;
+        padding-bottom: 65%; /* Adjusted for a slightly wider aspect ratio (closer to 16:9 for charts) */
+        height: 0;
+        overflow: hidden;
+        background-color: var(--card-bg); /* Ensure white background for chart area */
+        border-radius: 0 0 0.75rem 0.75rem; /* Round bottom corners */
+    }
+
+    .chart-responsive-container > div { /* Target the div containing Plotly chart */
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100% !important; /* Ensure Plotly chart fills width */
+        height: 100% !important; /* Ensure Plotly chart fills height */
+    }
+
+    /* Ensure Plotly charts fit their containers */
+    .js-plotly-plot {
+        width: 100% !important;
+        height: 100% !important;
+        /* Important: Plotly itself needs to generate the correct width/height attributes for its SVG/canvas elements */
+        /* If issues persist, you might need to ensure Plotly.react() or Plotly.newPlot() is called
+           with responsive: true in your JS, or update the layout.autosize to true. */
+    }
+
+    /* Footer / Separator styling */
+    .border-top.border-light.pt-3 {
+        border-top-color: rgba(255, 255, 255, 0.5) !important; /* Lighter border for distinction */
     }
 </style>
 {% endblock %}
-
-navbar
-
-<a href="{{ url_for('preprocessing') }}" 
-                   class="py-2 px-3 rounded-md {% if request.path == url_for('preprocessing') %}bg-indigo-900{% else %}hover:bg-indigo-600{% endif %} transition">
-                    <i class="fas fa-cogs mr-1"></i> Prétraitement
-                </a>
-                
-
-                <!-- 
-            <a href="{{ url_for('preprocessing') }}" class="py-2 px-3 rounded-md {% if request.path == url_for('preprocessing') %}bg-indigo-900{% endif %}">
-                <i class="fas fa-cogs mr-2"></i> Prétraitement
-            </a> -->

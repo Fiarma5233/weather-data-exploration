@@ -581,3 +581,27 @@ PERIOD_LABELS = {
     'Annuelle': {'fr': 'Annuelle', 'en': 'Annual'},
     # Add any other periods you might use
 }
+
+
+# Dictionnaire des types de données pour chaque variable météorologique pour optimiser le stockage
+# Utilisation de float32 pour les variables continues et category pour les variables catégorielles
+METEO_DTYPES = {
+    # Température air (°C)
+    'Air_Temp_Deg_C': 'float32',  # -40 à +50°C suffisant en float32
+    # Humidité relative (%)
+    'Rel_H_%': 'float32',         # 0-100% avec décimale
+    # Pression atmosphérique (mbar)
+    'BP_mbar_Avg': 'float32',     # 800-1100 mbar
+    # Pluviométrie (mm)
+    'Rain_01_mm': 'float32',
+    'Rain_02_mm': 'float32', 
+    'Rain_mm': 'float32',         # Cumuls pluie
+    # Vent (m/s)
+    'Wind_Sp_m/sec': 'float32',   # 0-60 m/s
+    # Radiation solaire (W/m²)
+    'Solar_R_W/m^2': 'float32',   # 0-1500 W/m²
+    # Direction vent (°)
+    'Wind_Dir_Deg': 'float32',    # 0-360°
+    # Station (catégorielle)
+    'Station': 'category'         # Optimise le stockage des noms
+}
