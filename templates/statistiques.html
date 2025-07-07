@@ -2,65 +2,60 @@
 
 {% block extra_css %}
 <style>
-    /* Styles spécifiques à la page statistiques */
+    .plot-section {
+        margin-bottom: 2rem;
+    }
+
+    /* Base style for all plot containers holding a single plotly figure (now including 3-subplot generics) */
     .plot-container {
         flex-grow: 1;
         background-color: white;
         border-radius: 0.5rem;
         padding: 1rem 1.5rem;
         overflow: hidden;
-        min-height: 500px;
-    }
-
-    .stats-card {
-        background-color: white;
+        min-height: 500px; /* Default min height for generic 3-subplot plots */
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border-radius: 0.5rem;
         border: 1px solid #e5e7eb;
     }
 
-    .stats-header {
+    /* Style for the main yearly rain plot (the 4x2 grid of specific stats) */
+    .plot-container-rain-yearly-detailed {
+        background-color: white;
+        border-radius: 0.5rem;
         padding: 1rem 1.5rem;
-        border-bottom: 1px solid #e5e7eb;
-        background-color: #f9fafb;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e5e7eb;
+        min-height: 1400px; /* Adjusted height for the 4x2 existing rain plots */
+        width: 100%;
+        overflow: hidden;
     }
 
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(1, minmax(0, 1fr));
+    /* Style for the NEW yearly rain summary plot (the 6x3 grid of overall means and extremes) */
+    .plot-container-rain-yearly-summary {
+        background-color: white;
+        border-radius: 0.5rem;
+        padding: 1rem 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e5e7eb;
+        min-height: 2200px; /* Adjusted height for the 6x3 new summary plots to ensure more "air" */
+        width: 100%;
+        overflow: hidden;
     }
 
-    @media (min-width: 640px) {
-        .stats-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
+    /* Ensure Plotly JS plots fill their containers */
+    .plot-container .js-plotly-plot,
+    .plot-container-rain-yearly-detailed .js-plotly-plot,
+    .plot-container-rain-yearly-summary .js-plotly-plot {
+        width: 100% !important;
+        height: 100% !important;
     }
 
-    @media (min-width: 1024px) {
-        .stats-grid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-        }
-    }
-
-    .stat-item {
-        padding: 1rem;
-        text-align: center;
-    }
-
-    .stat-label {
-        font-size: 0.875rem;
-        color: #6b7280;
-        font-weight: 500;
-    }
-
-    .stat-value {
+    .plot-title {
         font-size: 1.5rem;
         font-weight: bold;
-        color: #3b82f6;
-        margin-top: 0.25rem;
+        color: #4a5568;
+        margin-bottom: 1rem;
+        text-align: center;
     }
 
     .no-data-alert {
@@ -71,22 +66,20 @@
         border-radius: 0.375rem;
         display: flex;
         align-items: flex-start;
+        margin: 1rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="h-full flex flex-col px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Barre d'en-tête avec boutons -->
     <div class="flex items-center justify-between flex-wrap gap-4 mb-4">
-        <!-- Bouton Retour -->
         <a href="{{ url_for('visualisations_options') }}"
            class="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-600 rounded-md shadow-sm text-sm font-medium hover:bg-blue-600 hover:text-white transition-colors duration-200 ease-in-out">
             <i class="fas fa-arrow-left mr-2"></i>
             <span class="ml-1 hidden sm:inline">{{ _('Retour') }}</span>
         </a>
 
-        <!-- Bouton Réinitialiser -->
         <button id="reset-btn"
                 class="inline-flex items-center px-4 py-2 border border-red-600 text-red-600 rounded-md shadow-sm text-sm font-medium hover:bg-red-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200 ease-in-out">
             <i class="fas fa-redo mr-2"></i>
@@ -94,106 +87,214 @@
         </button>
     </div>
 
-    <!-- Titre principal -->
     <div class="text-center mb-6">
         <h1 class="text-2xl md:text-3xl font-bold text-gray-800">
             <i class="fas fa-chart-line mr-2"></i>{{ _('Statistiques :') }} {{ variable_name }}
         </h1>
+        <p class="text-gray-500 text-sm mt-1">{{ _('Unité :') }} {{ unit }}</p>
     </div>
 
-    <!-- Container du graphique -->
-    <div class="plot-container">
-        {% if plot_html %}
-            {{ plot_html|safe }}
-        {% else %}
-            <div class="flex items-center justify-center h-full">
+    {% if is_rain_variable %}
+    <div class="plot-section">
+        <h2 class="plot-title">{{ _('Statistiques Annuelles Détaillées de Précipitation') }}</h2>
+        <div id="plot-yearly-rain-detailed" class="plot-container-rain-yearly-detailed">
+            {% if plots_html_rain_yearly_detailed %}
+                {{ plots_html_rain_yearly_detailed|safe }}
+            {% else %}
                 <div class="no-data-alert">
-                    <i class="fas fa-exclamation-triangle mr-3 text-2xl"></i>
+                    <i class="fas fa-exclamation-triangle mr-3"></i>
                     <div>
-                        <h5 class="font-bold mb-1">{{ _('Aucune donnée disponible') }}</h5>
-                        <p class="text-sm">{{ _('Il n\'y a pas de données à afficher pour cette variable.') }}</p>
+                        <h5>{{ _('Aucune donnée de précipitation annuelle disponible pour les analyses détaillées.') }}</h5>
+                        <p>{{ _('Vérifiez que vos données contiennent bien des valeurs de pluie.') }}</p>
                     </div>
                 </div>
-            </div>
-        {% endif %}
+            {% endif %}
+        </div>
     </div>
 
-    <!-- Section des statistiques -->
-    {% if stats %}
-    <div class="mt-8 mb-5">
-        <div class="stats-card">
-            <div class="stats-header">
-                <h5 class="text-lg font-semibold text-gray-700">
-                    <i class="fas fa-calculator mr-2"></i>{{ _('Statistiques descriptives') }}
-                </h5>
-                <p class="text-gray-500 text-sm">{{ _('Unité :') }} {{ unit }}</p>
-            </div>
-            <div class="p-6">
-                <div class="stats-grid divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
-                    <div class="stat-item">
-                        <h6 class="stat-label">{{ _('Moyenne') }}</h6>
-                        <p class="stat-value">{{ stats.mean|round(2) }}</p>
-                    </div>
-                    <div class="stat-item">
-                        <h6 class="stat-label">{{ _('Médiane') }}</h6>
-                        <p class="stat-value">{{ stats.median|round(2) }}</p>
-                    </div>
-                    <div class="stat-item">
-                        <h6 class="stat-label">{{ _('Écart-type') }}</h6>
-                        <p class="stat-value">{{ stats.std|round(2) }}</p>
-                    </div>
-                    <div class="stat-item">
-                        <h6 class="stat-label">{{ _('Valeurs') }}</h6>
-                        <p class="stat-value">{{ stats.count }}</p>
+    <div class="plot-section">
+        <h2 class="plot-title">{{ _('Statistiques Récapitulatives Annuelles de Précipitation') }}</h2>
+        <div id="plot-yearly-rain-summary" class="plot-container-rain-yearly-summary">
+            {% if plots_html_rain_yearly_summary %}
+                {{ plots_html_rain_yearly_summary|safe }}
+            {% else %}
+                <div class="no-data-alert">
+                    <i class="fas fa-exclamation-triangle mr-3"></i>
+                    <div>
+                        <h5>{{ _('Aucune statistique récapitulative annuelle de précipitation disponible.') }}</h5>
+                        <p>{{ _('Vérifiez que vos données contiennent bien des valeurs de pluie et sont suffisantes pour le calcul des moyennes.') }}</p>
                     </div>
                 </div>
-            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="plot-section">
+        <h2 class="plot-title">{{ _('Statistiques Mensuelles (dans la saison pluvieuse)') }}</h2>
+        <div id="plot-monthly" class="plot-container">
+            {% if plots_html.monthly %}
+                {{ plots_html.monthly|safe }}
+            {% else %}
+                <div class="no-data-alert">
+                    <i class="fas fa-exclamation-triangle mr-3"></i>
+                    <p>{{ _('Aucune donnée mensuelle disponible dans la saison pluvieuse.') }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="plot-section">
+        <h2 class="plot-title">{{ _('Statistiques Hebdomadaires (dans la saison pluvieuse)') }}</h2>
+        <div id="plot-weekly" class="plot-container">
+            {% if plots_html.weekly %}
+                {{ plots_html.weekly|safe }}
+            {% else %}
+                <div class="no-data-alert">
+                    <i class="fas fa-exclamation-triangle mr-3"></i>
+                    <p>{{ _('Aucune donnée hebdomadaire disponible dans la saison pluvieuse.') }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="plot-section">
+        <h2 class="plot-title">{{ _('Statistiques Journalières (dans la saison pluvieuse)') }}</h2>
+        <div id="plot-daily" class="plot-container">
+            {% if plots_html.daily %}
+                {{ plots_html.daily|safe }}
+            {% else %}
+                <div class="no-data-alert">
+                    <i class="fas fa-exclamation-triangle mr-3"></i>
+                    <p>{{ _('Aucune donnée journalière disponible dans la saison pluvieuse.') }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% else %}
+    <div class="plot-section">
+        <h2 class="plot-title">{{ _('Statistiques Annuelles') }}</h2>
+        <div id="plot-yearly" class="plot-container">
+            {% if plots_html.yearly %}
+                {{ plots_html.yearly|safe }}
+            {% else %}
+                <div class="no-data-alert">
+                    <i class="fas fa-exclamation-triangle mr-3"></i>
+                    <p>{{ _('Aucune donnée annuelle disponible') }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="plot-section">
+        <h2 class="plot-title">{{ _('Statistiques Mensuelles') }}</h2>
+        <div id="plot-monthly" class="plot-container">
+            {% if plots_html.monthly %}
+                {{ plots_html.monthly|safe }}
+            {% else %}
+                <div class="no-data-alert">
+                    <i class="fas fa-exclamation-triangle mr-3"></i>
+                    <p>{{ _('Aucune donnée mensuelle disponible') }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="plot-section">
+        <h2 class="plot-title">{{ _('Statistiques Hebdomadaires') }}</h2>
+        <div id="plot-weekly" class="plot-container">
+            {% if plots_html.weekly %}
+                {{ plots_html.weekly|safe }}
+            {% else %}
+                <div class="no-data-alert">
+                    <i class="fas fa-exclamation-triangle mr-3"></i>
+                    <p>{{ _('Aucune donnée hebdomadaire disponible') }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="plot-section">
+        <h2 class="plot-title">{{ _('Statistiques Journalières') }}</h2>
+        <div id="plot-daily" class="plot-container">
+            {% if plots_html.daily %}
+                {{ plots_html.daily|safe }}
+            {% else %}
+                <div class="no-data-alert">
+                    <i class="fas fa-exclamation-triangle mr-3"></i>
+                    <p>{{ _('Aucune donnée journalière disponible') }}</p>
+                </div>
+            {% endif %}
         </div>
     </div>
     {% endif %}
+
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const plotContainer = document.querySelector('.plot-container');
+    const plotContainerIds = [
+        'plot-monthly',
+        'plot-weekly',
+        'plot-daily',
+        {% if is_rain_variable %}
+        'plot-yearly-rain-detailed',
+        'plot-yearly-rain-summary'
+        {% else %}
+        'plot-yearly'
+        {% endif %}
+    ];
 
-    // Gestion du clic sur le bouton Réinitialiser
     const resetButton = document.getElementById('reset-btn');
     if (resetButton) {
         resetButton.addEventListener('click', function(e) {
             e.preventDefault();
             const message = "{{ _('Voulez-vous vraiment réinitialiser les données ?') }}";
-            MessageSystem.confirmReset(resetData, message);
+            if (confirm(message)) {
+                window.location.href = "{{ url_for('reset_data') }}";
+            }
         });
     }
 
-    // Redimensionnement dynamique du graphique Plotly
-    const plotlyGraphDiv = plotContainer.querySelector('.js-plotly-plot');
-    if (plotlyGraphDiv) {
-        let resizeTimeout;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                if (typeof Plotly !== 'undefined') {
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            if (typeof Plotly !== 'undefined') {
+                plotContainerIds.forEach(id => {
+                    const plotContainer = document.getElementById(id);
+                    if (plotContainer) {
+                        const plotlyGraphDiv = plotContainer.querySelector('.js-plotly-plot');
+                        if (plotlyGraphDiv) {
+                            Plotly.relayout(plotlyGraphDiv.id, {
+                                'autosize': true,
+                                'width': plotContainer.offsetWidth,
+                                'height': plotContainer.offsetHeight
+                            });
+                        }
+                    }
+                });
+            }
+        }, 250);
+    });
+
+    // Initial resize to ensure plots are rendered correctly on load
+    if (typeof Plotly !== 'undefined') {
+        plotContainerIds.forEach(id => {
+            const plotContainer = document.getElementById(id);
+            if (plotContainer) {
+                const plotlyGraphDiv = plotContainer.querySelector('.js-plotly-plot');
+                if (plotlyGraphDiv) {
                     Plotly.relayout(plotlyGraphDiv.id, {
                         'autosize': true,
                         'width': plotContainer.offsetWidth,
                         'height': plotContainer.offsetHeight
                     });
                 }
-            }, 250);
+            }
         });
-
-        // Redimensionnement initial
-        if (typeof Plotly !== 'undefined') {
-            Plotly.relayout(plotlyGraphDiv.id, {
-                'autosize': true,
-                'width': plotContainer.offsetWidth,
-                'height': plotContainer.offsetHeight
-            });
-        }
     }
 });
 </script>

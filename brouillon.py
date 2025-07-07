@@ -1,3 +1,144 @@
+
+
+
+
+
+
+
+
+
+
+ #Processing fonctionnel -Debut -#
+
+# @app.route('/preprocessing', methods=['POST',  'GET'])
+# def preprocessing():
+#     stations = GLOBAL_PROCESSED_DATA_DF['Station'].unique()
+
+#     station_selected = request.args.get('station')
+
+#     print("--- In preprocessing route (GLOBAL_PROCESSED_DATA_DF) ---")
+#     print(GLOBAL_PROCESSED_DATA_DF.columns.tolist()) 
+
+#     # Liste des stations à afficher dans le select
+#     #stations = sorted(GLOBAL_PROCESSED_DATA_DF['Station'].unique())
+
+#     if not station_selected:
+#         station_selected = stations[0]  # par défaut
+
+#     # Filtrer les données selon la station sélectionnée
+#     df_raw = GLOBAL_BEFORE_INTERPOLATION_DATA_DF[GLOBAL_BEFORE_INTERPOLATION_DATA_DF['Station'] == station_selected]
+#     df_clean = GLOBAL_PROCESSED_DATA_DF[GLOBAL_PROCESSED_DATA_DF['Station'] == station_selected]
+
+#     # Générer les figures Plotly
+#     fig_missing_before = valeurs_manquantes_viz(df_raw)
+#     fig_outliers_before = outliers_viz(df_raw)
+
+#     fig_missing_after = valeurs_manquantes_viz(df_clean)
+#     fig_outliers_after = outliers_viz(df_clean)
+
+#     # Convertir en HTML
+#     return render_template(
+#         'preprocessing.html',
+#         stations=stations,
+#         station_selected=station_selected,
+#         missing_before=fig_missing_before.to_html(full_html=False),
+#         outliers_before=fig_outliers_before.to_html(full_html=False),
+#         missing_after=fig_missing_after.to_html(full_html=False),
+#         outliers_after=fig_outliers_after.to_html(full_html=False),
+#     )
+
+ #Processing fonctionnel -Fin -#
+ 
+
+ # COmmenter poiur eviter  le traitement des donnnees explicitement  dans le templates
+# @app.route('/preprocessing', methods=['GET', 'POST'])
+# def preprocessing():
+#     """
+#     Affiche la page de prévisualisation du prétraitement avec les graphiques.
+#     """
+#     global GLOBAL_PROCESSED_DATA_DF, GLOBAL_BEFORE_INTERPOLATION_DATA_DF, GLOBAL_MISSING_VALUES_BEFORE_INTERPOLATION_DF, GLOBAL_MISSING_VALUES_AFTER_INTERPOLATION_DF
+
+#     if GLOBAL_PROCESSED_DATA_DF.empty:
+#         flash(_("Veuillez d'abord uploader des données pour accéder à la page de prétraitement."), 'info')
+#         return redirect(url_for('index'))
+
+#     # Assure que la liste des stations est triée et unique
+#     stations = sorted(GLOBAL_PROCESSED_DATA_DF['Station'].unique().tolist())
+#     station_selected = request.args.get('station')
+
+#     # Sélectionne la première station si aucune n'est spécifiée
+#     if not station_selected and stations:
+#         station_selected = stations[0]
+#     elif not stations: # Aucune station disponible après traitement
+#         flash(_("Aucune station disponible pour la visualisation après le traitement."), 'warning')
+#         return redirect(url_for('index'))
+
+#     # Filtrer les données par la station sélectionnée
+#     df_raw_station = GLOBAL_BEFORE_INTERPOLATION_DATA_DF[GLOBAL_BEFORE_INTERPOLATION_DATA_DF['Station'] == station_selected]
+#     df_clean_station = GLOBAL_PROCESSED_DATA_DF[GLOBAL_PROCESSED_DATA_DF['Station'] == station_selected]
+
+#     # Filtrer les DataFrames des valeurs manquantes pour la station sélectionnée
+#     df_missing_before_station = GLOBAL_MISSING_VALUES_BEFORE_INTERPOLATION_DF[
+#         GLOBAL_MISSING_VALUES_BEFORE_INTERPOLATION_DF['station'] == station_selected
+#     ]
+#     df_missing_after_station = GLOBAL_MISSING_VALUES_AFTER_INTERPOLATION_DF[
+#         GLOBAL_MISSING_VALUES_AFTER_INTERPOLATION_DF['station'] == station_selected
+#     ]
+
+#     # Générer les figures Plotly
+#     # Les pie charts des pourcentages de manquants
+#     fig_missing_percent_before = valeurs_manquantes_viz(df_raw_station)
+#     fig_missing_percent_after = valeurs_manquantes_viz(df_clean_station)
+
+#     # Les graphiques de séries temporelles avec les gaps visualisés
+#     fig_gaps_before = gaps_time_series_viz(df_raw_station, df_missing_before_station, station_selected, _("Avant Interpolation"))
+#     fig_gaps_after = gaps_time_series_viz(df_clean_station, df_missing_after_station, station_selected, _("Après Interpolation"))
+
+#     # Placeholders pour les graphiques d'outliers
+#     # Remplacez ceci par vos vrais appels à `outliers_viz` si vous l'avez implémentée
+#     fig_outliers_before = go.Figure().add_annotation(
+#         x=0.5, y=0.5, text=_("Graphique des outliers avant interpolation (à implémenter)"),
+#         showarrow=False, font=dict(size=14)
+#     )
+#     fig_outliers_after = go.Figure().add_annotation(
+#         x=0.5, y=0.5, text=_("Graphique des outliers après interpolation (à implémenter)"),
+#         showarrow=False, font=dict(size=14)
+#     )
+
+
+#     # Convertir les figures Plotly en HTML et les passer au template
+#     return render_template(
+#         'preprocessing.html',
+#         stations=stations,
+#         station_selected=station_selected,
+        
+#         missing_percent_before=fig_missing_percent_before.to_html(full_html=False),
+#         missing_percent_after=fig_missing_percent_after.to_html(full_html=False),
+
+#         gaps_before=fig_gaps_before.to_html(full_html=False),
+#         gaps_after=fig_gaps_after.to_html(full_html=False),
+
+#         outliers_before=fig_outliers_before.to_html(full_html=False),
+#         outliers_after=fig_outliers_after.to_html(full_html=False),
+#     )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###################################################
 import pandas as pd
 from pyproj import CRS, Transformer
 import pytz

@@ -17,7 +17,10 @@
                 {% if data_available %}
 
                     
-               
+               <a href="{{ url_for('preprocessing') }}" class="py-2 px-3 rounded-md {% if request.path == url_for('preprocessing') %}bg-indigo-900{% endif %}">
+                    <i class="fas fa-cogs mr-2"></i> Prétraitement
+                </a>
+
 
                 <a href="{{ url_for('data_preview') }}"
                    class="py-2 px-3 rounded-md {% if request.path == url_for('data_preview') %}bg-indigo-900{% else %}hover:bg-indigo-600{% endif %} transition">
@@ -92,7 +95,10 @@
 
             {% if data_available %}
 
-            
+            <a href="{{ url_for('preprocessing') }}" class="py-2 px-3 rounded-md {% if request.path == url_for('preprocessing') %}bg-indigo-900{% endif %}">
+                    <i class="fas fa-cogs mr-2"></i> Prétraitement
+                </a>
+
                 
             <a href="{{ url_for('data_preview') }}" class="py-2 px-3 rounded-md {% if request.path == url_for('data_preview') %}bg-indigo-900{% endif %}">
                 <i class="fas fa-table mr-2"></i> {{ _('Données') }}

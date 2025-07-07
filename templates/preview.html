@@ -5,6 +5,7 @@
 {% block content %}
 <div class="container mx-auto px-4 py-6">
     <div class="bg-white rounded-lg shadow overflow-hidden">
+
         <!-- En-tête avec boutons -->
         <div class="px-6 py-4 border-b flex justify-between items-center">
             <a href="{{ url_for('index') }}"
@@ -16,14 +17,35 @@
                 <i class="fas fa-table mr-2 text-blue-500"></i>{{ _('Aperçu des Données Météorologiques') }}
             </h2>
 
-            {% if data_available %}
-            <a href="{{ url_for('visualisations_options') }}"
-               class="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-sm font-medium text-blue-600 bg-white hover:bg-blue-600 hover:text-white transition-colors duration-200">
-                <i class="fas fa-chart-line mr-2"></i> {{ _('Passer à la visualisation') }}
-            </a>
-            {% else %}
-            <div class="w-24"></div>
-            {% endif %}
+            <div class="flex items-center gap-4">
+                <!-- ✅ Bouton Télécharger avec dropdown -->
+                <div class="relative inline-block text-left">
+                    <button id="downloadToggle"
+                        class="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-600 rounded-md shadow-sm text-sm font-medium bg-white hover:bg-blue-600 hover:text-white transition-colors duration-200">
+                        <i class="fas fa-download mr-2"></i>{{ _('Télécharger') }}
+                        <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.186l3.71-3.956a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <div id="downloadMenu" class="origin-top-right absolute right-0 mt-2 w-40 rounded-md shadow-lg bg-white border border-gray-200 hidden z-10">
+                        <div class="py-1 text-sm text-gray-700">
+                            <a href="{{ url_for('download_csv') }}"
+                               class="block px-4 py-2 hover:bg-blue-100 hover:text-blue-700 transition">{{ _('CSV') }}</a>
+                            <a href="{{ url_for('download_excel') }}"
+                               class="block px-4 py-2 hover:bg-blue-100 hover:text-blue-700 transition">{{ _('Excel') }}</a>
+                        </div>
+                    </div>
+                </div>
+
+                {% if data_available %}
+                <a href="{{ url_for('visualisations_options') }}"
+                   class="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-sm font-medium text-blue-600 bg-white hover:bg-blue-600 hover:text-white transition-colors duration-200">
+                    <i class="fas fa-chart-line mr-2"></i> {{ _('Passer à la visualisation') }}
+                </a>
+                {% else %}
+                <div class="w-24"></div>
+                {% endif %}
+            </div>
         </div>
 
         <!-- Bloc d'informations -->
@@ -65,11 +87,11 @@
             </div>
             {% endif %}
         </div>
+
     </div>
 </div>
 
 <style>
-    /* Styles pour le tableau élargi */
     table {
         width: 100% !important;
         max-width: none !important;
@@ -77,11 +99,13 @@
         border-collapse: separate;
         border-spacing: 0;
     }
+
     th, td {
         padding: 0.75rem 1.25rem;
         white-space: nowrap;
         border-bottom: 1px solid #e2e8f0;
     }
+
     th {
         background-color: #f7fafc;
         font-weight: 600;
@@ -90,36 +114,47 @@
         top: 0;
         color: #1e40af;
     }
+
     tr:hover td {
         background-color: #f8fafc;
     }
+
     .table-striped tbody tr:nth-child(odd) td {
         background-color: #f7fafc;
     }
 
-    /* Effet de survol amélioré */
-    a:hover i {
-        color: white !important;
-        transition: color 0.2s ease;
-    }
-
-    /* Largeur maximale supprimée */
     .container {
         max-width: none;
         padding-left: 2rem;
         padding-right: 2rem;
     }
 
-    /* Amélioration de la lisibilité */
     td {
         color: #4a5568;
         font-size: 0.875rem;
     }
-    
-    /* Style pour les cellules numériques */
+
     td.numeric {
         font-family: monospace;
         text-align: right;
     }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const toggleBtn = document.getElementById('downloadToggle');
+    const menu = document.getElementById('downloadMenu');
+
+    toggleBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        menu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', function (event) {
+        if (!toggleBtn.contains(event.target) && !menu.contains(event.target)) {
+            menu.classList.add('hidden');
+        }
+    });
+});
+</script>
 {% endblock %}

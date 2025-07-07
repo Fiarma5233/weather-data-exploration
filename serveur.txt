@@ -1,0 +1,32 @@
+
+Se connecter au serveur
+ssh fiarma@wadirep.wascal.org
+
+zip meteo_app.zip meteo_app
+
+scp meteo_app.zip fiarma@wadirep.wascal.org:/home/fiarma
+
+utiliser le mot de passe
+
+Une fois apres la copie de l'hote vers le sever,  aller dans le terminal pour le server
+
+cp meteo_app.zip /srv/webprojects/fiarma
+
+Aller dans le dossier cd /srv/webprojects/fiarma
+cd /srv/webprojects/fiarma
+
+Puis dezippper le fichier meteo_app.zip
+unzip meteo_app.zip 
+
+Aller dans le dossier meteo_app
+cd meteo_app
+
+Construire l'image docker
+docker build -t meteo .
+
+Lancer docker
+docker run -d --network=host meteo
+
+sur le navigateur, lancer l'url:
+http://188.40.150.184:8089/
+ 

@@ -263,1168 +263,6 @@ def create_datetime(df: pd.DataFrame, bassin: str = None, station: str = None) -
     return df_copy
 
 
-# def interpolation(df: pd.DataFrame, limits: dict, df_gps: pd.DataFrame) -> pd.DataFrame:
-#     """
-#     Effectue toutes les interpolations météorologiques en une seule passe.
-#     Cette fonction DOIT recevoir un DataFrame avec un DatetimeIndex.
-#     Il doit également contenir une colonne 'Station'.
-
-#     Args:
-#         df (pd.DataFrame): Le DataFrame d'entrée avec DatetimeIndex et colonne 'Station'.
-#         limits (dict): Dictionnaire définissant les limites de valeurs pour chaque variable.
-#         df_gps (pd.DataFrame): Le DataFrame contenant les informations de station
-#                                (colonnes 'Station', 'Lat', 'Long', 'Timezone').
-
-#     Returns:
-#         pd.DataFrame: Le DataFrame original avec les données interpolées,
-#                       la colonne 'Is_Daylight' calculée, la durée du jour, et un DatetimeIndex.
-#     """
-#     df_processed = df.copy()
-
-#     if not isinstance(df_processed.index, pd.DatetimeIndex):
-#         raise TypeError(str(_l("Le DataFrame d'entrée pour l'interpolation DOIT avoir un DatetimeIndex.")))
-    
-#     initial_rows = len(df_processed)
-#     df_processed = df_processed[df_processed.index.notna()]
-#     if len(df_processed) == 0:
-#         raise ValueError(str(_l("Après nettoyage des index temporels manquants, le DataFrame est vide. Impossible de procéder à l'interpolation.")))
-#     if initial_rows - len(df_processed) > 0:
-#         warnings.warn(str(_l("Suppression de %s lignes avec index Datetime manquant ou invalide dans l'interpolation.") % (initial_rows - len(df_processed))))
-    
-#     print(_l("DEBUG (interpolation): Type de l'index du DataFrame initial: %s") % type(df_processed.index))
-#     print(_l("DEBUG (interpolation): Premières 5 valeurs de l'index après nettoyage des NaT: %s") % (df_processed.index[:5].tolist() if not df_processed.empty else 'DataFrame vide'))
-
-#     required_gps_cols = ['Station', 'Lat', 'Long', 'Timezone']
-#     if not all(col in df_gps.columns for col in required_gps_cols):
-#         raise ValueError(
-#             str(_l("df_gps doit contenir les colonnes %s. Colonnes actuelles dans df_gps : %s") % \
-#             (required_gps_cols, df_gps.columns.tolist()))
-#         )
-
-#     if not df_gps['Station'].is_unique:
-#         print(_l("Avertissement: La colonne 'Station' dans df_gps contient des noms de station dupliqués."))
-#         print(_l("Ceci peut entraîner des comportements inattendus ou des stations non reconnues."))
-#         df_gps_unique = df_gps.drop_duplicates(subset=['Station'], keep='first').copy()
-#         print(_l("Suppression de %s doublons dans df_gps (en gardant la première occurrence).") % (len(df_gps) - len(df_gps_unique)))
-#     else:
-#         df_gps_unique = df_gps.copy()
-
-#     gps_info_dict = df_gps_unique.set_index('Station')[['Lat', 'Long', 'Timezone']].to_dict('index')
-
-#     numerical_cols = ['Air_Temp_Deg_C', 'Rel_H_%', 'BP_mbar_Avg',
-#                       'Rain_01_mm', 'Rain_02_mm', 'Rain_mm', 'Wind_Sp_m/sec',
-#                       'Solar_R_W/m^2', 'Wind_Dir_Deg']
-#     for col in numerical_cols:
-#         if col in df_processed.columns:
-#             df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce')
-#             if col in limits:
-#                 min_val = limits[col]['min']
-#                 max_val = limits[col]['max']
-#                 initial_nan_count = df_processed[col].isna().sum()
-#                 if min_val is not None:
-#                     df_processed.loc[df_processed[col] < min_val, col] = np.nan
-#                 if max_val is not None:
-#                     df_processed.loc[df_processed[col] > max_val, col] = np.nan
-                
-#                 new_nan_count = df_processed[col].isna().sum()
-#                 if new_nan_count > initial_nan_count:
-#                     warnings.warn(str(_l("Remplacement de %s valeurs hors limites dans '%s' par NaN.") % (new_nan_count - initial_nan_count, col)))
-            
-#             print(_l("DEBUG (interpolation/variable): Interpolation de '%s'. Type de l'index de df_final: %s") % (col, type(df_processed.index)))
-            
-#             if isinstance(df_processed.index, pd.DatetimeIndex):
-#                 df_processed[col] = df_processed[col].interpolate(method='time', limit_direction='both')
-#             else:
-#                 print(_l("Avertissement (interpolation/variable): L'index n'est pas un DatetimeIndex pour l'interpolation de '%s'. Utilisation de la méthode 'linear'.") % col)
-#                 df_processed[col] = df_processed[col].interpolate(method='linear', limit_direction='both')
-#             df_processed[col] = df_processed[col].bfill().ffill()
-
-#     df_processed_parts = []
-
-#     for station_name, group in df_processed.groupby('Station'):
-#         group_copy = group.copy()
-#         print(_l("DEBUG (interpolation/groupby): Début du traitement du groupe '%s'.") % station_name)
-        
-#         if group_copy.index.tz is None:
-#             group_copy.index = group_copy.index.tz_localize('UTC', ambiguous='NaT', nonexistent='NaT')
-#         elif group_copy.index.tz != pytz.utc:
-#             group_copy.index = group_copy.index.tz_convert('UTC')
-#         print(_l("DEBUG (interpolation/groupby): Index Datetime pour '%s' STANDARDISÉ à UTC. Dtype: %s") % (station_name, group_copy.index.dtype))
-        
-#         group_copy = group_copy[group_copy.index.notna()]
-#         if group_copy.empty:
-#             warnings.warn(str(_l("Le groupe '%s' est vide après nettoyage de l'index Datetime. Il sera ignoré.") % station_name))
-#             continue
-
-#         apply_fixed_daylight = True
-#         gps_data = gps_info_dict.get(station_name)
-#         if gps_data and pd.notna(gps_data.get('Lat')) and pd.notna(gps_data.get('Long')) and pd.notna(gps_data.get('Timezone')):
-#             lat = gps_data['Lat']
-#             long = gps_data['Long']
-#             timezone_str = gps_data['Timezone']
-
-#             try:
-#                 local_tz = pytz.timezone(timezone_str)
-#                 index_for_astral_local = group_copy.index.tz_convert(local_tz)
-
-#                 daily_sun_info = {}
-#                 unique_dates_ts_local = index_for_astral_local.normalize().drop_duplicates()
-
-#                 if unique_dates_ts_local.empty:
-#                     raise ValueError(str(_l("Aucune date unique trouvée pour le calcul Astral.")))
-                
-#                 for ts_local_aware in unique_dates_ts_local:
-#                     loc = LocationInfo(station_name, "Site", timezone_str, lat, long)
-#                     naive_date_for_astral = ts_local_aware.to_pydatetime().date()
-#                     s = sun.sun(loc.observer, date=naive_date_for_astral) 
-#                     daily_sun_info[naive_date_for_astral] = {
-#                         'sunrise': s['sunrise'],
-#                         'sunset': s['sunset']
-#                     }
-
-#                 naive_unique_dates_for_index = [ts.date() for ts in unique_dates_ts_local]
-#                 temp_df_sun_index = pd.Index(naive_unique_dates_for_index, name='Date_Local_Naive')
-#                 temp_df_sun = pd.DataFrame(index=temp_df_sun_index)
-                
-#                 print(_l("DEBUG (astral_calc): unique_dates_ts_local type: %s") % type(unique_dates_ts_local))
-#                 print(_l("DEBUG (astral_calc): naive_unique_dates_for_index type: %s") % type(naive_unique_dates_for_index))
-#                 print(_l("DEBUG (astral_calc): temp_df_sun_index type: %s") % type(temp_df_sun_index))
-#                 if not temp_df_sun.empty:
-#                     print(_l("DEBUG (astral_calc): First element of temp_df_sun.index: %s") % temp_df_sun.index[0])
-#                     print(_l("DEBUG (astral_calc): Type of first element of temp_df_sun.index: %s") % type(temp_df_sun.index[0]))
-
-#                 temp_df_sun['sunrise_time_local'] = [daily_sun_info.get(date, {}).get('sunrise') for date in temp_df_sun.index]
-#                 temp_df_sun['sunset_time_local'] = [daily_sun_info.get(date, {}).get('sunset') for date in temp_df_sun.index]
-
-#                 group_copy_reset = group_copy.reset_index()
-#                 group_copy_reset['Date_Local_Naive'] = group_copy_reset['Datetime'].dt.tz_convert(local_tz).dt.date
-
-#                 group_copy_reset = pd.merge(group_copy_reset, temp_df_sun, on='Date_Local_Naive', how='left')
-
-#                 group_copy_reset['sunrise_time_utc'] = group_copy_reset['sunrise_time_local'].dt.tz_convert('UTC')
-#                 group_copy_reset['sunset_time_utc'] = group_copy_reset['sunset_time_local'].dt.tz_convert('UTC')
-
-#                 group_copy_reset.loc[:, 'Is_Daylight'] = (group_copy_reset['Datetime'] >= group_copy_reset['sunrise_time_utc']) & \
-#                                                           (group_copy_reset['Datetime'] < group_copy_reset['sunset_time_utc'])
-
-#                 daylight_timedelta_local = group_copy_reset['sunset_time_local'] - group_copy_reset['sunrise_time_local']
-                
-#                 def format_timedelta_to_hms(td):
-#                     if pd.isna(td):
-#                         return np.nan
-#                     total_seconds = int(td.total_seconds())
-#                     hours = total_seconds // 3600
-#                     minutes = (total_seconds % 3600) // 60
-#                     seconds = total_seconds % 60
-#                     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-#                 group_copy_reset.loc[:, 'Daylight_Duration'] = daylight_timedelta_local.apply(format_timedelta_to_hms)
-
-#                 group_copy = group_copy_reset.set_index('Datetime')
-#                 group_copy = group_copy.drop(columns=['Date_Local_Naive', 'sunrise_time_local', 'sunset_time_local', 'sunrise_time_utc', 'sunset_time_utc'], errors='ignore')
-
-#                 print(_l("Lever et coucher du soleil calculés pour %s.") % station_name)
-#                 apply_fixed_daylight = False
-
-#             except Exception as e:
-#                 print(_l("Erreur lors du calcul du lever/coucher du soleil avec Astral pour %s: %s.") % (station_name, e))
-#                 traceback.print_exc()
-#                 warnings.warn(str(_l("Calcul Astral impossible pour '%s'. Utilisation de l'indicateur jour/nuit fixe.") % station_name))
-#                 apply_fixed_daylight = True
-#         else:
-#             print(_l("Avertissement: Coordonnées ou Fuseau horaire manquants/invalides pour le site '%s' dans df_gps. Utilisation de l'indicateur jour/nuit fixe.") % station_name)
-#             apply_fixed_daylight = True
-
-#         if apply_fixed_daylight:
-#             group_copy.loc[:, 'Is_Daylight'] = (group_copy.index.hour >= 7) & (group_copy.index.hour <= 18)
-#             group_copy.loc[:, 'Daylight_Duration'] = "11:00:00"
-#             print(_l("Utilisation de l'indicateur jour/nuit fixe (7h-18h) pour %s.") % station_name)
-
-#         df_processed_parts.append(group_copy)
-
-#     if not df_processed_parts:
-#         raise ValueError(str(_l("Aucune partie de DataFrame n'a pu être traitée après le regroupement par station.")))
-
-#     df_final = pd.concat(df_processed_parts).sort_index()
-#     df_final.index.name = 'Datetime' 
-#     print(_l("DEBUG (interpolation/concat): Index du DataFrame final après concaténation et tri: %s") % type(df_final.index))
-#     print(_l("DEBUG (interpolation/concat): Colonnes du DataFrame final après concaténation: %s") % df_final.columns.tolist())
-
-#     cols_to_drop_after_process = ['Year', 'Month', 'Day', 'Hour', 'Minute', 'Date']
-#     df_final = df_final.drop(columns=cols_to_drop_after_process, errors='ignore')
-
-#     if 'Rain_mm' not in df_final.columns or df_final['Rain_mm'].isnull().all():
-#         if 'Rain_01_mm' in df_final.columns and 'Rain_02_mm' in df_final.columns:
-#             df_final = create_rain_mm(df_final)
-#             warnings.warn(str(_l("Colonne Rain_mm créée à partir des deux capteurs.")))
-#         else:
-#             warnings.warn(str(_l("Rain_mm manquant et impossible à créer (capteurs pluie incomplets).")))
-#             if 'Rain_mm' not in df_final.columns:
-#                 df_final['Rain_mm'] = np.nan
-
-#     standard_vars = ['Air_Temp_Deg_C', 'Rel_H_%', 'BP_mbar_Avg',
-#                       'Rain_01_mm', 'Rain_02_mm', 'Rain_mm', 'Wind_Sp_m/sec',
-#                       'Solar_R_W/m^2', 'Wind_Dir_Deg']
-
-#     for var in standard_vars:
-#         if var in df_final.columns:
-#             df_final[var] = pd.to_numeric(df_final[var], errors='coerce')
-#             if var in limits:
-#                 min_val = limits[var]['min']
-#                 max_val = limits[var]['max']
-#                 initial_nan_count = df_final[var].isna().sum()
-#                 if min_val is not None:
-#                     df_final.loc[df_final[var] < min_val, var] = np.nan
-#                 if max_val is not None:
-#                     df_final.loc[df_final[var] > max_val, var] = np.nan
-                
-#                 new_nan_count = df_final[var].isna().sum()
-#                 if new_nan_count > initial_nan_count:
-#                     warnings.warn(str(_l("Remplacement de %s valeurs hors limites dans '%s' par NaN.") % (new_nan_count - initial_nan_count, var)))
-            
-#             print(_l("DEBUG (interpolation/variable): Interpolation de '%s'. Type de l'index de df_final: %s") % (var, type(df_final.index)))
-            
-#             if isinstance(df_final.index, pd.DatetimeIndex):
-#                 df_final[var] = df_final[var].interpolate(method='time', limit_direction='both')
-#             else:
-#                 print(_l("Avertissement (interpolation/variable): L'index n'est pas un DatetimeIndex pour l'interpolation de '%s'. Utilisation de la méthode 'linear'.") % var)
-#                 df_final[var] = df_final[var].interpolate(method='linear', limit_direction='both')
-#             df_final[var] = df_final[var].bfill().ffill()
-
-#     if 'Solar_R_W/m^2' in df_final.columns:
-#         df_final['Solar_R_W/m^2'] = pd.to_numeric(df_final['Solar_R_W/m^2'], errors='coerce')
-
-#         if 'Solar_R_W/m^2' in limits:
-#             min_val = limits['Solar_R_W/m^2']['min']
-#             max_val = limits['Solar_R_W/m^2']['max']
-#             initial_nan_count = df_final['Solar_R_W/m^2'].isna().sum()
-#             df_final.loc[(df_final['Solar_R_W/m^2'] < min_val) | (df_final['Solar_R_W/m^2'] > max_val), 'Solar_R_W/m^2'] = np.nan
-#             if df_final['Solar_R_W/m^2'].isna().sum() > initial_nan_count:
-#                 warnings.warn(str(_l("Remplacement de %s valeurs hors limites dans 'Solar_R_W/m^2' par NaN.") % (df_final['Solar_R_W/m^2'].isna().sum() - initial_nan_count)))
-
-#         if 'Is_Daylight' in df_final.columns:
-#             df_final.loc[~df_final['Is_Daylight'] & (df_final['Solar_R_W/m^2'] > 0), 'Solar_R_W/m^2'] = 0
-
-#             if 'Rain_mm' in df_final.columns:
-#                 cond_suspect_zeros = (df_final['Is_Daylight']) & (df_final['Solar_R_W/m^2'] == 0) & (df_final['Rain_mm'] == 0)
-#             else:
-#                 cond_suspect_zeros = (df_final['Is_Daylight']) & (df_final['Solar_R_W/m^2'] == 0)
-#                 warnings.warn(str(_l("Rain_mm manquant. Tous les 0 de radiation solaire pendant le jour sont traités comme suspects.")))
-#             df_final.loc[cond_suspect_zeros, 'Solar_R_W/m^2'] = np.nan
-
-#             print(_l("DEBUG (interpolation/solaire): Interpolation de 'Solar_R_W/m^2' (conditionnel). Type de l'index de df_final: %s") % type(df_final.index))
-
-#             is_day = df_final['Is_Daylight']
-#             if isinstance(df_final.index, pd.DatetimeIndex):
-#                 df_final.loc[is_day, 'Solar_R_W/m^2'] = df_final.loc[is_day, 'Solar_R_W/m^2'].interpolate(method='time', limit_direction='both')
-#             else:
-#                 print(_l("Avertissement (interpolation/solaire): L'index n'est pas un DatetimeIndex pour l'interpolation de 'Solar_R_W/m^2'. Utilisation de la méthode 'linear'.") % type(df_final.index))
-#                 df_final.loc[is_day, 'Solar_R_W/m^2'] = df_final.loc[is_day, 'Solar_R_W/m^2'].interpolate(method='linear', limit_direction='both')
-
-#             df_final.loc[is_day, 'Solar_R_W/m^2'] = df_final.loc[is_day, 'Solar_R_W/m^2'].bfill().ffill()
-
-#             df_final.loc[~is_day & df_final['Solar_R_W/m^2'].isna(), 'Solar_R_W/m^2'] = 0
-#             warnings.warn(str(_l("Radiation solaire interpolée avec succès.")))
-#         else:
-#             warnings.warn(str(_l("Colonne 'Is_Daylight' manquante. Radiation solaire interpolée standard.")))
-#             if isinstance(df_final.index, pd.DatetimeIndex):
-#                  df_final['Solar_R_W/m^2'] = df_final['Solar_R_W/m^2'].interpolate(method='time', limit_direction='both').bfill().ffill()
-#             else:
-#                  df_final['Solar_R_W/m^2'] = df_final['Solar_R_W/m^2'].interpolate(method='linear', limit_direction='both').bfill().ffill()
-
-#     warnings.warn(str(_l("Vérification des valeurs manquantes après interpolation:")))
-#     missing_after_interp = df_final.isna().sum()
-#     columns_with_missing = missing_after_interp[missing_after_interp > 0]
-#     if not columns_with_missing.empty:
-#         warnings.warn(str(_l("Valeurs manquantes persistantes:\n%s") % columns_with_missing))
-#     else:
-#         warnings.warn(str(_l("Aucune valeur manquante après l'interpolation.")))
-
-#     return df_final
-
-
-
-
-
-
-
-# def interpolation(df: pd.DataFrame, limits: dict, df_gps: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-#     """
-#     Effectue le nettoyage, l'application des limites et l'interpolation des données météorologiques.
-#     Cette fonction retourne deux DataFrames :
-#     1. Le DataFrame après nettoyage et application des limites (avec NaNs pour les valeurs manquantes/outliers).
-#     2. Le DataFrame entièrement interpolé (sans NaNs).
-
-#     Args:
-#         df (pd.DataFrame): Le DataFrame d'entrée avec DatetimeIndex et colonne 'Station'.
-#         limits (dict): Dictionnaire définissant les limites de valeurs pour chaque variable.
-#         df_gps (pd.DataFrame): Le DataFrame contenant les informations de station
-#                                (colonnes 'Station', 'Lat', 'Long', 'Timezone').
-
-#     Returns:
-#         tuple[pd.DataFrame, pd.DataFrame]:
-#             - Le premier DataFrame contient les données après nettoyage et mise en NaN des outliers, mais AVANT interpolation.
-#             - Le deuxième DataFrame contient les données entièrement interpolées.
-#     """
-#     df_temp_processed = df.copy()
-
-#     # --- Vérifications initiales (identiques à l'original) ---
-#     if not isinstance(df_temp_processed.index, pd.DatetimeIndex):
-#         raise TypeError(str(_l("Le DataFrame d'entrée pour l'interpolation DOIT avoir un DatetimeIndex.")))
-    
-#     initial_rows = len(df_temp_processed)
-#     df_temp_processed = df_temp_processed[df_temp_processed.index.notna()]
-#     if len(df_temp_processed) == 0:
-#         raise ValueError(str(_l("Après nettoyage des index temporels manquants, le DataFrame est vide. Impossible de procéder à l'interpolation.")))
-#     if initial_rows - len(df_temp_processed) > 0:
-#         warnings.warn(str(_l("Suppression de %s lignes avec index Datetime manquant ou invalide.") % (initial_rows - len(df_temp_processed))))
-    
-#     print(_l("DEBUG (interpolation): Type de l'index du DataFrame initial: %s") % type(df_temp_processed.index))
-#     print(_l("DEBUG (interpolation): Premières 5 valeurs de l'index après nettoyage des NaT: %s") % (df_temp_processed.index[:5].tolist() if not df_temp_processed.empty else 'DataFrame vide'))
-
-#     required_gps_cols = ['Station', 'Lat', 'Long', 'Timezone']
-#     if not all(col in df_gps.columns for col in required_gps_cols):
-#         raise ValueError(
-#             str(_l("df_gps doit contenir les colonnes %s. Colonnes actuelles dans df_gps : %s") % \
-#             (required_gps_cols, df_gps.columns.tolist()))
-#         )
-
-#     if not df_gps['Station'].is_unique:
-#         print(_l("Avertissement: La colonne 'Station' dans df_gps contient des noms de station dupliqués."))
-#         print(_l("Ceci peut entraîner des comportements inattendus ou des stations non reconnues."))
-#         df_gps_unique = df_gps.drop_duplicates(subset=['Station'], keep='first').copy()
-#         print(_l("Suppression de %s doublons dans df_gps (en gardant la première occurrence).") % (len(df_gps) - len(df_gps_unique)))
-#     else:
-#         df_gps_unique = df_gps.copy()
-
-#     gps_info_dict = df_gps_unique.set_index('Station')[['Lat', 'Long', 'Timezone']].to_dict('index')
-
-#     numerical_cols = ['Air_Temp_Deg_C', 'Rel_H_%', 'BP_mbar_Avg',
-#                       'Rain_01_mm', 'Rain_02_mm', 'Rain_mm', 'Wind_Sp_m/sec',
-#                       'Solar_R_W/m^2', 'Wind_Dir_Deg']
-    
-#     # --- PHASE 1: Nettoyage, application des limites et calcul des auxiliaires (AVANT INTERPOLATION) ---
-#     # Appliquer les limites et convertir en NaN pour les colonnes numériques
-#     for col in numerical_cols:
-#         if col in df_temp_processed.columns:
-#             df_temp_processed[col] = pd.to_numeric(df_temp_processed[col], errors='coerce')
-#             if col in limits:
-#                 min_val = limits[col]['min']
-#                 max_val = limits[col]['max']
-#                 initial_nan_count = df_temp_processed[col].isna().sum()
-#                 if min_val is not None:
-#                     df_temp_processed.loc[df_temp_processed[col] < min_val, col] = np.nan
-#                 if max_val is not None:
-#                     df_temp_processed.loc[df_temp_processed[col] > max_val, col] = np.nan
-                
-#                 new_nan_count = df_temp_processed[col].isna().sum()
-#                 if new_nan_count > initial_nan_count:
-#                     warnings.warn(str(_l("Remplacement de %s valeurs hors limites dans '%s' par NaN (pré-interpolation).") % (new_nan_count - initial_nan_count, col)))
-
-#     df_parts_before_interp = []
-
-#     for station_name, group in df_temp_processed.groupby('Station'):
-#         group_copy = group.copy()
-#         print(_l("DEBUG (interpolation/groupby): Début du traitement du groupe '%s' pour l'étape pré-interpolation.") % station_name)
-        
-#         if group_copy.index.tz is None:
-#             group_copy.index = group_copy.index.tz_localize('UTC', ambiguous='NaT', nonexistent='NaT')
-#         elif group_copy.index.tz != pytz.utc:
-#             group_copy.index = group_copy.index.tz_convert('UTC')
-        
-#         group_copy = group_copy[group_copy.index.notna()]
-#         if group_copy.empty:
-#             warnings.warn(str(_l("Le groupe '%s' est vide après nettoyage de l'index Datetime. Il sera ignoré pour l'interpolation.") % station_name))
-#             continue
-
-#         # Calcul Is_Daylight et Daylight_Duration
-#         apply_fixed_daylight = True
-#         gps_data = gps_info_dict.get(station_name)
-#         if gps_data and pd.notna(gps_data.get('Lat')) and pd.notna(gps_data.get('Long')) and pd.notna(gps_data.get('Timezone')):
-#             lat = gps_data['Lat']
-#             long = gps_data['Long']
-#             timezone_str = gps_data['Timezone']
-
-#             try:
-#                 local_tz = pytz.timezone(timezone_str)
-#                 index_for_astral_local = group_copy.index.tz_convert(local_tz)
-
-#                 daily_sun_info = {}
-#                 unique_dates_ts_local = index_for_astral_local.normalize().drop_duplicates()
-
-#                 if unique_dates_ts_local.empty:
-#                     raise ValueError(str(_l("Aucune date unique trouvée pour le calcul Astral.")))
-                
-#                 for ts_local_aware in unique_dates_ts_local:
-#                     loc = LocationInfo(station_name, "Site", timezone_str, lat, long)
-#                     naive_date_for_astral = ts_local_aware.to_pydatetime().date()
-#                     s = sun.sun(loc.observer, date=naive_date_for_astral) 
-#                     daily_sun_info[naive_date_for_astral] = {
-#                         'sunrise': s['sunrise'],
-#                         'sunset': s['sunset']
-#                     }
-
-#                 temp_df_sun_index = pd.Index([ts.date() for ts in unique_dates_ts_local], name='Date_Local_Naive')
-#                 temp_df_sun = pd.DataFrame(index=temp_df_sun_index)
-                
-#                 temp_df_sun['sunrise_time_local'] = [daily_sun_info.get(date, {}).get('sunrise') for date in temp_df_sun.index]
-#                 temp_df_sun['sunset_time_local'] = [daily_sun_info.get(date, {}).get('sunset') for date in temp_df_sun.index]
-
-#                 group_copy_reset = group_copy.reset_index()
-#                 group_copy_reset['Date_Local_Naive'] = group_copy_reset['Datetime'].dt.tz_convert(local_tz).dt.date
-
-#                 group_copy_reset = pd.merge(group_copy_reset, temp_df_sun, on='Date_Local_Naive', how='left')
-
-#                 group_copy_reset['sunrise_time_utc'] = group_copy_reset['sunrise_time_local'].dt.tz_convert('UTC')
-#                 group_copy_reset['sunset_time_utc'] = group_copy_reset['sunset_time_local'].dt.tz_convert('UTC')
-
-#                 group_copy_reset.loc[:, 'Is_Daylight'] = (group_copy_reset['Datetime'] >= group_copy_reset['sunrise_time_utc']) & \
-#                                                           (group_copy_reset['Datetime'] < group_copy_reset['sunset_time_utc'])
-
-#                 daylight_timedelta_local = group_copy_reset['sunset_time_local'] - group_copy_reset['sunrise_time_local']
-                
-#                 def format_timedelta_to_hms(td):
-#                     if pd.isna(td):
-#                         return np.nan
-#                     total_seconds = int(td.total_seconds())
-#                     hours = total_seconds // 3600
-#                     minutes = (total_seconds % 3600) // 60
-#                     seconds = total_seconds % 60
-#                     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-#                 group_copy_reset.loc[:, 'Daylight_Duration'] = daylight_timedelta_local.apply(format_timedelta_to_hms)
-
-#                 group_copy = group_copy_reset.set_index('Datetime')
-#                 group_copy = group_copy.drop(columns=['Date_Local_Naive', 'sunrise_time_local', 'sunset_time_local', 'sunrise_time_utc', 'sunset_time_utc'], errors='ignore')
-
-#                 print(_l("Lever et coucher du soleil calculés pour %s.") % station_name)
-#                 apply_fixed_daylight = False
-
-#             except Exception as e:
-#                 print(_l("Erreur lors du calcul du lever/coucher du soleil avec Astral pour %s: %s.") % (station_name, e))
-#                 traceback.print_exc()
-#                 warnings.warn(str(_l("Calcul Astral impossible pour '%s'. Utilisation de l'indicateur jour/nuit fixe.") % station_name))
-#                 apply_fixed_daylight = True
-#         else:
-#             print(_l("Avertissement: Coordonnées ou Fuseau horaire manquants/invalides pour le site '%s' dans df_gps. Utilisation de l'indicateur jour/nuit fixe.") % station_name)
-#             apply_fixed_daylight = True
-
-#         if apply_fixed_daylight:
-#             group_copy.loc[:, 'Is_Daylight'] = (group_copy.index.hour >= 7) & (group_copy.index.hour <= 18)
-#             group_copy.loc[:, 'Daylight_Duration'] = "11:00:00"
-#             print(_l("Utilisation de l'indicateur jour/nuit fixe (7h-18h) pour %s.") % station_name)
-        
-#         df_parts_before_interp.append(group_copy)
-
-#     if not df_parts_before_interp:
-#         return pd.DataFrame(), pd.DataFrame()
-
-#     df_before_interpolation = pd.concat(df_parts_before_interp).sort_index()
-#     df_before_interpolation.index.name = 'Datetime'
-
-#     # Gestion de 'Rain_mm'
-#     if 'Rain_mm' not in df_before_interpolation.columns or df_before_interpolation['Rain_mm'].isnull().all():
-#         if 'Rain_01_mm' in df_before_interpolation.columns and 'Rain_02_mm' in df_before_interpolation.columns:
-#             df_before_interpolation = create_rain_mm(df_before_interpolation)
-#             warnings.warn(str(_l("Colonne Rain_mm créée à partir des deux capteurs (pré-interpolation).")))
-#         else:
-#             warnings.warn(str(_l("Rain_mm manquant et impossible à créer (capteurs pluie incomplets) (pré-interpolation).")))
-#             if 'Rain_mm' not in df_before_interpolation.columns:
-#                 df_before_interpolation['Rain_mm'] = np.nan
-
-#     # NOUVELLE LOGIQUE POUR SOLAR_R_W/m^2 EN PHASE 1:
-#     # Appliquer la règle "toute valeur de radiation solaire en dehors du jour est 0" dès maintenant
-#     if 'Solar_R_W/m^2' in df_before_interpolation.columns and 'Is_Daylight' in df_before_interpolation.columns:
-#         # Forcer TOUTES les valeurs de Solar_R_W/m^2 à 0 quand il fait nuit
-#         # Cela inclut les NaNs et les valeurs positives erronées
-#         df_before_interpolation.loc[~df_before_interpolation['Is_Daylight'], 'Solar_R_W/m^2'] = 0
-#         warnings.warn(str(_l("Toutes les valeurs de Solar_R_W/m^2 en dehors des heures de jour ont été mises à zéro dans df_before_interpolation.")))
-
-#         # Ensuite, le traitement des zéros suspects pendant le JOUR (si Is_Daylight est True)
-#         # Ici, on recherche les zéros suspects PENDANT LA JOURNÉE
-#         cond_suspect_zeros = (df_before_interpolation['Is_Daylight']) & \
-#                              (df_before_interpolation['Solar_R_W/m^2'] == 0) & \
-#                              (df_before_interpolation['Rain_mm'] == 0 if 'Rain_mm' in df_before_interpolation.columns else True)
-        
-#         if 'Rain_mm' not in df_before_interpolation.columns:
-#              warnings.warn(str(_l("Rain_mm manquant. Tous les 0 de radiation solaire pendant le jour sont traités comme suspects pour l'étape pré-interpolation.")))
-
-#         df_before_interpolation.loc[cond_suspect_zeros, 'Solar_R_W/m^2'] = np.nan
-#         warnings.warn(str(_l("Zéros suspects de radiation solaire pendant le jour mis à NaN dans df_before_interpolation.")))
-    
-#     cols_to_drop_after_process = ['Year', 'Month', 'Day', 'Hour', 'Minute', 'Date']
-#     df_before_interpolation = df_before_interpolation.drop(columns=cols_to_drop_after_process, errors='ignore')
-
-#     warnings.warn(str(_l("Vérification des valeurs manquantes dans le DataFrame AVANT interpolation:")))
-#     missing_before_interp = df_before_interpolation.isna().sum()
-#     columns_with_missing_before = missing_before_interp[missing_before_interp > 0]
-#     if not columns_with_missing_before.empty:
-#         warnings.warn(str(_l("Valeurs manquantes persistantes AVANT interpolation:\n%s") % columns_with_missing_before))
-#     else:
-#         warnings.warn(str(_l("Aucune valeur manquante après le prétraitement et la mise en NaN (AVANT interpolation).")))
-
-
-#     # --- PHASE 2: Interpolation des valeurs (création de df_after_interpolation) ---
-#     df_after_interpolation = df_before_interpolation.copy()
-
-#     # Interpolation des variables numériques standard
-#     for var in numerical_cols:
-#         if var in df_after_interpolation.columns:
-#             if isinstance(df_after_interpolation.index, pd.DatetimeIndex):
-#                 df_after_interpolation[var] = df_after_interpolation[var].interpolate(method='time', limit_direction='both')
-#             else:
-#                 warnings.warn(str(_l("Avertissement (interpolation/variable): L'index n'est pas un DatetimeIndex pour l'interpolation de '%s'. Utilisation de la méthode 'linear'.") % var))
-#                 df_after_interpolation[var] = df_after_interpolation[var].interpolate(method='linear', limit_direction='both')
-#             df_after_interpolation[var] = df_after_interpolation[var].bfill().ffill()
-
-
-#     # Traitement spécifique pour Solar_R_W/m^2 avec interpolation
-#     if 'Solar_R_W/m^2' in df_after_interpolation.columns:
-#         if 'Is_Daylight' in df_after_interpolation.columns:
-#             is_day = df_after_interpolation['Is_Daylight']
-            
-#             # Interpoler uniquement pendant le jour
-#             if isinstance(df_after_interpolation.index, pd.DatetimeIndex):
-#                 df_after_interpolation.loc[is_day, 'Solar_R_W/m^2'] = df_after_interpolation.loc[is_day, 'Solar_R_W/m^2'].interpolate(method='time', limit_direction='both')
-#             else:
-#                 warnings.warn(str(_l("Avertissement (interpolation/solaire): L'index n'est pas un DatetimeIndex pour l'interpolation de 'Solar_R_W/m^2'. Utilisation de la méthode 'linear'.")))
-#                 df_after_interpolation.loc[is_day, 'Solar_R_W/m^2'] = df_after_interpolation.loc[is_day, 'Solar_R_W/m^2'].interpolate(method='linear', limit_direction='both')
-            
-#             # Combler les éventuels NaN restants après interpolation pendant le jour
-#             df_after_interpolation.loc[is_day, 'Solar_R_W/m^2'] = df_after_interpolation.loc[is_day, 'Solar_R_W/m^2'].bfill().ffill()
-
-#             # Forcer TOUTES les valeurs de Solar_R_W/m^2 à 0 quand il fait nuit (redondant mais sécurisant après interpolation)
-#             df_after_interpolation.loc[~is_day, 'Solar_R_W/m^2'] = 0
-#             warnings.warn(str(_l("Radiation solaire interpolée et valeurs nocturnes assurées à zéro dans df_after_interpolation.")))
-#         else:
-#             warnings.warn(str(_l("Colonne 'Is_Daylight' manquante. Radiation solaire interpolée standard dans df_after_interpolation.")))
-#             if isinstance(df_after_interpolation.index, pd.DatetimeIndex):
-#                  df_after_interpolation['Solar_R_W/m^2'] = df_after_interpolation['Solar_R_W/m^2'].interpolate(method='time', limit_direction='both').bfill().ffill()
-#             else:
-#                  df_after_interpolation['Solar_R_W/m^2'] = df_after_interpolation['Solar_R_W/m^2'].interpolate(method='linear', limit_direction='both').bfill().ffill()
-
-#     warnings.warn(str(_l("Vérification des valeurs manquantes dans le DataFrame APRÈS interpolation:")))
-#     missing_after_interp = df_after_interpolation.isna().sum()
-#     columns_with_missing_after = missing_after_interp[missing_after_interp > 0]
-#     if not columns_with_missing_after.empty:
-#         warnings.warn(str(_l("Valeurs manquantes persistantes APRÈS interpolation:\n%s") % columns_with_missing_after))
-#     else:
-#         warnings.warn(str(_l("Aucune valeur manquante après l'interpolation.")))
-
-#     return df_before_interpolation, df_after_interpolation
-
-
-# def _get_missing_ranges(series: pd.Series, station_name: str, variable_name: str) -> list[dict]:
-#     """
-#     Détermine les plages de valeurs manquantes (NaN) dans une série temporelle.
-
-#     Args:
-#         series (pd.Series): La série à analyser, avec un DatetimeIndex.
-#         station_name (str): Le nom de la station associée à la série.
-#         variable_name (str): Le nom de la variable de la série.
-
-#     Returns:
-#         list[dict]: Une liste de dictionnaires, chacun décrivant une plage manquante
-#                     avec 'station', 'variable', 'start_time', 'end_time', et 'duration_hours'.
-#     """
-#     if not isinstance(series.index, pd.DatetimeIndex):
-#         warnings.warn(f"Impossible de déterminer les plages manquantes pour {variable_name} ({station_name}): L'index n'est pas un DatetimeIndex.")
-#         return []
-
-#     missing_ranges_data = []
-    
-#     is_nan = series.isna()
-    
-#     starts = is_nan & (~is_nan.shift(1, fill_value=False))
-#     ends = is_nan & (~is_nan.shift(-1, fill_value=False))
-
-#     start_indices = series.index[starts].tolist()
-#     end_indices = series.index[ends].tolist()
-
-#     # Ajustement pour les cas où les NaNs sont au début/fin de la série
-#     if len(start_indices) > len(end_indices):
-#         end_indices.append(series.index.max()) # Utilise la fin de la série comme fin de la dernière plage NaN
-#     elif len(end_indices) > len(start_indices):
-#         start_indices.insert(0, series.index.min()) # Utilise le début de la série comme début de la première plage NaN
-
-#     for start, end in zip(start_indices, end_indices):
-#         duration_timedelta = end - start
-        
-#         missing_ranges_data.append({
-#             'station': station_name,
-#             'variable': variable_name,
-#             'start_time': start, # Gardons les objets datetime pour le DataFrame
-#             'end_time': end,     # Gardons les objets datetime pour le DataFrame
-#             'duration_hours': duration_timedelta.total_seconds() / 3600
-#         })
-#     return missing_ranges_data
-
-
-# def interpolation(df: pd.DataFrame, limits: dict, df_gps: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-#     """
-#     Effectue le nettoyage, l'application des limites et l'interpolation des données météorologiques.
-#     Cette fonction retourne quatre DataFrames :
-#     1. Le DataFrame après nettoyage et application des limites (avec NaNs pour les valeurs manquantes/outliers).
-#     2. Le DataFrame entièrement interpolé (sans NaNs).
-#     3. Un DataFrame récapitulant les plages de valeurs manquantes pour chaque variable AVANT interpolation.
-#     4. Un DataFrame récapitulant les plages de valeurs manquantes pour chaque variable APRÈS interpolation.
-
-#     Args:
-#         df (pd.DataFrame): Le DataFrame d'entrée avec DatetimeIndex et colonne 'Station'.
-#         limits (dict): Dictionnaire définissant les limites de valeurs pour chaque variable.
-#         df_gps (pd.DataFrame): Le DataFrame contenant les informations de station
-#                                (colonnes 'Station', 'Lat', 'Long', 'Timezone').
-
-#     Returns:
-#         tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-#             - Le premier DataFrame contient les données après nettoyage et mise en NaN des outliers, mais AVANT interpolation.
-#             - Le deuxième DataFrame contient les données entièrement interpolées.
-#             - Le troisième est un DataFrame (cols: 'station', 'variable', 'start_time', 'end_time', 'duration_hours') AVANT interpolation.
-#             - Le quatrième est un DataFrame (cols: 'station', 'variable', 'start_time', 'end_time', 'duration_hours') APRÈS interpolation.
-#     """
-#     df_temp_processed = df.copy()
-
-#     # --- Vérifications initiales ---
-#     if not isinstance(df_temp_processed.index, pd.DatetimeIndex):
-#         raise TypeError(str(_l("Le DataFrame d'entrée pour l'interpolation DOIT avoir un DatetimeIndex.")))
-    
-#     initial_rows = len(df_temp_processed)
-#     df_temp_processed = df_temp_processed[df_temp_processed.index.notna()]
-#     if len(df_temp_processed) == 0:
-#         raise ValueError(str(_l("Après nettoyage des index temporels manquants, le DataFrame est vide. Impossible de procéder à l'interpolation.")))
-#     if initial_rows - len(df_temp_processed) > 0:
-#         warnings.warn(str(_l("Suppression de %s lignes avec index Datetime manquant ou invalide.") % (initial_rows - len(df_temp_processed))))
-    
-#     print(_l("DEBUG (interpolation): Type de l'index du DataFrame initial: %s") % type(df_temp_processed.index))
-#     print(_l("DEBUG (interpolation): Premières 5 valeurs de l'index après nettoyage des NaT: %s") % (df_temp_processed.index[:5].tolist() if not df_temp_processed.empty else 'DataFrame vide'))
-
-#     required_gps_cols = ['Station', 'Lat', 'Long', 'Timezone']
-#     if not all(col in df_gps.columns for col in required_gps_cols):
-#         raise ValueError(
-#             str(_l("df_gps doit contenir les colonnes %s. Colonnes actuelles dans df_gps : %s") % \
-#             (required_gps_cols, df_gps.columns.tolist()))
-#         )
-
-#     if not df_gps['Station'].is_unique:
-#         print(_l("Avertissement: La colonne 'Station' dans df_gps contient des noms de station dupliqués."))
-#         print(_l("Ceci peut entraîner des comportements inattendus ou des stations non reconnues."))
-#         df_gps_unique = df_gps.drop_duplicates(subset=['Station'], keep='first').copy()
-#         print(_l("Suppression de %s doublons dans df_gps (en gardant la première occurrence).") % (len(df_gps) - len(df_gps_unique)))
-#     else:
-#         df_gps_unique = df_gps.copy()
-
-#     gps_info_dict = df_gps_unique.set_index('Station')[['Lat', 'Long', 'Timezone']].to_dict('index')
-
-#     numerical_cols = ['Air_Temp_Deg_C', 'Rel_H_%', 'BP_mbar_Avg',
-#                       'Rain_01_mm', 'Rain_02_mm', 'Rain_mm', 'Wind_Sp_m/sec',
-#                       'Solar_R_W/m^2', 'Wind_Dir_Deg']
-    
-#     # --- PHASE 1: Nettoyage, application des limites et calcul des auxiliaires (AVANT INTERPOLATION) ---
-#     for col in numerical_cols:
-#         if col in df_temp_processed.columns:
-#             df_temp_processed[col] = pd.to_numeric(df_temp_processed[col], errors='coerce')
-#             if col in limits:
-#                 min_val = limits[col]['min']
-#                 max_val = limits[col]['max']
-#                 initial_nan_count = df_temp_processed[col].isna().sum()
-#                 if min_val is not None:
-#                     df_temp_processed.loc[df_temp_processed[col] < min_val, col] = np.nan
-#                 if max_val is not None:
-#                     df_temp_processed.loc[df_temp_processed[col] > max_val, col] = np.nan
-                
-#                 new_nan_count = df_temp_processed[col].isna().sum()
-#                 if new_nan_count > initial_nan_count:
-#                     warnings.warn(str(_l("Remplacement de %s valeurs hors limites dans '%s' par NaN (pré-interpolation).") % (new_nan_count - initial_nan_count, col)))
-
-#     df_parts_before_interp = []
-    
-#     # Liste pour collecter tous les dictionnaires de plages manquantes (avant interpolation)
-#     all_missing_ranges_before_interp_list = [] 
-
-#     for station_name, group in df_temp_processed.groupby('Station'):
-#         group_copy = group.copy()
-#         print(_l("DEBUG (interpolation/groupby): Début du traitement du groupe '%s' pour l'étape pré-interpolation.") % station_name)
-        
-#         if group_copy.index.tz is None:
-#             group_copy.index = group_copy.index.tz_localize('UTC', ambiguous='NaT', nonexistent='NaT')
-#         elif group_copy.index.tz != pytz.utc:
-#             group_copy.index = group_copy.index.tz_convert('UTC')
-        
-#         group_copy = group_copy[group_copy.index.notna()]
-#         if group_copy.empty:
-#             warnings.warn(str(_l("Le groupe '%s' est vide après nettoyage de l'index Datetime. Il sera ignoré pour l'interpolation.") % station_name))
-#             continue
-
-#         # Initialiser les colonnes de lever/coucher du soleil
-#         group_copy.loc[:, 'Is_Daylight'] = False
-#         group_copy.loc[:, 'Daylight_Duration'] = pd.NA
-#         group_copy.loc[:, 'sunrise_time_utc'] = pd.NaT 
-#         group_copy.loc[:, 'sunset_time_utc'] = pd.NaT 
-
-#         apply_fixed_daylight = True
-#         gps_data = gps_info_dict.get(station_name)
-#         if gps_data and pd.notna(gps_data.get('Lat')) and pd.notna(gps_data.get('Long')) and pd.notna(gps_data.get('Timezone')):
-#             lat = gps_data['Lat']
-#             long = gps_data['Long']
-#             timezone_str = gps_data['Timezone']
-
-#             try:
-#                 local_tz = pytz.timezone(timezone_str)
-#                 index_for_astral_local = group_copy.index.tz_convert(local_tz)
-
-#                 daily_sun_info = {}
-#                 unique_dates_ts_local = index_for_astral_local.normalize().drop_duplicates()
-
-#                 if unique_dates_ts_local.empty:
-#                     raise ValueError(str(_l("Aucune date unique trouvée pour le calcul Astral.")))
-                
-#                 for ts_local_aware in unique_dates_ts_local:
-#                     loc = LocationInfo(station_name, "Site", timezone_str, lat, long)
-#                     naive_date_for_astral = ts_local_aware.to_pydatetime().date()
-#                     s = sun.sun(loc.observer, date=naive_date_for_astral) 
-#                     daily_sun_info[naive_date_for_astral] = {
-#                         'sunrise': s['sunrise'],
-#                         'sunset': s['sunset']
-#                     }
-
-#                 temp_df_sun_index = pd.Index([ts.date() for ts in unique_dates_ts_local], name='Date_Local_Naive')
-#                 temp_df_sun = pd.DataFrame(index=temp_df_sun_index)
-                
-#                 temp_df_sun['sunrise_time_local'] = [daily_sun_info.get(date, {}).get('sunrise') for date in temp_df_sun.index]
-#                 temp_df_sun['sunset_time_local'] = [daily_sun_info.get(date, {}).get('sunset') for date in temp_df_sun.index]
-
-#                 group_copy_reset = group_copy.reset_index()
-#                 group_copy_reset['Date_Local_Naive'] = group_copy_reset['Datetime'].dt.tz_convert(local_tz).dt.date
-
-#                 group_copy_reset = pd.merge(group_copy_reset, temp_df_sun, on='Date_Local_Naive', how='left')
-
-#                 group_copy_reset['sunrise_time_utc'] = group_copy_reset['sunrise_time_local'].dt.tz_convert('UTC')
-#                 group_copy_reset['sunset_time_utc'] = group_copy_reset['sunset_time_local'].dt.tz_convert('UTC')
-
-#                 group_copy_reset.loc[:, 'Is_Daylight'] = (group_copy_reset['Datetime'] >= group_copy_reset['sunrise_time_utc']) & \
-#                                                           (group_copy_reset['Datetime'] < group_copy_reset['sunset_time_utc'])
-
-#                 daylight_timedelta_local = group_copy_reset['sunset_time_local'] - group_copy_reset['sunrise_time_local']
-                
-#                 def format_timedelta_to_hms(td):
-#                     if pd.isna(td):
-#                         return np.nan
-#                     total_seconds = int(td.total_seconds())
-#                     hours = total_seconds // 3600
-#                     minutes = (total_seconds % 3600) // 60
-#                     seconds = total_seconds % 60
-#                     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
-#                 group_copy_reset.loc[:, 'Daylight_Duration'] = daylight_timedelta_local.apply(format_timedelta_to_hms)
-
-#                 group_copy = group_copy_reset.set_index('Datetime')
-#                 group_copy = group_copy.drop(columns=['Date_Local_Naive', 'sunrise_time_local', 'sunset_time_local'], errors='ignore')
-
-#                 print(_l("Lever et coucher du soleil calculés pour %s.") % station_name)
-#                 apply_fixed_daylight = False
-
-#             except Exception as e:
-#                 print(_l("Erreur lors du calcul du lever/coucher du soleil avec Astral pour %s: %s.") % (station_name, e))
-#                 traceback.print_exc()
-#                 warnings.warn(str(_l("Calcul Astral impossible pour '%s'. Utilisation de l'indicateur jour/nuit fixe.") % station_name))
-#                 apply_fixed_daylight = True
-#         else:
-#             print(_l("Avertissement: Coordonnées ou Fuseau horaire manquants/invalides pour le site '%s' dans df_gps. Utilisation de l'indicateur jour/nuit fixe.") % station_name)
-#             apply_fixed_daylight = True
-
-#         if apply_fixed_daylight:
-#             group_copy.loc[:, 'Is_Daylight'] = (group_copy.index.hour >= 7) & (group_copy.index.hour <= 18)
-#             group_copy.loc[:, 'Daylight_Duration'] = "11:00:00"
-#             group_copy.loc[:, 'sunrise_time_utc'] = pd.NaT 
-#             group_copy.loc[:, 'sunset_time_utc'] = pd.NaT 
-#             print(_l("Utilisation de l'indicateur jour/nuit fixe (7h-18h) pour %s.") % station_name)
-        
-#         df_parts_before_interp.append(group_copy)
-
-#     if not df_parts_before_interp:
-#         # Retourne des DataFrames vides pour les plages manquantes si le DF principal est vide
-#         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame() 
-
-#     df_before_interpolation = pd.concat(df_parts_before_interp).sort_index()
-#     df_before_interpolation.index.name = 'Datetime'
-
-#     # Gestion de 'Rain_mm'
-#     if 'Rain_mm' not in df_before_interpolation.columns or df_before_interpolation['Rain_mm'].isnull().all():
-#         if 'Rain_01_mm' in df_before_interpolation.columns and 'Rain_02_mm' in df_before_interpolation.columns:
-#             df_before_interpolation = create_rain_mm(df_before_interpolation)
-#             warnings.warn(str(_l("Colonne Rain_mm créée à partir des deux capteurs (pré-interpolation).")))
-#         else:
-#             warnings.warn(str(_l("Rain_mm manquant et impossible à créer (capteurs pluie incomplets) (pré-interpolation).")))
-#             if 'Rain_mm' not in df_before_interpolation.columns:
-#                 df_before_interpolation['Rain_mm'] = np.nan
-
-#     # NOUVELLE LOGIQUE POUR SOLAR_R_W/m^2 EN PHASE 1:
-#     if 'Solar_R_W/m^2' in df_before_interpolation.columns and 'Is_Daylight' in df_before_interpolation.columns:
-#         df_before_interpolation.loc[~df_before_interpolation['Is_Daylight'], 'Solar_R_W/m^2'] = 0
-#         warnings.warn(str(_l("Toutes les valeurs de Solar_R_W/m^2 en dehors des heures de jour ont été mises à zéro dans df_before_interpolation.")))
-
-#         cond_suspect_zeros = (df_before_interpolation['Is_Daylight']) & \
-#                              (df_before_interpolation['Solar_R_W/m^2'] == 0) & \
-#                              (df_before_interpolation['Rain_mm'] == 0 if 'Rain_mm' in df_before_interpolation.columns else True)
-        
-#         if 'Rain_mm' not in df_before_interpolation.columns:
-#              warnings.warn(str(_l("Rain_mm manquant. Tous les 0 de radiation solaire pendant le jour sont traités comme suspects pour l'étape pré-interpolation.")))
-
-#         df_before_interpolation.loc[cond_suspect_zeros, 'Solar_R_W/m^2'] = np.nan
-#         warnings.warn(str(_l("Zéros suspects de radiation solaire pendant le jour mis à NaN dans df_before_interpolation.")))
-    
-#     if 'sunrise_time_utc' not in df_before_interpolation.columns:
-#         df_before_interpolation['sunrise_time_utc'] = pd.NaT
-#     if 'sunset_time_utc' not in df_before_interpolation.columns:
-#         df_before_interpolation['sunset_time_utc'] = pd.NaT
-
-#     cols_to_drop_after_process = ['Year', 'Month', 'Day', 'Hour', 'Minute', 'Date']
-#     df_before_interpolation = df_before_interpolation.drop(columns=cols_to_drop_after_process, errors='ignore')
-
-#     warnings.warn(str(_l("Vérification des valeurs manquantes dans le DataFrame AVANT interpolation:")))
-#     missing_before_interp_counts = df_before_interpolation.isna().sum()
-#     columns_with_missing_before = missing_before_interp_counts[missing_before_interp_counts > 0]
-#     if not columns_with_missing_before.empty:
-#         warnings.warn(str(_l("Valeurs manquantes persistantes AVANT interpolation:\n%s") % columns_with_missing_before))
-#     else:
-#         warnings.warn(str(_l("Aucune valeur manquante après le prétraitement et la mise en NaN (AVANT interpolation).")))
-
-#     # DÉTERMINER LES PLAGES MANQUANTES AVANT INTERPOLATION ET COLLECTER DANS UNE LISTE
-#     interpolated_cols = [col for col in numerical_cols if col in df_before_interpolation.columns and col != 'Station'] # Exclure 'Station'
-#     for var in interpolated_cols:
-#         for station_name, group in df_before_interpolation.groupby('Station'):
-#             all_missing_ranges_before_interp_list.extend(_get_missing_ranges(group[var], station_name, var))
-
-#     # Convertir la liste de dictionnaires en DataFrame
-#     df_missing_ranges_before_interp = pd.DataFrame(all_missing_ranges_before_interp_list)
-#     if not df_missing_ranges_before_interp.empty:
-#         df_missing_ranges_before_interp = df_missing_ranges_before_interp.sort_values(by=['station', 'variable', 'start_time'])
-#     else:
-#         df_missing_ranges_before_interp = pd.DataFrame(columns=['station', 'variable', 'start_time', 'end_time', 'duration_hours'])
-
-
-#     # --- PHASE 2: Interpolation des valeurs (création de df_after_interpolation) ---
-#     df_after_interpolation = df_before_interpolation.copy()
-
-#     cols_to_interpolate_standard = [col for col in numerical_cols if col in df_after_interpolation.columns and col not in ['sunrise_time_utc', 'sunset_time_utc', 'Station']]
-
-#     for var in cols_to_interpolate_standard:
-#         if isinstance(df_after_interpolation.index, pd.DatetimeIndex):
-#             df_after_interpolation[var] = df_after_interpolation[var].interpolate(method='time', limit_direction='both')
-#         else:
-#             warnings.warn(str(_l("Avertissement (interpolation/variable): L'index n'est pas un DatetimeIndex pour l'interpolation de '%s'. Utilisation de la méthode 'linear'.") % var))
-#             df_after_interpolation[var] = df_after_interpolation[var].interpolate(method='linear', limit_direction='both')
-#         df_after_interpolation[var] = df_after_interpolation[var].bfill().ffill()
-
-
-#     # Traitement spécifique pour Solar_R_W/m^2 avec interpolation
-#     if 'Solar_R_W/m^2' in df_after_interpolation.columns:
-#         if 'Is_Daylight' in df_after_interpolation.columns:
-#             is_day = df_after_interpolation['Is_Daylight']
-            
-#             if isinstance(df_after_interpolation.index, pd.DatetimeIndex):
-#                 df_after_interpolation.loc[is_day, 'Solar_R_W/m^2'] = df_after_interpolation.loc[is_day, 'Solar_R_W/m^2'].interpolate(method='time', limit_direction='both')
-#             else:
-#                 warnings.warn(str(_l("Avertissement (interpolation/solaire): L'index n'est pas un DatetimeIndex pour l'interpolation de 'Solar_R_W/m^2'. Utilisation de la méthode 'linear'.")))
-#                 df_after_interpolation.loc[is_day, 'Solar_R_W/m^2'] = df_after_interpolation.loc[is_day, 'Solar_R_W/m^2'].interpolate(method='linear', limit_direction='both')
-            
-#             df_after_interpolation.loc[is_day, 'Solar_R_W/m^2'] = df_after_interpolation.loc[is_day, 'Solar_R_W/m^2'].bfill().ffill()
-
-#             df_after_interpolation.loc[~is_day, 'Solar_R_W/m^2'] = 0
-#             warnings.warn(str(_l("Radiation solaire interpolée et valeurs nocturnes assurées à zéro dans df_after_interpolation.")))
-#         else:
-#             warnings.warn(str(_l("Colonne 'Is_Daylight' manquante. Radiation solaire interpolée standard dans df_after_interpolation.")))
-#             if isinstance(df_after_interpolation.index, pd.DatetimeIndex):
-#                  df_after_interpolation['Solar_R_W/m^2'] = df_after_interpolation['Solar_R_W/m^2'].interpolate(method='time', limit_direction='both').bfill().ffill()
-#             else:
-#                  df_after_interpolation['Solar_R_W/m^2'] = df_after_interpolation['Solar_R_W/m^2'].interpolate(method='linear', limit_direction='both').bfill().ffill()
-
-#     warnings.warn(str(_l("Vérification des valeurs manquantes dans le DataFrame APRÈS interpolation:")))
-#     missing_after_interp_counts = df_after_interpolation.isna().sum()
-#     columns_with_missing_after = missing_after_interp_counts[missing_after_interp_counts > 0]
-#     if not columns_with_missing_after.empty:
-#         warnings.warn(str(_l("Valeurs manquantes persistantes APRÈS interpolation:\n%s") % columns_with_missing_after))
-#     else:
-#         warnings.warn(str(_l("Aucune valeur manquante après l'interpolation.")))
-
-#     # DÉTERMINER LES PLAGES MANQUANTES APRÈS INTERPOLATION ET COLLECTER DANS UNE LISTE
-#     all_missing_ranges_after_interp_list = []
-#     for var in interpolated_cols: 
-#         for station_name, group in df_after_interpolation.groupby('Station'):
-#             all_missing_ranges_after_interp_list.extend(_get_missing_ranges(group[var], station_name, var))
-        
-#     # Convertir la liste de dictionnaires en DataFrame
-#     df_missing_ranges_after_interp = pd.DataFrame(all_missing_ranges_after_interp_list)
-#     if not df_missing_ranges_after_interp.empty:
-#         df_missing_ranges_after_interp = df_missing_ranges_after_interp.sort_values(by=['station', 'variable', 'start_time'])
-#     else:
-#         df_missing_ranges_after_interp = pd.DataFrame(columns=['station', 'variable', 'start_time', 'end_time', 'duration_hours']) # Assure un DF vide avec les bonnes colonnes
-        
-#     return df_before_interpolation, df_after_interpolation, df_missing_ranges_before_interp, df_missing_ranges_after_interp
-
-
-# def interpolation(df: pd.DataFrame, limits: dict, df_gps: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-#     """
-#     Effectue le nettoyage, l'application des limites et l'interpolation des données météorologiques.
-#     ...
-#     """
-#     df_temp_processed = df.copy()
-
-#     # --- Vérifications initiales et nettoyage de l'index ---
-#     if not isinstance(df_temp_processed.index, pd.DatetimeIndex):
-#         raise TypeError(str(_l("Le DataFrame d'entrée pour l'interpolation DOIT avoir un DatetimeIndex.")))
-    
-#     initial_rows = len(df_temp_processed)
-#     df_temp_processed = df_temp_processed[df_temp_processed.index.notna()]
-#     if len(df_temp_processed) == 0:
-#         warnings.warn(str(_l("Après nettoyage des index temporels manquants, le DataFrame est vide. Retourne des DataFrames vides.")))
-#         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(columns=['station', 'variable', 'start_time', 'end_time', 'duration_hours']), pd.DataFrame(columns=['station', 'variable', 'start_time', 'end_time', 'duration_hours'])
-#     if initial_rows - len(df_temp_processed) > 0:
-#         warnings.warn(str(_l("Suppression de %d lignes avec index Datetime manquant ou invalide.") % (initial_rows - len(df_temp_processed))))
-    
-#     if df_temp_processed.index.tz is None:
-#         df_temp_processed.index = df_temp_processed.index.tz_localize('UTC', ambiguous='NaT', nonexistent='NaT')
-#     elif df_temp_processed.index.tz != pytz.utc:
-#         df_temp_processed.index = df_temp_processed.index.tz_convert('UTC')
-    
-#     # Assurer que l'index a un nom, ce qui aide drop_duplicates
-#     if df_temp_processed.index.name is None:
-#         df_temp_processed.index.name = 'Datetime'
-
-#     if 'Station' not in df_temp_processed.columns:
-#         raise ValueError(str(_l("La colonne 'Station' est manquante dans le DataFrame d'entrée. Elle est requise.")))
-
-#     initial_df_len = len(df_temp_processed)
-    
-#     # Correction pour KeyError: Index(['Datetime'], dtype='object')
-#     # On va dédupliquer sur la colonne 'Station' ET sur l'index lui-même.
-#     # Pour ce faire, il est souvent plus simple de réinitialiser l'index temporairement,
-#     # dédupliquer, puis le remettre.
-    
-#     # Étape 1: Réinitialiser l'index pour que 'Datetime' devienne une colonne
-#     df_temp_processed_reset = df_temp_processed.reset_index()
-    
-#     # Étape 2: Appliquer drop_duplicates sur les colonnes 'Station' et 'Datetime'
-#     df_temp_processed_reset.drop_duplicates(subset=['Station', 'Datetime'], keep='first', inplace=True)
-    
-#     # Étape 3: Remettre 'Datetime' comme index
-#     df_temp_processed = df_temp_processed_reset.set_index('Datetime')
-
-#     if len(df_temp_processed) < initial_df_len:
-#         warnings.warn(str(_l("Suppression de %d lignes dupliquées (même Datetime et Station).") % (initial_df_len - len(df_temp_processed))))
-
-#     df_temp_processed = df_temp_processed.sort_index()
-
-
-#     # ... (Le reste de votre fonction, qui devrait être inchangé par cette correction de drop_duplicates)
-#     # ...
-
-#     # Gestion de df_gps
-#     required_gps_cols = ['Station', 'Lat', 'Long', 'Timezone']
-#     if not all(col in df_gps.columns for col in required_gps_cols):
-#         raise ValueError(
-#             str(_l("df_gps doit contenir les colonnes %s. Colonnes actuelles dans df_gps : %s") % \
-#             (required_gps_cols, df_gps.columns.tolist()))
-#         )
-
-#     df_gps_unique = df_gps.drop_duplicates(subset=['Station'], keep='first').copy()
-#     if len(df_gps) > len(df_gps_unique):
-#         warnings.warn(str(_l("Suppression de %d doublons dans df_gps (en gardant la première occurrence).") % (len(df_gps) - len(df_gps_unique))))
-    
-#     gps_info_dict = df_gps_unique.set_index('Station')[['Lat', 'Long', 'Timezone']].to_dict('index')
-
-#     numerical_cols = ['Air_Temp_Deg_C', 'Rel_H_%', 'BP_mbar_Avg',
-#                       'Rain_01_mm', 'Rain_02_mm', 'Rain_mm', 'Wind_Sp_m/sec',
-#                       'Solar_R_W/m^2', 'Wind_Dir_Deg']
-    
-#     # --- PHASE 1: Nettoyage et application des limites (AVANT INTERPOLATION) ---
-#     for col in numerical_cols:
-#         if col in df_temp_processed.columns:
-#             df_temp_processed[col] = pd.to_numeric(df_temp_processed[col], errors='coerce')
-            
-#             if col in limits:
-#                 min_val = limits[col].get('min')
-#                 max_val = limits[col].get('max')
-                
-#                 if min_val is not None:
-#                     df_temp_processed.loc[df_temp_processed[col] < min_val, col] = np.nan
-#                 if max_val is not None:
-#                     df_temp_processed.loc[df_temp_processed[col] > max_val, col] = np.nan
-    
-#     if 'Rain_mm' not in df_temp_processed.columns or df_temp_processed['Rain_mm'].isnull().all():
-#         df_temp_processed = create_rain_mm(df_temp_processed)
-#         warnings.warn(str(_l("Colonne Rain_mm créée à partir des deux capteurs (pré-interpolation).")))
-
-#     df_temp_processed.loc[:, 'Is_Daylight'] = False
-#     df_temp_processed.loc[:, 'Daylight_Duration'] = pd.NA
-#     df_temp_processed.loc[:, 'sunrise_time_utc'] = pd.NaT 
-#     df_temp_processed.loc[:, 'sunset_time_utc'] = pd.NaT 
-
-#     sun_info_df_list = []
-
-#     for station_name, group in df_temp_processed.groupby('Station'):
-#         group_copy_for_sun_calc = group.copy() 
-
-#         if station_name not in gps_info_dict or \
-#            pd.isna(gps_info_dict[station_name].get('Lat')) or \
-#            pd.isna(gps_info_dict[station_name].get('Long')) or \
-#            pd.isna(gps_info_dict[station_name].get('Timezone')):
-#             warnings.warn(str(_l("Coordonnées ou Fuseau horaire manquants/invalides pour le site '%s' dans df_gps. Utilisation de l'indicateur jour/nuit fixe pour cette station.") % station_name))
-#             group_copy_for_sun_calc.loc[:, 'Is_Daylight'] = (group_copy_for_sun_calc.index.hour >= 7) & (group_copy_for_sun_calc.index.hour <= 18)
-#             group_copy_for_sun_calc.loc[:, 'Daylight_Duration'] = "11:00:00"
-#             group_copy_for_sun_calc.loc[:, 'sunrise_time_utc'] = pd.NaT 
-#             group_copy_for_sun_calc.loc[:, 'sunset_time_utc'] = pd.NaT
-#             sun_info_df_list.append(group_copy_for_sun_calc[['Is_Daylight', 'Daylight_Duration', 'sunrise_time_utc', 'sunset_time_utc']])
-#             continue
-
-#         lat = gps_info_dict[station_name]['Lat']
-#         long = gps_info_dict[station_name]['Long']
-#         timezone_str = gps_info_dict[station_name]['Timezone']
-        
-#         try:
-#             local_tz = pytz.timezone(timezone_str)
-            
-#             unique_dates_local = group_copy_for_sun_calc.index.tz_convert(local_tz).normalize().drop_duplicates()
-            
-#             sun_data = []
-#             loc = LocationInfo(station_name, "Site", timezone_str, lat, long)
-
-#             for date_local_naive in unique_dates_local.to_pydatetime():
-#                 s = sun.sun(loc.observer, date=date_local_naive.date())
-                
-#                 sunrise_utc = s['sunrise'].astimezone(pytz.utc) if s['sunrise'] and pd.notna(s['sunrise']) else pd.NaT
-#                 sunset_utc = s['sunset'].astimezone(pytz.utc) if s['sunset'] and pd.notna(s['sunset']) else pd.NaT
-                
-#                 daylight_duration_hours = (sunset_utc - sunrise_utc).total_seconds() / 3600 if pd.notna(sunrise_utc) and pd.notna(sunset_utc) and sunset_utc > sunrise_utc else np.nan
-
-#                 sun_data.append({
-#                     'Datetime_Date_UTC': date_local_naive.date(),
-#                     'sunrise_time_utc': sunrise_utc,
-#                     'sunset_time_utc': sunset_utc,
-#                     'Daylight_Duration_h': daylight_duration_hours
-#                 })
-            
-#             daily_sun_df = pd.DataFrame(sun_data).set_index('Datetime_Date_UTC')
-
-#             group_copy_for_sun_calc['Datetime_Date_UTC'] = group_copy_for_sun_calc.index.normalize().date
-
-#             group_with_sun = pd.merge(
-#                 group_copy_for_sun_calc.reset_index(),
-#                 daily_sun_df,
-#                 left_on='Datetime_Date_UTC',
-#                 right_index=True,
-#                 how='left'
-#             ).set_index('Datetime')
-
-#             group_copy_for_sun_calc.loc[:, 'sunrise_time_utc'] = group_with_sun['sunrise_time_utc']
-#             group_copy_for_sun_calc.loc[:, 'sunset_time_utc'] = group_with_sun['sunset_time_utc']
-#             group_copy_for_sun_calc.loc[:, 'Is_Daylight'] = (group_copy_for_sun_calc.index >= group_copy_for_sun_calc['sunrise_time_utc']) & \
-#                                                              (group_copy_for_sun_calc.index < group_copy_for_sun_calc['sunset_time_utc'])
-            
-#             group_copy_for_sun_calc.loc[:, 'Daylight_Duration'] = group_with_sun['Daylight_Duration_h'].apply(
-#                 lambda x: f"{int(x)}:{int((x*60)%60):02d}:{int((x*3600)%60):02d}" if pd.notna(x) else pd.NA
-#             )
-
-#             warnings.warn(str(_l("Lever et coucher du soleil calculés pour %s.") % station_name))
-#             sun_info_df_list.append(group_copy_for_sun_calc[['Is_Daylight', 'Daylight_Duration', 'sunrise_time_utc', 'sunset_time_utc']])
-
-#         except Exception as e:
-#             warnings.warn(str(_l("Erreur lors du calcul du lever/coucher du soleil avec Astral pour %s: %s. Utilisation de l'indicateur jour/nuit fixe.") % (station_name, e)))
-#             traceback.print_exc()
-#             group_copy_for_sun_calc.loc[:, 'Is_Daylight'] = (group_copy_for_sun_calc.index.hour >= 7) & (group_copy_for_sun_calc.index.hour <= 18)
-#             group_copy_for_sun_calc.loc[:, 'Daylight_Duration'] = "11:00:00"
-#             group_copy_for_sun_calc.loc[:, 'sunrise_time_utc'] = pd.NaT 
-#             group_copy_for_sun_calc.loc[:, 'sunset_time_utc'] = pd.NaT 
-#             sun_info_df_list.append(group_copy_for_sun_calc[['Is_Daylight', 'Daylight_Duration', 'sunrise_time_utc', 'sunset_time_utc']])
-
-#     if sun_info_df_list:
-#         df_sun_info_concat = pd.concat(sun_info_df_list)
-#         # S'assurer que les index correspondent. La reindexation directe sur l'index de df_temp_processed
-#         # est maintenant sûre car df_temp_processed n'a plus d'index dupliqués.
-#         df_temp_processed['Is_Daylight'] = df_sun_info_concat.reindex(df_temp_processed.index)['Is_Daylight']
-#         df_temp_processed['Daylight_Duration'] = df_sun_info_concat.reindex(df_temp_processed.index)['Daylight_Duration']
-#         df_temp_processed['sunrise_time_utc'] = df_sun_info_concat.reindex(df_temp_processed.index)['sunrise_time_utc']
-#         df_temp_processed['sunset_time_utc'] = df_sun_info_concat.reindex(df_temp_processed.index)['sunset_time_utc']
-#     else:
-#         warnings.warn(str(_l("Aucune information solaire calculée. Toutes les colonnes 'Is_Daylight', etc. restent à leurs valeurs initiales par défaut.")))
-
-
-#     if 'Solar_R_W/m^2' in df_temp_processed.columns and 'Is_Daylight' in df_temp_processed.columns:
-#         df_temp_processed.loc[~df_temp_processed['Is_Daylight'], 'Solar_R_W/m^2'] = 0
-#         warnings.warn(str(_l("Toutes les valeurs de Solar_R_W/m^2 en dehors des heures de jour ont été mises à zéro dans le DataFrame pré-interpolation.")))
-
-#         has_rain_mm = 'Rain_mm' in df_temp_processed.columns
-#         cond_suspect_zeros = (df_temp_processed['Is_Daylight']) & \
-#                              (df_temp_processed['Solar_R_W/m^2'] == 0)
-#         if has_rain_mm:
-#             cond_suspect_zeros = cond_suspect_zeros & (df_temp_processed['Rain_mm'] == 0)
-#         else:
-#             warnings.warn(str(_l("Rain_mm manquant. Tous les 0 de radiation solaire pendant le jour sont traités comme suspects pour l'étape pré-interpolation.")))
-
-#         df_temp_processed.loc[cond_suspect_zeros, 'Solar_R_W/m^2'] = np.nan
-#         warnings.warn(str(_l("Zéros suspects de radiation solaire pendant le jour mis à NaN dans le DataFrame pré-interpolation.")))
-
-#     df_before_interpolation = df_temp_processed.copy()
-
-#     cols_to_drop_after_process = ['Year', 'Month', 'Day', 'Hour', 'Minute', 'Date']
-#     df_before_interpolation = df_before_interpolation.drop(columns=cols_to_drop_after_process, errors='ignore')
-
-
-#     all_missing_ranges_before_interp_list = [] 
-#     numerical_cols_to_check = [col for col in numerical_cols if col in df_before_interpolation.columns and col != 'Station']
-    
-#     for station_name, group in df_before_interpolation.groupby('Station'):
-#         for var in numerical_cols_to_check:
-#             all_missing_ranges_before_interp_list.extend(_get_missing_ranges(group[var], station_name, var))
-
-#     df_missing_ranges_before_interp = pd.DataFrame(all_missing_ranges_before_interp_list)
-#     if not df_missing_ranges_before_interp.empty:
-#         df_missing_ranges_before_interp = df_missing_ranges_before_interp.sort_values(by=['station', 'variable', 'start_time'])
-#     else:
-#         df_missing_ranges_before_interp = pd.DataFrame(columns=['station', 'variable', 'start_time', 'end_time', 'duration_hours'])
-
-
-#     df_after_interpolation = df_before_interpolation.copy()
-
-#     cols_to_interpolate_standard = [col for col in numerical_cols_to_check if col != 'Solar_R_W/m^2']
-
-#     for station_name, group in df_after_interpolation.groupby('Station'):
-#         group_copy_for_interp = group.copy() 
-#         for var in cols_to_interpolate_standard:
-#             if var in group_copy_for_interp.columns:
-#                 if isinstance(group_copy_for_interp.index, pd.DatetimeIndex):
-#                     group_copy_for_interp.loc[:, var] = group_copy_for_interp[var].interpolate(method='time', limit_direction='both')
-#                 else:
-#                     group_copy_for_interp.loc[:, var] = group_copy_for_interp[var].interpolate(method='linear', limit_direction='both')
-#                 group_copy_for_interp.loc[:, var] = group_copy_for_interp[var].bfill().ffill()
-        
-#         if 'Solar_R_W/m^2' in group_copy_for_interp.columns and 'Is_Daylight' in group_copy_for_interp.columns:
-#             is_day = group_copy_for_interp['Is_Daylight']
-            
-#             if isinstance(group_copy_for_interp.index, pd.DatetimeIndex):
-#                 group_copy_for_interp.loc[is_day, 'Solar_R_W/m^2'] = group_copy_for_interp.loc[is_day, 'Solar_R_W/m^2'].interpolate(method='time', limit_direction='both')
-#             else:
-#                 group_copy_for_interp.loc[is_day, 'Solar_R_W/m^2'] = group_copy_for_interp.loc[is_day, 'Solar_R_W/m^2'].interpolate(method='linear', limit_direction='both')
-            
-#             group_copy_for_interp.loc[is_day, 'Solar_R_W/m^2'] = group_copy_for_interp.loc[is_day, 'Solar_R_W/m^2'].bfill().ffill()
-
-#             group_copy_for_interp.loc[~is_day, 'Solar_R_W/m^2'] = 0
-            
-#         df_after_interpolation.loc[group_copy_for_interp.index, group_copy_for_interp.columns] = group_copy_for_interp
-
-#     all_missing_ranges_after_interp_list = []
-#     for station_name, group in df_after_interpolation.groupby('Station'):
-#         for var in numerical_cols_to_check:
-#             all_missing_ranges_after_interp_list.extend(_get_missing_ranges(group[var], station_name, var))
-        
-#     df_missing_ranges_after_interp = pd.DataFrame(all_missing_ranges_after_interp_list)
-#     if not df_missing_ranges_after_interp.empty:
-#         df_missing_ranges_after_interp = df_missing_ranges_after_interp.sort_values(by=['station', 'variable', 'start_time'])
-#     else:
-#         df_missing_ranges_after_interp = pd.DataFrame(columns=['station', 'variable', 'start_time', 'end_time', 'duration_hours'])
-        
-#     return df_before_interpolation, df_after_interpolation, df_missing_ranges_before_interp, df_missing_ranges_after_interp
-
 
 def convert_utm_df_to_gps(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -2112,91 +950,104 @@ from flask_babel import gettext as _ # <-- C'EST CETTE LIGNE QUI MANQUE OU EST M
 from flask_babel import get_locale
 
 
-def generer_graphique_par_variable_et_periode(df: pd.DataFrame, station: str, variables: list, periode: str, colors: dict, metadata: dict) -> go.Figure:
+######################### Debut du code fonctionnel ##################################
+
+
+
+#############  Fin du code fonctionnel ###################
+
+
+############   Debut de test avec les nouvelles fonctionnalites  #############
+
+
+
+def generer_graphique_par_variable_et_periode(df: pd.DataFrame, station: str, variables: list, periode: str, colors: dict, metadata: dict, before_interpolation_df: pd.DataFrame = None) -> go.Figure:
     """
     Génère un graphique Plotly de l'évolution de plusieurs variables pour une station sur une période donnée.
+    Trace les données interpolées et les données avant interpolation simultanément.
     Retourne l'objet Figure Plotly.
     """
     if not isinstance(df.index, pd.DatetimeIndex):
-        raise TypeError(_("Le DataFrame doit avoir un DatetimeIndex pour générer le graphique.")) # Use _ for this string
+        raise TypeError(_("Le DataFrame doit avoir un DatetimeIndex pour générer le graphique."))
 
     filtered_df = df[df['Station'] == station].copy()
     if filtered_df.empty:
         return go.Figure()
 
     fig = go.Figure()
-    
-    # Use get_period_label for the `periode` string
-    if periode == get_period_label('Journalière'): # Check for translated string
+
+    # Déterminer la fréquence de rééchantillonnage
+    if periode == 'Journalière':
         resample_freq = 'D'
-    elif periode == get_period_label('Hebdomadaire'): # Check for translated string
+    elif periode == 'Hebdomadaire':
         resample_freq = 'W'
-    elif periode == get_period_label('Mensuelle'): # Check for translated string
+    elif periode == 'Mensuelle':
         resample_freq = 'M'
-    elif periode == get_period_label('Annuelle'): # Check for translated string
+    elif periode == 'Annuelle':
         resample_freq = 'Y'
-    else: # Fallback to original key if not found in PERIOD_LABELS
-        # This branch might be tricky if 'periode' comes pre-translated from client.
-        # It's better to pass the original 'periode' key to the backend function
-        # and let the backend translate it for display purposes.
-        # For resampling, we need the *actual* frequency.
-        # Let's assume 'periode' parameter itself is the original key ('Journalière', 'Hebdomadaire', etc.)
-        # and we only translate it for display.
-        # If 'periode' parameter is *already* translated, this logic needs adjustment.
-        # For now, I'll assume 'periode' passed to the function is the untranslated key.
-        # Reverting to direct string check for resampling logic, but still translating for display.
-        pass # The current if/elif chain below handles the original keys.
+    else:
+        resample_freq = None # Pour les données 'Brutes'
 
     for variable in variables:
         if variable not in filtered_df.columns:
             continue
-            
-        # The resampling logic should use the original, untranslated period keys
-        # as these are internal identifiers for pandas resample.
-        if periode == 'Journalière':
-            resampled_df = filtered_df[variable].resample('D').mean()
-        elif periode == 'Hebdomadaire':
-            resampled_df = filtered_df[variable].resample('W').mean()
-        elif periode == 'Mensuelle':
-            resampled_df = filtered_df[variable].resample('M').mean()
-        elif periode == 'Annuelle':
-            resampled_df = filtered_df[variable].resample('Y').mean()
-        # else:
-        #     resampled_df = filtered_df[variable]
 
-        resampled_df = resampled_df.dropna()
-        if resampled_df.empty:
-            continue
-
-        var_color = colors.get(variable, '#1f77b4')  # Default color if not found
-
+        var_color = colors.get(variable, '#1f77b4')  # Couleur par défaut
         var_meta = metadata.get(variable, {'Nom': {'fr': variable, 'en': variable}, 'Unite': {'fr': '', 'en': ''}})
         var_label = str(get_var_label(var_meta, 'Nom'))
         var_unit = str(get_var_label(var_meta, 'Unite'))
-
         
-        fig.add_trace(go.Scatter(
-            x=resampled_df.index, 
-            y=resampled_df.values,
-            mode='lines', 
-            name=f"{var_label} ({var_unit})",
-            line=dict(color=var_color, width=2),
-            hovertemplate=f"%{{y:.2f}} {var_unit}<extra>{var_label}</extra>"
-        ))
+        # --- Trace pour les données interpolées ---
+        if resample_freq:
+            resampled_interp_df = filtered_df[variable].resample(resample_freq).mean()
+        else:
+            resampled_interp_df = filtered_df[variable]
+            
+        resampled_interp_df = resampled_interp_df.dropna()
+        if not resampled_interp_df.empty:
+            fig.add_trace(go.Scatter(
+                x=resampled_interp_df.index, 
+                y=resampled_interp_df.values,
+                mode='lines', 
+                name=f"{var_label} ({_('Interpolée')})",
+                line=dict(color=var_color, width=2),
+                hovertemplate=f"<b>{var_label} ({_('Interpolée')})</b><br>Date: %{{x|%Y-%m-%d %H:%M:%S}}<br>Valeur: %{{y:.2f}} {var_unit}<extra></extra>"
+            ))
+            
+        # --- Trace pour les données AVANT interpolation (sur le même graphique) ---
+        if before_interpolation_df is not None:
+            before_interp_filtered_df = before_interpolation_df[before_interpolation_df['Station'] == station].copy()
+            if variable in before_interp_filtered_df.columns:
+                if resample_freq:
+                    # Rééchantillonner les données originales pour la comparaison
+                    resampled_before_interp_df = before_interp_filtered_df[variable].resample(resample_freq).mean()
+                else:
+                    resampled_before_interp_df = before_interp_filtered_df[variable]
+                
+                # S'assurer de ne tracer que les points existants
+                resampled_before_interp_df = resampled_before_interp_df.dropna()
+
+                if not resampled_before_interp_df.empty:
+                    fig.add_trace(go.Scatter(
+                        x=resampled_before_interp_df.index,
+                        y=resampled_before_interp_df.values,
+                        mode='markers', # Utilise des marqueurs pour montrer les points de données d'origine
+                        name=f"{var_label} ({_('Avant interpolation')})",
+                        marker=dict(color=var_color, size=5, symbol='circle-open', line=dict(width=2, color=var_color)),
+                        hovertemplate=f"<b>{var_label} ({_('Avant interpolation')})</b><br>Date: %{{x|%Y-%m-%d %H:%M:%S}}<br>Valeur: %{{y:.2f}} {var_unit}<extra></extra>"
+                    ))
 
     if not fig.data:
         return go.Figure()
 
-    # Translate 'periode' for display in the title
+    # Titre et mise en page
     translated_periode = get_period_label(periode)
-
     fig.update_layout(
-        #title=str(_("Évolution des variables pour %(station)s (%(periode)s)", station=station, periode=translated_periode)),
         title=str(_("Évolution des variables pour %(station)s (%(periode)s)", station=station, periode=translated_periode)),
-        xaxis_title=str(_("Date")), # Use _ for static strings
-        yaxis_title=str(_("Valeurs")), # Use _ for static strings
+        xaxis_title=str(_("Date")),
+        yaxis_title=str(_("Valeurs")),
         hovermode="x unified",
-        legend_title=str(_("Variables")), # Use _ for static strings
+        legend_title=str(_("Variables")),
         template="plotly_white",
         plot_bgcolor='white',
         paper_bgcolor='white'
@@ -2205,71 +1056,91 @@ def generer_graphique_par_variable_et_periode(df: pd.DataFrame, station: str, va
     return fig
 
 
-def generer_graphique_comparatif(df: pd.DataFrame, variable: str, periode: str, colors: dict, metadata: dict) -> go.Figure:
+def generer_graphique_comparatif(df: pd.DataFrame, variable: str, periode: str, colors: dict, metadata: dict, before_interpolation_df: pd.DataFrame = None) -> go.Figure:
     """
     Génère un graphique Plotly comparatif de l'évolution d'une variable entre toutes les stations.
-    Chaque station utilise sa couleur personnalisée.
+    Trace les données interpolées et les données avant interpolation pour chaque station.
     Retourne l'objet Figure Plotly.
     """
     if not isinstance(df.index, pd.DatetimeIndex):
-        raise TypeError(_("Le DataFrame doit avoir un DatetimeIndex pour générer le graphique comparatif.")) # Use _ for this string
+        raise TypeError(_("Le DataFrame doit avoir un DatetimeIndex pour générer le graphique comparatif."))
 
     fig = go.Figure()
     
     all_stations = df['Station'].unique()
     if len(all_stations) < 2:
-        warnings.warn(_("Moins de 2 stations disponibles pour la comparaison. Le graphique comparatif ne sera pas généré.")) # Use _ for this string
+        warnings.warn(_("Moins de 2 stations disponibles pour la comparaison. Le graphique comparatif ne sera pas généré."))
         return go.Figure()
 
+    # Fréquence de rééchantillonnage
+    if periode == 'Journalière':
+        resample_freq = 'D'
+    elif periode == 'Hebdomadaire':
+        resample_freq = 'W'
+    elif periode == 'Mensuelle':
+        resample_freq = 'M'
+    elif periode == 'Annuelle':
+        resample_freq = 'Y'
+    else:
+        resample_freq = None
+
     for station in all_stations:
+        station_color = colors.get(station, '#1f77b4') # Couleur par défaut
+        
+        # --- Trace pour les données interpolées ---
         filtered_df = df[df['Station'] == station].copy()
-        if filtered_df.empty:
-            continue
+        if not filtered_df.empty:
+            if resample_freq:
+                resampled_interp_df = filtered_df[variable].resample(resample_freq).mean()
+            else:
+                resampled_interp_df = filtered_df[variable]
 
-        # Resampling logic uses original period keys
-        if periode == 'Journalière':
-            resampled_df = filtered_df[variable].resample('D').mean()
-        elif periode == 'Hebdomadaire':
-            resampled_df = filtered_df[variable].resample('W').mean()
-        elif periode == 'Mensuelle':
-            resampled_df = filtered_df[variable].resample('M').mean()
-        elif periode == 'Annuelle':
-            resampled_df = filtered_df[variable].resample('Y').mean()
-        # else:
-        #     resampled_df = filtered_df[variable]
-
-        resampled_df = resampled_df.dropna()
-        if resampled_df.empty:
-            continue
+            resampled_interp_df = resampled_interp_df.dropna()
+            if not resampled_interp_df.empty:
+                fig.add_trace(go.Scatter(
+                    x=resampled_interp_df.index, 
+                    y=resampled_interp_df.values,
+                    mode='lines', 
+                    name=f"{station} ({_('Interpolée')})",
+                    line=dict(color=station_color, width=2),
+                    hovertemplate=f"<b>{station} ({_('Interpolée')})</b><br>{variable}: %{{y:.2f}}<extra></extra>"
+                ))
         
-        station_color = colors.get(station, '#1f77b4')  # Default color if not found
-        
-        fig.add_trace(go.Scatter(
-            x=resampled_df.index, 
-            y=resampled_df.values,
-            mode='lines', 
-            name=station,
-            line=dict(color=station_color, width=2),
-            hovertemplate=f"{variable}: %{{y:.2f}}<extra>{station}</extra>"
-        ))
+        # --- Trace pour les données AVANT interpolation ---
+        if before_interpolation_df is not None:
+            before_interp_filtered_df = before_interpolation_df[before_interpolation_df['Station'] == station].copy()
+            if not before_interp_filtered_df.empty and variable in before_interp_filtered_df.columns:
+                if resample_freq:
+                    resampled_before_interp_df = before_interp_filtered_df[variable].resample(resample_freq).mean()
+                else:
+                    resampled_before_interp_df = before_interp_filtered_df[variable]
+                    
+                resampled_before_interp_df = resampled_before_interp_df.dropna()
+                if not resampled_before_interp_df.empty:
+                    fig.add_trace(go.Scatter(
+                        x=resampled_before_interp_df.index,
+                        y=resampled_before_interp_df.values,
+                        mode='markers', # Utilisez des marqueurs
+                        name=f"{station} ({_('Avant interpolation')})",
+                        marker=dict(color=station_color, size=5, symbol='circle-open', line=dict(width=2, color=station_color)),
+                        hovertemplate=f"<b>{station} ({_('Avant interpolation')})</b><br>{variable}: %{{y:.2f}}<extra></extra>"
+                    ))
 
     if not fig.data:
         return go.Figure()
 
+    # Titre et mise en page
     var_meta = metadata.get(variable, {'Nom': {'fr': variable, 'en': variable}, 'Unite': {'fr': '', 'en': ''}})
     var_label = str(get_var_label(var_meta, 'Nom'))
     var_unit = str(get_var_label(var_meta, 'Unite'))
-
-    # Translate 'periode' for display in the title
     translated_periode = get_period_label(periode)
 
     fig.update_layout(
-        #title=str(_("Comparaison de %(var_label)s (%(var_unit)s) entre stations (%(periode)s)", var_label=var_label, var_unit=var_unit, periode=translated_periode)),
         title=str(_("Comparaison de %(var_label)s (%(var_unit)s) entre stations (%(periode)s)", var_label=var_label, var_unit=var_unit, periode=translated_periode)),
-        xaxis_title=str(_("Date")), # Use _ for static strings
-        yaxis_title=f"{var_label} ({var_unit})", # This mixes translated var_label with direct string, if var_label needs translation itself this is fine.
+        xaxis_title=str(_("Date")),
+        yaxis_title=f"{var_label} ({var_unit})",
         hovermode="x unified",
-        legend_title=str(_("Stations")), # Use _ for static strings
+        legend_title=str(_("Stations")),
         template="plotly_white",
         plot_bgcolor='white',
         paper_bgcolor='white'
@@ -2277,7 +1148,7 @@ def generer_graphique_comparatif(df: pd.DataFrame, variable: str, periode: str, 
     return fig
 
 
-def generate_multi_variable_station_plot(df: pd.DataFrame, station: str, variables: list, periode: str, colors: dict, metadata: dict) -> go.Figure:
+def generate_multi_variable_station_plot(df: pd.DataFrame, station: str, variables: list, periode: str, colors: dict, metadata: dict, before_interpolation_df: pd.DataFrame = None) -> go.Figure:
     if not isinstance(df.index, pd.DatetimeIndex):
         raise TypeError(_("Le DataFrame doit avoir un DatetimeIndex"))
 
@@ -2289,66 +1160,117 @@ def generate_multi_variable_station_plot(df: pd.DataFrame, station: str, variabl
     if not valid_vars:
         warnings.warn(_("Aucune variable numérique valide trouvée"))
         return go.Figure()
+    
+    # Fréquence de rééchantillonnage
+    if periode == 'Journalière':
+        resample_freq = 'D'
+    elif periode == 'Hebdomadaire':
+        resample_freq = 'W'
+    elif periode == 'Mensuelle':
+        resample_freq = 'M'
+    elif periode == 'Annuelle':
+        resample_freq = 'Y'
+    else:
+        resample_freq = None
 
     traces = []
-    for i, var in enumerate(valid_vars, 1):
-        # Resampling logic uses original period keys
-        if periode == 'Journalière':
-            serie = filtered_df[var].resample('D').mean()
-        elif periode == 'Hebdomadaire':
-            serie = filtered_df[var].resample('W').mean()
-        elif periode == 'Mensuelle':
-            serie = filtered_df[var].resample('M').mean()
-        elif periode == 'Annuelle':
-            serie = filtered_df[var].resample('Y').mean()
+    
+    # D'abord, nous devons calculer les valeurs min/max pour la normalisation en utilisant les données interpolées
+    # pour garantir une échelle cohérente pour les deux traces.
+    norm_ranges = {}
+    for var in valid_vars:
+        if resample_freq:
+            serie = filtered_df[var].resample(resample_freq).mean()
         else:
             serie = filtered_df[var]
-
         serie = serie.dropna()
-        if serie.empty:
+        if not serie.empty:
+            norm_ranges[var] = (serie.min(), serie.max())
+    
+    for i, var in enumerate(valid_vars, 1):
+        if var not in norm_ranges:
             continue
-
-        min_val, max_val = serie.min(), serie.max()
-        if max_val != min_val:
-            serie_norm = (serie - min_val) / (max_val - min_val)
-        else:
-            serie_norm = serie * 0 + 0.5
-
+            
+        min_val, max_val = norm_ranges[var]
+        
         var_meta = metadata.get(var, {'Nom': {'fr': var, 'en': var}, 'Unite': {'fr': '', 'en': ''}})
         var_label = str(get_var_label(var_meta, 'Nom'))
         var_unit = str(get_var_label(var_meta, 'Unite'))
         color = colors.get(var, px.colors.qualitative.Plotly[i % len(px.colors.qualitative.Plotly)])
 
-       
-# In generate_multi_variable_station_plot:
-        traces.append(
-            go.Scatter(
-                x=serie_norm.index,
-                y=serie_norm,
-                name=var_label,
-                line=dict(color=color, width=2),
-                mode='lines',
-                hovertemplate=(
-                    f"<b>{var_label}</b><br>" +
-                    str(_("Date")) + ": %{x|%d/%m/%Y}<br>" +  # Removed extra curly braces around x
-                    str(_("Valeur normalisée")) + ": %{y:.2f}<br>" + # Removed extra curly braces around y
-                    str(_("Valeur originale")) + ": %{customdata[0]:.2f} " + var_unit + # Removed extra curly braces
-                    "<extra></extra>"
-                ),
-                customdata=np.column_stack([serie.values])
+        # --- Trace pour les données interpolées ---
+        if resample_freq:
+            serie = filtered_df[var].resample(resample_freq).mean()
+        else:
+            serie = filtered_df[var]
+
+        serie = serie.dropna()
+        if not serie.empty:
+            if max_val != min_val:
+                serie_norm = (serie - min_val) / (max_val - min_val)
+            else:
+                serie_norm = serie * 0 + 0.5
+            
+            traces.append(
+                go.Scatter(
+                    x=serie_norm.index,
+                    y=serie_norm,
+                    name=f"{var_label} ({_('Interpolée')})",
+                    line=dict(color=color, width=2),
+                    mode='lines',
+                    hovertemplate=(
+                        f"<b>{var_label} ({_('Interpolée')})</b><br>" +
+                        str(_("Date")) + ": %{x|%d/%m/%Y}<br>" +
+                        str(_("Valeur normalisée")) + ": %{y:.2f}<br>" +
+                        str(_("Valeur originale")) + ": %{customdata[0]:.2f} " + var_unit +
+                        "<extra></extra>"
+                    ),
+                    customdata=np.column_stack([serie.values])
+                )
             )
-        )
-        
+
+        # --- Trace pour les données AVANT interpolation ---
+        if before_interpolation_df is not None:
+            before_interp_filtered_df = before_interpolation_df[before_interpolation_df['Station'] == station].copy()
+            if var in before_interp_filtered_df.columns and pd.api.types.is_numeric_dtype(before_interp_filtered_df[var]):
+                if resample_freq:
+                    serie_before_interp = before_interp_filtered_df[var].resample(resample_freq).mean()
+                else:
+                    serie_before_interp = before_interp_filtered_df[var]
+
+                serie_before_interp = serie_before_interp.dropna()
+                if not serie_before_interp.empty:
+                    # Normaliser en utilisant les mêmes min/max pour maintenir l'échelle
+                    if max_val != min_val:
+                        serie_norm_before_interp = (serie_before_interp - min_val) / (max_val - min_val)
+                    else:
+                        serie_norm_before_interp = serie_before_interp * 0 + 0.5
+                    
+                    traces.append(
+                        go.Scatter(
+                            x=serie_norm_before_interp.index,
+                            y=serie_norm_before_interp,
+                            name=f"{var_label} ({_('Avant interpolation')})",
+                            mode='markers', # Utilise des marqueurs
+                            marker=dict(color=color, size=5, symbol='x', opacity=0.8), # Symbole différent pour plus de clarté
+                            hovertemplate=(
+                                f"<b>{var_label} ({_('Avant interpolation')})</b><br>" +
+                                str(_("Date")) + ": %{x|%d/%m/%Y}<br>" +
+                                str(_("Valeur normalisée")) + ": %{y:.2f}<br>" +
+                                str(_("Valeur originale")) + ": %{customdata[0]:.2f} " + var_unit +
+                                "<extra></extra>"
+                            ),
+                            customdata=np.column_stack([serie_before_interp.values])
+                        )
+                    )
+
     if not traces:
         return go.Figure()
 
-    # Translate 'periode' for display in the title
+    # Titre et mise en page
     translated_periode = get_period_label(periode)
-
     fig = go.Figure(data=traces)
     fig.update_layout(
-        # Use get_metric_label for the template string and pass translated period
-        #title=str(get_metric_label("Comparaison normalisée des variables - %(station)s (%(periode)s)").format(station=station, periode=translated_periode)),
         title=str(_("Comparaison normalisée des variables - %(station)s (%(periode)s)", station=station, periode=translated_periode)),
         xaxis_title=str(_("Date")),
         yaxis_title=str(_("Valeur normalisée (0-1)")),
@@ -2396,6 +1318,10 @@ def generate_multi_variable_station_plot(df: pd.DataFrame, station: str, variabl
 
     return fig
 
+############   Fin de test avec les nouvelles fonctionnalites  #############
+
+
+
 
 from config import METRIC_LABELS, METADATA_VARIABLES
 
@@ -2416,608 +1342,13 @@ def get_metric_label(metric_key):
 
 ### Fonction fonctionnelle @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-# def generate_daily_stats_plot_plotly(df: pd.DataFrame, variable: str, station_colors: dict) -> go.Figure:
-#     """
-#     Dynamically generates interactive Plotly graphs for daily statistics,
-#     including dates for maximums and minimums, with station-specific colors.
-#     """
-#     try:
-#         df = df.copy()
 
-#         # Remove unnecessary columns
-#         col_sup = ['Rain_01_mm', 'Rain_02_mm']
-#         for var in col_sup:
-#             if var in df.columns:
-#                 df = df.drop(var, axis=1)
-                
-#         if isinstance(df.index, pd.DatetimeIndex):
-#             df = df.reset_index()
-            
-#         df['Datetime'] = pd.to_datetime(df['Datetime'], errors='coerce')
-#         df = df.dropna(subset=['Datetime', 'Station'])
-        
-#         if 'Is_Daylight' not in df.columns:
-#             df['Is_Daylight'] = (df['Datetime'].dt.hour >= 7) & (df['Datetime'].dt.hour <= 18)
-
-#         if variable not in df.columns:
-#             return go.Figure()
-
-#         # Use get_var_label for variable specific names and units
-#         var_meta = METADATA_VARIABLES.get(variable, {'Nom': {'fr': variable, 'en': variable}, 'Unite': {'fr': '', 'en': ''}})
-#         var_label = str(get_var_label(var_meta, 'Nom'))
-#         var_unit = str(get_var_label(var_meta, 'Unite'))
-
-#         # Initialize stats DataFrame
-#         stats = pd.DataFrame()
-
-#         # --- Specific processing for Rain ---
-#         if var_meta.get('is_rain', False) and variable == 'Rain_mm':
-#             # Daily rainfall calculation
-#             df_daily_rain = df.groupby(['Station', pd.Grouper(key='Datetime', freq='D')])['Rain_mm'].sum().reset_index()
-
-#             # Rainy season detection
-#             RAIN_SEASON_GAP_THRESHOLD = pd.Timedelta(days=60)
-#             season_stats = []
-
-#             for station_name, station_df in df_daily_rain.groupby('Station'):
-#                 station_df = station_df.set_index('Datetime').sort_index()
-#                 rain_events = station_df[station_df['Rain_mm'] > 0].index
-
-#                 if rain_events.empty:
-#                     season_stats.append({
-#                         'Station': station_name,
-#                         get_metric_label('Moyenne Saison Pluvieuse'): np.nan, # Using new function
-#                         get_metric_label('Début Saison Pluvieuse'): pd.NaT,
-#                         get_metric_label('Fin Saison Pluvieuse'): pd.NaT,
-#                         get_metric_label('Durée Saison Pluvieuse Jours'): np.nan
-#                     })
-#                     continue
-
-#                 block_ids = (rain_events.to_series().diff() > RAIN_SEASON_GAP_THRESHOLD).cumsum()
-#                 valid_blocks = {}
-
-#                 for block_id, rain_dates_in_block in rain_events.to_series().groupby(block_ids):
-#                     if not rain_dates_in_block.empty:
-#                         block_start = rain_dates_in_block.min()
-#                         block_end = rain_dates_in_block.max()
-#                         full_block_df = station_df.loc[block_start:block_end]
-#                         valid_blocks[block_id] = full_block_df
-
-#                 if not valid_blocks:
-#                     season_stats.append({
-#                         'Station': station_name,
-#                         get_metric_label('Moyenne Saison Pluvieuse'): np.nan,
-#                         get_metric_label('Début Saison Pluvieuse'): pd.NaT,
-#                         get_metric_label('Fin Saison Pluvieuse'): pd.NaT,
-#                         get_metric_label('Durée Saison Pluvieuse Jours'): np.nan
-#                     })
-#                     continue
-
-#                 main_block_id = max(valid_blocks, key=lambda k: (valid_blocks[k].index.max() - valid_blocks[k].index.min()).days)
-#                 main_season_df = valid_blocks[main_block_id]
-
-#                 debut_saison = main_season_df.index.min()
-#                 fin_saison = main_season_df.index.max()
-#                 total_days = (fin_saison - debut_saison).days + 1
-#                 moyenne_saison = main_season_df['Rain_mm'].sum() / total_days if total_days > 0 else 0
-
-#                 season_stats.append({
-#                     'Station': station_name,
-#                     get_metric_label('Moyenne Saison Pluvieuse'): moyenne_saison,
-#                     get_metric_label('Début Saison Pluvieuse'): debut_saison,
-#                     get_metric_label('Fin Saison Pluvieuse'): fin_saison,
-#                     get_metric_label('Durée Saison Pluvieuse Jours'): total_days
-#                 })
-
-#             df_season_stats = pd.DataFrame(season_stats)
-
-#             # Dry spell detection
-#             station_dry_spell_events = []
-
-#             for station_name, station_df in df_daily_rain.groupby('Station'):
-#                 station_df = station_df.set_index('Datetime').sort_index()
-#                 full_daily_series = station_df['Rain_mm'].resample('D').sum().fillna(0)
-#                 rainy_days_index = full_daily_series[full_daily_series > 0].index
-
-#                 if rainy_days_index.empty:
-#                     continue
-
-#                 for i in range(1, len(rainy_days_index)):
-#                     prev_rain_date = rainy_days_index[i-1]
-#                     current_rain_date = rainy_days_index[i]
-#                     dry_days = (current_rain_date - prev_rain_date).days - 1
-
-#                     if dry_days > 0:
-#                         rain_prev_day = full_daily_series.loc[prev_rain_date]
-#                         saison_moyenne = df_season_stats.loc[
-#                             df_season_stats['Station'] == station_name,
-#                             get_metric_label('Moyenne Saison Pluvieuse') # Access column by its translated name
-#                         ].iloc[0] if not df_season_stats[df_season_stats['Station'] == station_name].empty else np.nan
-
-#                         debut_secheresse = pd.NaT
-#                         duree_secheresse = 0
-
-#                         if pd.isna(saison_moyenne) or saison_moyenne == 0:
-#                             continue
-
-#                         for j in range(1, dry_days + 1):
-#                             current_dry_date = prev_rain_date + timedelta(days=j)
-#                             current_ratio = rain_prev_day / j
-
-#                             if current_ratio < saison_moyenne:
-#                                 debut_secheresse = current_dry_date
-#                                 duree_secheresse = (current_rain_date - debut_secheresse).days
-#                                 break
-
-#                         if pd.notna(debut_secheresse) and duree_secheresse > 0:
-#                             station_dry_spell_events.append({
-#                                 'Station': station_name,
-#                                 get_metric_label('Début Sécheresse Définie'): debut_secheresse,
-#                                 get_metric_label('Fin Sécheresse Définie'): current_rain_date - timedelta(days=1),
-#                                 get_metric_label('Durée Sécheresse Définie Jours'): duree_secheresse
-#                             })
-
-#             df_dry_spell_events = pd.DataFrame(station_dry_spell_events)
-
-#             # Calculate final statistics with dates
-#             stats = df[df['Rain_mm'] > 0].groupby('Station')['Rain_mm'].agg(
-#                 Maximum='max', Minimum='min', Mediane='median' # These remain English keys for aggregation
-#             ).reset_index()
-
-#             # Add dates of max/min
-#             max_dates = df.loc[df.groupby('Station')['Rain_mm'].idxmax()][['Station', 'Datetime']]
-#             min_dates = df.loc[df.groupby('Station')['Rain_mm'].idxmin()][['Station', 'Datetime']]
-            
-#             # Rename columns with translatable strings
-#             stats = stats.merge(
-#                 max_dates.rename(columns={'Datetime': get_metric_label('Date Max')}),
-#                 on='Station', how='left'
-#             )
-#             stats = stats.merge(
-#                 min_dates.rename(columns={'Datetime': get_metric_label('Date Min')}),
-#                 on='Station', how='left'
-#             )
-
-#             total_cumul = df.groupby('Station')['Rain_mm'].sum().reset_index(name=get_metric_label('Cumul Annuel'))
-#             stats = stats.merge(total_cumul, on='Station', how='left')
-
-#             stats = stats.merge(
-#                 df_daily_rain[df_daily_rain['Rain_mm'] > 0].groupby('Station')['Rain_mm'].mean().reset_index().rename(
-#                     columns={'Rain_mm': get_metric_label('Moyenne Jours Pluvieux')}),
-#                 on='Station', how='left'
-#             )
-            
-#             stats = stats.merge(
-#                 df_season_stats[['Station', get_metric_label('Moyenne Saison Pluvieuse'), get_metric_label('Début Saison Pluvieuse'),
-#                                  get_metric_label('Fin Saison Pluvieuse'), get_metric_label('Durée Saison Pluvieuse Jours')]],
-#                 on='Station', how='left'
-#             )
-
-#             if not df_dry_spell_events.empty:
-#                 longest_dry_spells = df_dry_spell_events.loc[
-#                     df_dry_spell_events.groupby('Station')[get_metric_label('Durée Sécheresse Définie Jours')].idxmax()
-#                 ][['Station', get_metric_label('Durée Sécheresse Définie Jours'), get_metric_label('Début Sécheresse Définie'), get_metric_label('Fin Sécheresse Définie')]]
-
-#                 stats = stats.merge(longest_dry_spells, on='Station', how='left')
-
-#             # List of original metric keys
-#             metrics_to_plot_keys = [
-#                 'Maximum', 'Minimum', 'Cumul Annuel', 'Mediane',
-#                 'Moyenne Jours Pluvieux', 'Moyenne Saison Pluvieuse',
-#                 'Durée Saison Pluvieuse Jours', 'Durée Sécheresse Définie Jours'
-#             ]
-
-#             # Generate subplot titles by translating each key using get_metric_label
-#             subplot_titles = [f"{var_label} {get_metric_label(_key)}" for _key in metrics_to_plot_keys]
-
-#             fig = make_subplots(
-#                 rows=4, cols=2,
-#                 subplot_titles=subplot_titles,
-#                 vertical_spacing=0.1
-#             )
-
-#             for i, metric_key in enumerate(metrics_to_plot_keys):
-#                 row = (i // 2) + 1
-#                 col = (i % 2) + 1
-                
-#                 # Get the translated column name for accessing data from 'stats' DataFrame
-#                 translated_col_name = get_metric_label(metric_key)
-
-#                 if translated_col_name not in stats.columns:
-#                     continue
-
-#                 hover_text_list = []
-#                 station_colors_list = []
-#                 for _, row_data in stats.iterrows():
-#                     station_name = row_data['Station']
-#                     station_color = station_colors.get(station_name, '#1f77b4')
-#                     station_colors_list.append(station_color)
-                    
-#                     value = row_data[translated_col_name]
-#                     if pd.isna(value):
-#                         hover_text_list.append("")
-#                         continue
-
-#                     # Adjust hover text logic for translations
-#                     if metric_key in ['Durée Saison Pluvieuse Jours', 'Durée Sécheresse Définie Jours']:
-#                         date_debut = ''
-#                         date_fin = ''
-#                         # Access dates by their translated column names
-#                         if metric_key == 'Durée Saison Pluvieuse Jours' and pd.notna(row_data.get(get_metric_label('Début Saison Pluvieuse'))) and pd.notna(row_data.get(get_metric_label('Fin Saison Pluvieuse'))):
-#                             date_debut = row_data[get_metric_label('Début Saison Pluvieuse')].strftime('%d/%m/%Y')
-#                             date_fin = row_data[get_metric_label('Fin Saison Pluvieuse')].strftime('%d/%m/%Y')
-#                         elif metric_key == 'Durée Sécheresse Définie Jours' and pd.notna(row_data.get(get_metric_label('Début Sécheresse Définie'))) and pd.notna(row_data.get(get_metric_label('Fin Sécheresse Définie'))):
-#                             date_debut = row_data[get_metric_label('Début Sécheresse Définie')].strftime('%d/%m/%Y')
-#                             date_fin = row_data[get_metric_label('Fin Sécheresse Définie')].strftime('%d/%m/%Y')
-
-#                         hover_text = f"<b>{get_metric_label(metric_key)}</b><br>"
-#                         if date_debut and date_fin:
-#                             hover_text += get_metric_label("From {} to {}").format(date_debut, date_fin) + "<br>"
-#                         hover_text += get_metric_label("Duration: {} days").format(int(value))
-#                     elif metric_key == 'Maximum':
-#                         date_str = row_data[get_metric_label('Date Max')].strftime('%d/%m/%Y') if pd.notna(row_data.get(get_metric_label('Date Max'))) else get_metric_label('Unknown date')
-#                         hover_text = get_metric_label("<b>Maximum</b><br>Value: {:.1f} {}<br>Date: {}").format(value, var_unit, date_str)
-#                     elif metric_key == 'Minimum':
-#                         date_str = row_data[get_metric_label('Date Min')].strftime('%d/%m/%Y') if pd.notna(row_data.get(get_metric_label('Date Min'))) else get_metric_label('Unknown date')
-#                         hover_text = get_metric_label("<b>Minimum</b><br>Value: {:.1f} {}<br>Date: {}").format(value, var_unit, date_str)
-#                     elif metric_key in ['Cumul Annuel', 'Moyenne Jours Pluvieux', 'Moyenne Saison Pluvieuse', 'Mediane']:
-#                         hover_text = get_metric_label("<b>{}</b><br>{:.1f} {}").format(get_metric_label(metric_key), value, var_unit)
-#                     else:
-#                         hover_text = get_metric_label("<b>{}</b><br>{:.1f} {}").format(get_metric_label(metric_key), value, var_unit)
-
-#                     hover_text_list.append(hover_text)
-
-#                 fig.add_trace(
-#                     go.Bar(
-#                         x=stats[translated_col_name],
-#                         y=stats['Station'],
-#                         orientation='h',
-#                         marker_color=station_colors_list,
-#                         name=get_metric_label(metric_key),
-#                         hovertext=hover_text_list,
-#                         hoverinfo='text',
-#                         textposition='none'
-#                     ),
-#                     row=row,
-#                     col=col
-#                 )
-
-#                 fig.update_xaxes(
-#                     showgrid=False,
-#                     row=row,
-#                     col=col
-#                 )
-                
-#                 # Dynamic x-axis title based on metric
-#                 xaxis_title = get_metric_label("Days") if ("Durée" in metric_key or "Duration" in metric_key) else f"{var_label} ({var_unit})"
-#                 fig.update_layout(
-#                     {f'xaxis{i+1}_title': xaxis_title}
-#                 )
-
-#                 fig.update_yaxes(
-#                     showgrid=False,
-#                     row=row,
-#                     col=col
-#                 )
-
-#             fig.update_layout(
-#                 height=1200,
-#                 title_text=get_metric_label("Statistics of {} by Station").format(var_label),
-#                 showlegend=False,
-#                 hovermode='closest',
-#                 plot_bgcolor='white',
-#                 paper_bgcolor='white'
-#             )
-            
-#         else:
-#             # --- Processing for other variables ---
-#             df[variable] = pd.to_numeric(df[variable], errors='coerce')
-#             df_clean = df.dropna(subset=[variable, 'Station']).copy()
-            
-#             if variable == 'Solar_R_W/m^2':
-#                 df_clean = df_clean[df_clean['Is_Daylight']].copy()
-            
-#             if df_clean.empty:
-#                 return go.Figure()
-                
-#             # Calculate statistics with dates
-#             stats = df_clean.groupby('Station')[variable].agg(
-#                 Maximum='max', Minimum='min', Mediane='median'
-#             ).reset_index()
-            
-#             # Add dates of max/min
-#             max_dates = df_clean.loc[df_clean.groupby('Station')[variable].idxmax()][['Station', 'Datetime']]
-#             min_dates = df_clean.loc[df_clean.groupby('Station')[variable].idxmin()][['Station', 'Datetime']]
-            
-#             # Rename columns with translatable strings
-#             stats = stats.merge(
-#                 max_dates.rename(columns={'Datetime': get_metric_label('Date Max')}),
-#                 on='Station', how='left'
-#             )
-#             stats = stats.merge(
-#                 min_dates.rename(columns={'Datetime': get_metric_label('Date Min')}),
-#                 on='Station', how='left'
-#             )
-            
-#             stats[get_metric_label('Moyenne')] = df_clean.groupby('Station')[variable].mean().values
-
-#             # List of original metric keys
-#             metrics_to_plot_keys = ['Maximum', 'Minimum', 'Moyenne', 'Mediane']
-            
-#             # Generate subplot titles by translating each key using get_metric_label
-#             subplot_titles = [f"{var_label} {get_metric_label(_key)}" for _key in metrics_to_plot_keys]
-            
-#             fig = make_subplots(
-#                 rows=2, cols=2,
-#                 subplot_titles=subplot_titles,
-#                 vertical_spacing=0.15
-#             )
-
-#             for i, metric_key in enumerate(metrics_to_plot_keys):
-#                 row = (i // 2) + 1
-#                 col = (i % 2) + 1
-                
-#                 # Get the translated column name for accessing data from 'stats' DataFrame
-#                 translated_col_name = get_metric_label(metric_key)
-
-#                 if translated_col_name not in stats.columns:
-#                     continue
-
-#                 hover_text_list = []
-#                 station_colors_list = []
-#                 for _, row_data in stats.iterrows():
-#                     station_name = row_data['Station']
-#                     station_color = station_colors.get(station_name, '#1f77b4')
-#                     station_colors_list.append(station_color)
-                    
-#                     value = row_data[translated_col_name]
-#                     if pd.isna(value):
-#                         hover_text_list.append("")
-#                         continue
-
-#                     # Adjust hover text logic for translations
-#                     if metric_key == 'Maximum':
-#                         date_str = row_data[get_metric_label('Date Max')].strftime('%d/%m/%Y') if pd.notna(row_data.get(get_metric_label('Date Max'))) else get_metric_label('Unknown date')
-#                         hover_text = get_metric_label("<b>Maximum</b><br>Value: {:.1f} {}<br>Date: {}").format(value, var_unit, date_str)
-#                     elif metric_key == 'Minimum':
-#                         date_str = row_data[get_metric_label('Date Min')].strftime('%d/%m/%Y') if pd.notna(row_data.get(get_metric_label('Date Min'))) else get_metric_label('Unknown date')
-#                         hover_text = get_metric_label("<b>Minimum</b><br>Value: {:.1f} {}<br>Date: {}").format(value, var_unit, date_str)
-#                     else:
-#                         hover_text = get_metric_label("<b>{}</b><br>{:.1f} {}").format(get_metric_label(metric_key), value, var_unit)
-
-#                     hover_text_list.append(hover_text)
-
-#                 fig.add_trace(
-#                     go.Bar(
-#                         x=stats[translated_col_name],
-#                         y=stats['Station'],
-#                         orientation='h',
-#                         marker_color=station_colors_list,
-#                         name=get_metric_label(metric_key),
-#                         hovertext=hover_text_list,
-#                         hoverinfo='text',
-#                         textposition='none'
-#                     ),
-#                     row=row,
-#                     col=col
-#                 )
-
-#                 fig.update_xaxes(
-#                     showgrid=False,
-#                     row=row,
-#                     col=col
-#                 )
-                
-#                 fig.update_layout(
-#                     {f'xaxis{i+1}_title': f"{var_label} ({var_unit})"}
-#                 )
-
-#                 fig.update_yaxes(
-#                     showgrid=False,
-#                     row=row,
-#                     col=col
-#                 )
-
-#             fig.update_layout(
-#                 height=800,
-#                 title_text=get_metric_label("Statistics of {} by Station").format(var_label),
-#                 showlegend=False,
-#                 hovermode='closest',
-#                 plot_bgcolor='white',
-#                 paper_bgcolor='white'
-#             )
-        
-#         return fig
-        
-#     except Exception as e:
-#         print(f"Erreur dans generate_daily_stats_plot_plotly: {str(e)}")
-#         traceback.print_exc()
-#         return go.Figure()
 
 
 import pandas as pd
 import plotly.express as px
 
-# import pandas as pd
-# import plotly.express as px
 
-# def valeurs_manquantes_viz(df: pd.DataFrame):
-#     """
-#     Retourne une figure Plotly de type diagramme en cercle (pie chart)
-#     montrant le pourcentage total de valeurs présentes et manquantes
-#     pour l'ensemble du DataFrame.
-#     """
-#     df_copy = df.copy()
-
-#     # Calcul du nombre total de cellules dans le DataFrame
-#     total_cells = df_copy.size # df.size donne le nombre total de cellules (lignes * colonnes)
-
-#     # Calcul du nombre de valeurs manquantes
-#     missing_values_count = df_copy.isnull().sum().sum()
-
-#     # Calcul du nombre de valeurs présentes
-#     present_values_count = total_cells - missing_values_count
-
-#     # Création d'un DataFrame pour le pie chart
-#     data_for_pie = pd.DataFrame({
-#         'Catégorie': ['Valeurs Présentes', 'Valeurs Manquantes'],
-#         'Nombre': [present_values_count, missing_values_count]
-#     })
-
-#     # Calcul des pourcentages pour l'affichage au survol
-#     data_for_pie['Pourcentage'] = (data_for_pie['Nombre'] / total_cells * 100).round(2)
-
-#     fig = px.pie(
-#         data_for_pie,
-#         values='Nombre',
-#         names='Catégorie',
-#         title=f"Répartition globale des valeurs (Total: {total_cells} cellules)",
-#         hole=0.3, # Crée un diagramme en anneau
-#         color='Catégorie',
-#         color_discrete_map={
-#             'Valeurs Présentes': 'lightgreen',
-#             'Valeurs Manquantes': 'lightcoral'
-#         }
-#     )
-
-#     # Personnaliser le texte affiché au survol
-#     fig.update_traces(
-#         textinfo='percent+label', # Affiche le pourcentage et le label
-#         hovertemplate="<b>%{label}</b><br>Nombre: %{value}<br>Pourcentage: %{percent:.2%}<extra></extra>"
-#     )
-
-#     fig.update_layout(showlegend=True)
-
-#     return fig
-
-# # Note: La fonction outliers_viz ne change pas et conserve la heatmap.
-# # Si vous souhaitez un autre type de visualisation pour les outliers, veuillez le spécifier.
-
-# def outliers_viz(df: pd.DataFrame, coef: float = 1.5):
-#     """
-#     Retourne une figure Plotly du pourcentage d'outliers (méthode IQR) par variable et station.
-#     """
-#     df_copy = df.copy()
-#     numeric_cols = df_copy.select_dtypes(include='number').columns
-#     stations = df_copy['Station'].unique()
-
-#     data = []
-#     for station in stations:
-#         group = df_copy[df_copy['Station'] == station]
-#         for col in numeric_cols:
-#             Q1 = group[col].quantile(0.25)
-#             Q3 = group[col].quantile(0.75)
-#             IQR = Q3 - Q1
-#             lower = Q1 - coef * IQR
-#             upper = Q3 + coef * IQR
-#             total = group[col].count()
-#             outliers = group[(group[col] < lower) | (group[col] > upper)][col].count()
-#             percent = (outliers / total * 100) if total > 0 else 0
-#             data.append({'Station': station, 'Variable': col, 'Pourcentage': round(percent, 2)})
-
-#     df_outliers = pd.DataFrame(data)
-
-#     fig = px.imshow(
-#         df_outliers.pivot(index='Variable', columns='Station', values='Pourcentage'),
-#         labels=dict(color="% outliers"),
-#         color_continuous_scale='YlGnBu',
-#         aspect='auto'
-#     )
-#     fig.update_layout(
-#         title="Pourcentage d'outliers par variable et station (IQR)",
-#         xaxis_title="Station",
-#         yaxis_title="Variable"
-#     )
-#     return fig
-
-# import pandas as pd
-# import plotly.express as px
-# from plotly.subplots import make_subplots
-# import plotly.graph_objects as go
-
-# def valeurs_manquantes_viz(df: pd.DataFrame):
-#     """
-#     Retourne une figure Plotly avec des sous-plots (diagrammes en cercle)
-#     montrant le pourcentage de valeurs présentes et manquantes pour chaque variable.
-#     """
-#     df_copy = df.copy()
-
-#     # Exclure les colonnes non-numériques ou d'identification qui ne sont pas des "variables" à analyser
-#     # Adapter cette liste si vous avez d'autres colonnes d'ID/non-mesure.
-#     cols_to_exclude = ['Datetime', 'Station']
-    
-#     # Filtrer les colonnes qui sont réellement des variables à mesurer
-#     variable_columns = [col for col in df_copy.columns if col not in cols_to_exclude]
-
-
-#     if not variable_columns:
-#         # Gérer le cas où il n'y a pas de variables à analyser
-#         fig = go.Figure().add_annotation(
-#             x=0.5, y=0.5, text="Aucune variable à analyser pour les valeurs manquantes.",
-#             showarrow=False, font=dict(size=16)
-#         )
-#         fig.update_layout(title="Analyse des valeurs manquantes")
-#         return fig
-
-#     # Déterminer la taille de la grille des sous-plots
-#     num_variables = len(variable_columns)
-#     cols_per_row = 3 # Nombre de camemberts par ligne dans la grille
-#     rows = (num_variables + cols_per_row - 1) // cols_per_row # Calcul le nombre de lignes nécessaires
-
-#     # Créer les sous-plots
-#     fig = make_subplots(
-#         rows=rows,
-#         cols=cols_per_row,
-#         specs=[[{'type':'domain'}]*cols_per_row] * rows, # Spécifie que chaque sous-plot est un camembert
-#         subplot_titles=variable_columns # Les titres des sous-plots seront les noms des variables
-#     )
-
-#     for i, col in enumerate(variable_columns):
-#         # Calculer les valeurs présentes et manquantes pour la colonne actuelle
-#         present_count = df_copy[col].count()
-#         missing_count = df_copy[col].isnull().sum()
-#         total_for_col = present_count + missing_count
-
-#         if total_for_col == 0:
-#             # Gérer le cas où une colonne est entièrement vide
-#             pie_data = pd.DataFrame({'Catégorie': ['Aucune donnée'], 'Nombre': [1], 'Pourcentage': [100.0]})
-#         else:
-#             pie_data = pd.DataFrame({
-#                 'Catégorie': ['Valeurs Présentes', 'Valeurs Manquantes'],
-#                 'Nombre': [present_count, missing_count]
-#             })
-#             pie_data['Pourcentage'] = (pie_data['Nombre'] / total_for_col * 100).round(2)
-
-#         # Ajouter le camembert au sous-plot approprié
-#         row_idx = (i // cols_per_row) + 1
-#         col_idx = (i % cols_per_row) + 1
-
-#         # Utiliser go.Pie directement pour plus de contrôle dans les sous-plots
-#         fig.add_trace(
-#             go.Pie(
-#                 labels=pie_data['Catégorie'],
-#                 values=pie_data['Nombre'],
-#                 name=col, # Nom de la trace
-#                 textinfo='percent+label', # Affiche le pourcentage et le label sur la tranche
-#                 hovertemplate="<b>%{label}</b><br>Nombre: %{value}<br>Pourcentage: %{percent:.2%}<extra></extra>", # <-- Corrected hovertemplate
-#                 marker=dict(colors=['lightgreen', 'lightcoral'] if 'Aucune donnée' not in pie_data['Catégorie'].tolist() else ['lightgray'])
-#             ),
-#             row=row_idx, col=col_idx
-#         )
-
-#     fig.update_layout(
-#         title_text="Pourcentage de valeurs manquantes par variable",
-#         showlegend=False, # La légende n'est pas nécessaire car les labels sont dans les titres et camemberts
-#         height=300 * rows, # Ajuster la hauteur totale de la figure
-#         margin=dict(l=50, r=50, b=50, t=80) # Ajuster les marges
-#     )
-    
-#     # Centrer les titres des sous-plots
-#     for i in range(num_variables):
-#         fig.layout.annotations[i].update(x=fig.layout.annotations[i].x)
-
-
-#     return fig
 
 
 import pandas as pd
@@ -3025,136 +1356,6 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
-# def outliers_viz(df: pd.DataFrame, coef: float = 1.5):
-#     """
-#     Retourne une figure Plotly avec des sous-plots (scatter plots)
-#     montrant les outliers pour chaque variable numérique.
-#     Les points sont colorés en fonction de leur statut d'outlier (par station).
-#     """
-#     df_copy = df.copy()
-
-#     # Ensure 'Datetime' is a column for plotting (it might be an index)
-#     if df_copy.index.name == 'Datetime':
-#         df_copy = df_copy.reset_index()
-#     elif 'Datetime' not in df_copy.columns:
-#         # Fallback if Datetime is neither index nor column (shouldn't happen with previous fixes)
-#         return go.Figure().add_annotation(
-#             x=0.5, y=0.5, text="Colonne 'Datetime' manquante pour la visualisation des outliers.",
-#             showarrow=False, font=dict(size=16)
-#         )
-
-#     # # Identify numeric columns for outlier analysis, excluding 'Station' and 'Datetime'
-#     # numeric_cols = df_copy.select_dtypes(include='number').columns.drop(['Station'], errors='ignore')
-#     # numeric_cols = [col for col in numeric_cols if col != 'Datetime'] # Ensure Datetime is also not treated as a variable for outliers
-
-#     cols_to_exclude = ['Datetime', 'Station', 'Rain_01_mm', 'Rain_02_mm', 'Is_Daylight', 'Day_Duration', 'sunrise_time_utc', 'sunset_time_utc', 'Day']
-#         #cols_to_exclude = ['Year', 'Month', 'Minute', 'Hour', 'Date', 'Day', 'Daylight_Duration', 'sunrise_time_utc', 'sunset_time_utc']
-
-    
-#     # Filtrer les colonnes qui sont réellement des variables à analyser
-#     numeric_cols = [col for col in df_copy.columns if col not in cols_to_exclude]
-
-#     if not numeric_cols:
-#         fig = go.Figure().add_annotation(
-#             x=0.5, y=0.5, text="Aucune variable numérique pour l'analyse des outliers.",
-#             showarrow=False, font=dict(size=16)
-#         )
-#         fig.update_layout(title="Analyse des Outliers")
-#         return fig
-
-#     # Pre-calculate outlier status for each point
-#     df_with_outlier_status = df_copy.copy()
-    
-#     # Initialize a column to store outlier status for each variable
-#     for col in numeric_cols:
-#         df_with_outlier_status[f'{col}_is_outlier'] = False # Default to False
-
-#     stations = df_with_outlier_status['Station'].unique()
-
-#     # Calculate outlier bounds per station and mark outliers
-#     for station in stations:
-#         station_df = df_with_outlier_status[df_with_outlier_status['Station'] == station]
-#         for col in numeric_cols:
-#             Q1 = station_df[col].quantile(0.25)
-#             Q3 = station_df[col].quantile(0.75)
-#             IQR = Q3 - Q1
-#             lower = Q1 - coef * IQR
-#             upper = Q3 + coef * IQR
-
-#             # Identify outlier indices for this station and column
-#             outlier_indices = station_df[(station_df[col] < lower) | (station_df[col] > upper)].index
-            
-#             # Update the global df_with_outlier_status DataFrame
-#             df_with_outlier_status.loc[outlier_indices, f'{col}_is_outlier'] = True
-    
-#     # Determine subplot grid dimensions
-#     num_plots = len(numeric_cols)
-#     cols_per_row = 2 # Number of scatter plots per row
-#     rows = (num_plots + cols_per_row - 1) // cols_per_row
-
-#     fig = make_subplots(
-#         rows=rows,
-#         cols=cols_per_row,
-#         subplot_titles=numeric_cols, # Titles for each subplot
-#         x_title="Date",
-#         y_title="Valeur" # This will be overwritten by individual subplot titles
-#     )
-
-#     # Get a list of colors for stations if multiple
-#     num_stations = len(stations)
-#     if num_stations > 1:
-#         # Use Plotly's default color cycle if many stations, or define custom ones
-#         # For simplicity, px.scatter will handle colors automatically if `color='Station'` is used
-#         pass
-
-#     for i, col in enumerate(numeric_cols):
-#         row_idx = (i // cols_per_row) + 1
-#         col_idx = (i % cols_per_row) + 1
-
-#         # Create the scatter plot for the current variable
-#         # Color by outlier status and optionally by station for differentiation
-#         # Using px.scatter for easier coloring and legend
-#         scatter_plot = px.scatter(
-#             df_with_outlier_status,
-#             x='Datetime',
-#             y=col,
-#             color=f'{col}_is_outlier', # Color by outlier status (True/False)
-#             color_discrete_map={
-#                 True: 'red',    # Outliers
-#                 False: 'blue'   # Inliers
-#             },
-#             hover_name='Station', # Show Station name on hover
-#             hover_data={
-#                 'Datetime': '|%Y-%m-%d %H:%M:%S', # Format Datetime on hover
-#                 col: True, # Show variable value
-#                 'Station': True, # Show Station
-#                 f'{col}_is_outlier': False # Don't show the boolean flag itself
-#             },
-#             labels={
-#                 f'{col}_is_outlier': 'Est un Outlier', # Label for color legend
-#                 col: col # Label for Y-axis
-#             },
-#             title=f"Distribution de {col} avec Outliers" # Individual subplot title
-#         )
-        
-#         # Add traces from px.scatter to the make_subplots figure
-#         for trace in scatter_plot.data:
-#             trace.showlegend = (trace.name == 'True' or trace.name == 'False') # Show legend only for Outlier status
-#             fig.add_trace(trace, row=row_idx, col=col_idx)
-
-#         # Update layout for individual subplot axes (titles, ranges, etc.)
-#         fig.update_xaxes(title_text="Date", row=row_idx, col=col_idx)
-#         fig.update_yaxes(title_text=col, row=row_idx, col=col_idx)
-
-#     # Update overall layout
-#     fig.update_layout(
-#         title_text="Analyse des Outliers par Variable",
-#         height=400 * rows, # Adjust total height based on number of rows
-#         showlegend=True, # Show a combined legend for outlier status
-#         legend_title_text="Statut d'Outlier"
-#     )
-    
-#     return fig
 
 
 import pandas as pd
@@ -3165,836 +1366,199 @@ from plotly.subplots import make_subplots
 import warnings
 from flask_babel import _, lazy_gettext as _l
 
-# def outliers_viz(df: pd.DataFrame, coef: float = 1.5):
+
+
+# def outliers_viz(df: pd.DataFrame, coef: float = 1.5) -> go.Figure:
 #     """
-#     Retourne une figure Plotly avec des sous-plots (scatter plots)
-#     montrant les outliers pour chaque variable numérique.
-#     Les points sont colorés en fonction de leur statut d'outlier (par station).
-
-#     Args:
-#         df (pd.DataFrame): Le DataFrame d'entrée contenant les données.
-#                            Doit contenir une colonne 'Station' et un DatetimeIndex
-#                            ou une colonne 'Datetime'.
-#         coef (float): Le coefficient IQR pour la détection des outliers (par défaut 1.5).
-
-#     Returns:
-#         go.Figure: Une figure Plotly visualisant les outliers.
+#     Visualisation des outliers pour chaque variable numérique via des scatter plots Plotly.
 #     """
-#     df_copy = df.copy()
-
-#     # Ensure 'Datetime' is a column for plotting (it might be an index)
-#     if df_copy.index.name == 'Datetime':
-#         df_copy = df_copy.reset_index()
-#     elif 'Datetime' not in df_copy.columns:
-#         # Fallback if Datetime is neither index nor column (shouldn't happen with previous fixes)
+#     df = df.copy()
+#     if df.index.name == 'Datetime':
+#         df.reset_index(inplace=True)
+#     elif 'Datetime' not in df.columns:
 #         return go.Figure().add_annotation(
-#             x=0.5, y=0.5, text=str(_l("Colonne 'Datetime' manquante pour la visualisation des outliers.")),
+#             x=0.5, y=0.5, text=_l("Colonne 'Datetime' manquante pour la visualisation des outliers."),
 #             showarrow=False, font=dict(size=16)
 #         )
 
-#     # Convert all potentially numeric columns to numeric, coercing errors
-#     # This is crucial for handling mixed types or strings that look like numbers
-#     for col in df_copy.columns:
-#         # Try converting only if it's not 'Datetime' or 'Station'
-#         if col not in ['Datetime', 'Station']:
-#             # Attempt to convert to numeric, turning unconvertible values into NaN
-#             df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce')
-
-#     # Identify numeric columns for outlier analysis after conversion
-#     # Exclude 'Station' as it's categorical, and 'Datetime' (handled as x-axis)
-#     # Also exclude columns that are purely flags or derived categorical (like Is_Daylight)
-#     # or specific rain components if only 'Rain_mm' is desired for analysis.
-    
-#     # Define columns that should definitively NOT be treated as numerical for outlier calculation
-#     # These are typically identifiers, dates, or boolean/categorical flags.
-#     base_cols_to_exclude_from_numeric_analysis = [
+#     # Conversion des colonnes numériques (hors colonnes à exclure)
+#     exclude_cols = {
 #         'Datetime', 'Station', 'Is_Daylight', 'Day', 
-#         'sunrise_time_utc', 'sunset_time_utc', 'Daylight_Duration'
+#         'sunrise_time_utc', 'sunset_time_utc', 'Daylight_Duration',
+#         'Rain_01_mm', 'Rain_02_mm', 'Day_Duration'
+#     }
+
+#     for col in df.columns:
+#         if col not in exclude_cols:
+#             df[col] = pd.to_numeric(df[col], errors='coerce')
+
+#     numeric_cols = [
+#         col for col in df.select_dtypes(include='number').columns
+#         if col not in exclude_cols
 #     ]
-    
-#     # Also, if Rain_01_mm and Rain_02_mm are only used to derive Rain_mm,
-#     # and you don't want to analyze them for outliers directly, add them.
-#     # Same for 'Day_Duration' if 'Daylight_Duration' is the intended output.
-#     additional_cols_to_exclude = ['Rain_01_mm', 'Rain_02_mm', 'Day_Duration']
-
-#     all_cols_to_exclude = list(set(base_cols_to_exclude_from_numeric_analysis + additional_cols_to_exclude))
-
-#     # Filter columns that are numeric AND not in our exclusion list
-#     # Use df_copy.select_dtypes(include='number') for robustness against non-numeric data
-#     numeric_cols = df_copy.select_dtypes(include='number').columns.tolist()
-#     numeric_cols = [col for col in numeric_cols if col not in all_cols_to_exclude]
 
 #     if not numeric_cols:
-#         fig = go.Figure().add_annotation(
-#             x=0.5, y=0.5, text=str(_l("Aucune variable numérique pour l'analyse des outliers après nettoyage.")),
+#         return go.Figure().add_annotation(
+#             x=0.5, y=0.5, text=_l("Aucune variable numérique pour l'analyse des outliers après nettoyage."),
 #             showarrow=False, font=dict(size=16)
-#         )
-#         fig.update_layout(title=str(_l("Analyse des Outliers")))
-#         return fig
+#         ).update_layout(title=_l("Analyse des Outliers"))
 
-#     # Pre-calculate outlier status for each point
-#     df_with_outlier_status = df_copy.copy()
-    
-#     # Initialize a column to store outlier status for each variable
+#     # Détection des outliers par station et par variable
+#     df_out = df.copy()
 #     for col in numeric_cols:
-#         df_with_outlier_status[f'{col}_is_outlier'] = False # Default to False
+#         df_out[f'{col}_is_outlier'] = False
 
-#     stations = df_with_outlier_status['Station'].unique()
-
-#     # Calculate outlier bounds per station and mark outliers
-#     for station in stations:
-#         station_df = df_with_outlier_status[df_with_outlier_status['Station'] == station]
+#     for station, group in df.groupby('Station'):
 #         for col in numeric_cols:
-#             # Ensure there's enough non-NaN data to calculate quantiles
-#             if station_df[col].count() > 1: # Need at least 2 non-NaN values for quantile
-#                 Q1 = station_df[col].quantile(0.25)
-#                 Q3 = station_df[col].quantile(0.75)
+#             if group[col].count() > 1:
+#                 Q1, Q3 = group[col].quantile([0.25, 0.75])
 #                 IQR = Q3 - Q1
-#                 lower = Q1 - coef * IQR
-#                 upper = Q3 + coef * IQR
-
-#                 # Identify outlier indices for this station and column
-#                 # Make sure to only consider non-NaN values for outlier detection
-#                 outlier_indices = station_df[(station_df[col].notna()) & 
-#                                              ((station_df[col] < lower) | (station_df[col] > upper))].index
-                
-#                 # Update the global df_with_outlier_status DataFrame
-#                 df_with_outlier_status.loc[outlier_indices, f'{col}_is_outlier'] = True
+#                 lower, upper = Q1 - coef * IQR, Q3 + coef * IQR
+#                 outlier_idx = group[(group[col] < lower) | (group[col] > upper)].index
+#                 df_out.loc[outlier_idx, f'{col}_is_outlier'] = True
 #             else:
-#                 warnings.warn(str(_l("Pas assez de données pour calculer les outliers pour la station '%s' et la variable '%s'.") % (station, col)))
-    
-#     # Determine subplot grid dimensions
-#     num_plots = len(numeric_cols)
-#     cols_per_row = 2 # Number of scatter plots per row
-#     rows = (num_plots + cols_per_row - 1) // cols_per_row
+#                 warnings.warn(_l("Pas assez de données pour calculer les outliers pour la station '%s' et la variable '%s'.") % (station, col))
 
-#     fig = make_subplots(
-#         rows=rows,
-#         cols=cols_per_row,
-#         subplot_titles=numeric_cols, # Titles for each subplot
-#         # x_title="Date", # Cannot set for all at once, must be per axis
-#         # y_title="Valeur" # This will be overwritten by individual subplot titles
-#     )
+#     # Préparation des subplots
+#     cols_per_row = 2
+#     n = len(numeric_cols)
+#     rows = (n + cols_per_row - 1) // cols_per_row
 
-#     # Get a list of colors for stations if multiple
-#     num_stations = len(stations)
+#     fig = make_subplots(rows=rows, cols=cols_per_row, subplot_titles=numeric_cols)
 
+#     # Génération des traces
 #     for i, col in enumerate(numeric_cols):
-#         row_idx = (i // cols_per_row) + 1
-#         col_idx = (i % cols_per_row) + 1
+#         r, c = divmod(i, cols_per_row)
+#         r += 1; c += 1
 
-#         # Use px.scatter to generate traces, then add them to the subplot figure
-#         # Create separate traces for inliers and outliers to control legend more effectively
-#         df_inliers = df_with_outlier_status[df_with_outlier_status[f'{col}_is_outlier'] == False]
-#         df_outliers = df_with_outlier_status[df_with_outlier_status[f'{col}_is_outlier'] == True]
-
-#         # Inliers trace
-#         fig.add_trace(
-#             go.Scatter(
-#                 x=df_inliers['Datetime'],
-#                 y=df_inliers[col],
-#                 mode='markers',
-#                 name=str(_l('Valeurs normales')),
-#                 marker=dict(color='blue', size=5),
-#                 hovertemplate=(
-#                     '<b>Station:</b> %{customdata[0]}<br>' +
-#                     '<b>Date:</b> %{x|%Y-%m-%d %H:%M:%S}<br>' +
-#                     f'<b>{col}:</b> %{{y}}<br>' +
-#                     '<extra></extra>' # Hides trace name in hover
+#         for outlier_status, color, label, marker_opts in [
+#             (False, 'blue', _l('Valeurs normales'), dict(size=5)),
+#             (True, 'red', _l('Outliers'), dict(size=7, symbol='circle-open', line=dict(width=2, color='red')))
+#         ]:
+#             subset = df_out[df_out[f'{col}_is_outlier'] == outlier_status]
+#             fig.add_trace(
+#                 go.Scatter(
+#                     x=subset['Datetime'], y=subset[col],
+#                     mode='markers',
+#                     name=label,
+#                     marker=dict(color=color, **marker_opts),
+#                     hovertemplate=(
+#                         "<b>Station:</b> %{customdata[0]}<br>"
+#                         "<b>Date:</b> %{x|%Y-%m-%d %H:%M:%S}<br>"
+#                         f"<b>{col}:</b> %{{y}}<br><extra></extra>"
+#                     ),
+#                     customdata=subset[['Station']],
+#                     showlegend=(i == 0)  # Ne montrer qu'une fois la légende
 #                 ),
-#                 customdata=df_inliers[['Station']]
-#             ),
-#             row=row_idx, col=col_idx
-#         )
+#                 row=r, col=c
+#             )
 
-#         # Outliers trace
-#         fig.add_trace(
-#             go.Scatter(
-#                 x=df_outliers['Datetime'],
-#                 y=df_outliers[col],
-#                 mode='markers',
-#                 name=str(_l('Outliers')),
-#                 marker=dict(color='red', size=7, symbol='circle-open', line=dict(width=2, color='red')),
-#                 hovertemplate=(
-#                     '<b>Station:</b> %{customdata[0]}<br>' +
-#                     '<b>Date:</b> %{x|%Y-%m-%d %H:%M:%S}<br>' +
-#                     f'<b>{col}:</b> %{{y}}<br>' +
-#                     '<extra></extra>' # Hides trace name in hover
-#                 ),
-#                 customdata=df_outliers[['Station']]
-#             ),
-#             row=row_idx, col=col_idx
-#         )
-        
-#         # Update layout for individual subplot axes (titles, ranges, etc.)
-#         fig.update_xaxes(title_text=str(_l("Date")), row=row_idx, col=col_idx)
-#         fig.update_yaxes(title_text=col, row=row_idx, col=col_idx)
+#         fig.update_xaxes(title_text=_l("Date"), row=r, col=c)
+#         fig.update_yaxes(title_text=col, row=r, col=c)
 
-#     # Update overall layout
+#     # Mise en forme finale
 #     fig.update_layout(
-#         title_text=str(_l("Analyse des Outliers par Variable")),
-#         height=400 * rows, # Adjust total height based on number of rows
-#         showlegend=True, # Show a combined legend for outlier status
-#         legend_title_text=str(_l("Statut d'Outlier"))
+#         title=_l("Analyse des Outliers par Variable"),
+#         height=400 * rows,
+#         showlegend=True,
+#         legend_title_text=_l("Statut d'Outlier")
 #     )
-    
+
 #     return fig
 
+# import pandas as pd
+# import plotly.express as px
+# from plotly.subplots import make_subplots
+# import plotly.graph_objects as go
 
-def outliers_viz(df: pd.DataFrame, coef: float = 1.5) -> go.Figure:
-    """
-    Visualisation des outliers pour chaque variable numérique via des scatter plots Plotly.
-    """
-    df = df.copy()
-    if df.index.name == 'Datetime':
-        df.reset_index(inplace=True)
-    elif 'Datetime' not in df.columns:
-        return go.Figure().add_annotation(
-            x=0.5, y=0.5, text=_l("Colonne 'Datetime' manquante pour la visualisation des outliers."),
-            showarrow=False, font=dict(size=16)
-        )
 
-    # Conversion des colonnes numériques (hors colonnes à exclure)
-    exclude_cols = {
-        'Datetime', 'Station', 'Is_Daylight', 'Day', 
-        'sunrise_time_utc', 'sunset_time_utc', 'Daylight_Duration',
-        'Rain_01_mm', 'Rain_02_mm', 'Day_Duration'
-    }
 
-    for col in df.columns:
-        if col not in exclude_cols:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    numeric_cols = [
-        col for col in df.select_dtypes(include='number').columns
-        if col not in exclude_cols
-    ]
-
-    if not numeric_cols:
-        return go.Figure().add_annotation(
-            x=0.5, y=0.5, text=_l("Aucune variable numérique pour l'analyse des outliers après nettoyage."),
-            showarrow=False, font=dict(size=16)
-        ).update_layout(title=_l("Analyse des Outliers"))
-
-    # Détection des outliers par station et par variable
-    df_out = df.copy()
-    for col in numeric_cols:
-        df_out[f'{col}_is_outlier'] = False
-
-    for station, group in df.groupby('Station'):
-        for col in numeric_cols:
-            if group[col].count() > 1:
-                Q1, Q3 = group[col].quantile([0.25, 0.75])
-                IQR = Q3 - Q1
-                lower, upper = Q1 - coef * IQR, Q3 + coef * IQR
-                outlier_idx = group[(group[col] < lower) | (group[col] > upper)].index
-                df_out.loc[outlier_idx, f'{col}_is_outlier'] = True
-            else:
-                warnings.warn(_l("Pas assez de données pour calculer les outliers pour la station '%s' et la variable '%s'.") % (station, col))
-
-    # Préparation des subplots
-    cols_per_row = 2
-    n = len(numeric_cols)
-    rows = (n + cols_per_row - 1) // cols_per_row
-
-    fig = make_subplots(rows=rows, cols=cols_per_row, subplot_titles=numeric_cols)
-
-    # Génération des traces
-    for i, col in enumerate(numeric_cols):
-        r, c = divmod(i, cols_per_row)
-        r += 1; c += 1
-
-        for outlier_status, color, label, marker_opts in [
-            (False, 'blue', _l('Valeurs normales'), dict(size=5)),
-            (True, 'red', _l('Outliers'), dict(size=7, symbol='circle-open', line=dict(width=2, color='red')))
-        ]:
-            subset = df_out[df_out[f'{col}_is_outlier'] == outlier_status]
-            fig.add_trace(
-                go.Scatter(
-                    x=subset['Datetime'], y=subset[col],
-                    mode='markers',
-                    name=label,
-                    marker=dict(color=color, **marker_opts),
-                    hovertemplate=(
-                        "<b>Station:</b> %{customdata[0]}<br>"
-                        "<b>Date:</b> %{x|%Y-%m-%d %H:%M:%S}<br>"
-                        f"<b>{col}:</b> %{{y}}<br><extra></extra>"
-                    ),
-                    customdata=subset[['Station']],
-                    showlegend=(i == 0)  # Ne montrer qu'une fois la légende
-                ),
-                row=r, col=c
-            )
-
-        fig.update_xaxes(title_text=_l("Date"), row=r, col=c)
-        fig.update_yaxes(title_text=col, row=r, col=c)
-
-    # Mise en forme finale
-    fig.update_layout(
-        title=_l("Analyse des Outliers par Variable"),
-        height=400 * rows,
-        showlegend=True,
-        legend_title_text=_l("Statut d'Outlier")
-    )
-
-    return fig
-
-import pandas as pd
-import plotly.express as px
-from plotly.subplots import make_subplots
-import plotly.graph_objects as go
-
-# def valeurs_manquantes_viz(df: pd.DataFrame):
+# def valeurs_manquantes_viz(df: pd.DataFrame) -> go.Figure:
 #     """
-#     Retourne une figure Plotly avec des sous-plots (diagrammes en cercle)
-#     montrant le pourcentage de valeurs présentes et manquantes pour chaque variable.
-#     Affiche une légende et exclut certaines variables.
+#     Génère une figure Plotly contenant des diagrammes en secteurs
+#     pour illustrer les pourcentages de valeurs manquantes par variable.
 #     """
-#     df_copy = df.copy()
+#     # Colonnes à exclure de l’analyse
+#     exclude = {
+#         'Datetime', 'Station', 'Rain_01_mm', 'Rain_02_mm',
+#         'Is_Daylight', 'Day_Duration', 'sunrise_time_utc', 'sunset_time_utc', 'Day'
+#     }
 
-#     # Colonnes à exclure de l'analyse des valeurs manquantes
-#     # 'Datetime' et 'Station' sont des colonnes d'identification, pas des mesures.
-#     # Les variables spécifiques demandées sont ajoutées ici.
-#     cols_to_exclude = ['Datetime', 'Station', 'Rain_01_mm', 'Rain_02_mm', 'Is_Daylight', 'Day_Duration', 'sunrise_time_utc', 'sunset_time_utc', 'Day']
-#         #cols_to_exclude = ['Year', 'Month', 'Minute', 'Hour', 'Date', 'Day', 'Daylight_Duration', 'sunrise_time_utc', 'sunset_time_utc']
+#     variables = [col for col in df.columns if col not in exclude]
 
-    
-#     # Filtrer les colonnes qui sont réellement des variables à analyser
-#     variable_columns = [col for col in df_copy.columns if col not in cols_to_exclude]
-
-#     if not variable_columns:
-#         # Gérer le cas où il n'y a pas de variables à analyser
-#         fig = go.Figure().add_annotation(
+#     if not variables:
+#         return go.Figure().add_annotation(
 #             x=0.5, y=0.5, text="Aucune variable à analyser pour les valeurs manquantes.",
 #             showarrow=False, font=dict(size=16)
-#         )
-#         fig.update_layout(title="Analyse des valeurs manquantes")
-#         return fig
+#         ).update_layout(title="Analyse des valeurs manquantes")
 
-#     # Déterminer la taille de la grille des sous-plots
-#     num_variables = len(variable_columns)
-#     cols_per_row = 3 # Nombre de camemberts par ligne dans la grille
-#     rows = (num_variables + cols_per_row - 1) // cols_per_row # Calcul le nombre de lignes nécessaires
+#     # Paramètres pour l'affichage
+#     cols_per_row = 3
+#     rows = (len(variables) + cols_per_row - 1) // cols_per_row
+#     colors = ['lightgreen', 'lightcoral']
 
-#     # Créer les sous-plots
+#     # Créer la figure avec sous-graphiques de type "camembert"
 #     fig = make_subplots(
 #         rows=rows,
 #         cols=cols_per_row,
-#         specs=[[{'type':'domain'}]*cols_per_row] * rows, # Spécifie que chaque sous-plot est un camembert
-#         subplot_titles=variable_columns # Les titres des sous-plots seront les noms des variables
+#         specs=[[{'type': 'domain'}]*cols_per_row]*rows,
+#         subplot_titles=variables
 #     )
 
-#     # Définir les couleurs pour la légende
-#     colors = ['lightgreen', 'lightcoral']
-    
-#     # Créer un dictionnaire pour suivre si la légende a déjà été ajoutée pour "Présentes" et "Manquantes"
-#     # Plotly ajoute automatiquement une légende unique pour chaque 'name' de trace s'il y a plusieurs traces
-#     # Nous allons donner un 'name' spécifique aux traces "Valeurs Présentes" et "Valeurs Manquantes"
-#     # pour qu'elles apparaissent une seule fois dans la légende globale.
+#     for i, col in enumerate(variables):
+#         present = df[col].count()
+#         missing = df[col].isna().sum()
+#         total = present + missing
 
-#     for i, col in enumerate(variable_columns):
-#         present_count = df_copy[col].count()
-#         missing_count = df_copy[col].isnull().sum()
-#         total_for_col = present_count + missing_count
-
-#         if total_for_col == 0:
-#             pie_data = pd.DataFrame({'Catégorie': ['Aucune donnée'], 'Nombre': [1]})
-#             # Pas de pourcentage car pas de données
-#             trace_colors = ['lightgray']
-#             textinfo_val = 'none' # Ne pas afficher de texte sur la tranche
+#         if total == 0:
+#             values = [1]
+#             labels = ['Aucune donnée']
+#             pie_colors = ['lightgray']
+#             textinfo = 'none'
 #         else:
-#             pie_data = pd.DataFrame({
-#                 'Catégorie': ['Valeurs Présentes', 'Valeurs Manquantes'],
-#                 'Nombre': [present_count, missing_count]
-#             })
-#             trace_colors = colors
-#             textinfo_val = 'percent' # Affiche seulement le pourcentage sur la tranche
+#             values = [present, missing]
+#             labels = ['Valeurs Présentes', 'Valeurs Manquantes']
+#             pie_colors = colors
+#             textinfo = 'percent'
 
-#         row_idx = (i // cols_per_row) + 1
-#         col_idx = (i % cols_per_row) + 1
-
+#         r, c = divmod(i, cols_per_row)
 #         fig.add_trace(
 #             go.Pie(
-#                 labels=pie_data['Catégorie'],
-#                 values=pie_data['Nombre'],
-#                 # Utiliser le même nom pour toutes les traces de "Valeurs Présentes" et "Valeurs Manquantes"
-#                 # pour qu'elles n'apparaissent qu'une seule fois dans la légende globale
-#                 name=col, # Ceci sert de référence pour le subplot_title
-#                 textinfo=textinfo_val, # N'affiche que le pourcentage sur la tranche
+#                 labels=labels,
+#                 values=values,
+#                 name=col,
+#                 marker=dict(colors=pie_colors),
+#                 textinfo=textinfo,
 #                 hovertemplate="<b>%{label}</b><br>Nombre: %{value}<br>Pourcentage: %{percent:.2%}<extra></extra>",
-#                 marker=dict(colors=trace_colors)
+#                 showlegend=True if i == 0 else False  # Une seule légende affichée
 #             ),
-#             row=row_idx, col=col_idx
+#             row=r + 1,
+#             col=c + 1
 #         )
 
-#     # Mettre à jour la mise en page de la figure
+#     # Mise en page globale
 #     fig.update_layout(
 #         title_text="Pourcentage de valeurs manquantes par variable",
-#         showlegend=True, # Afficher la légende globale
+#         showlegend=True,
 #         legend=dict(
-#             orientation="h", # Légende horizontale
-#             yanchor="bottom", # Ancrée en bas
-#             y=-0.15, # Positionnement sous les graphiques
-#             xanchor="center", # Ancrée au centre
-#             x=0.5 # Centrée horizontalement
+#             orientation="h", yanchor="bottom", y=-0.15,
+#             xanchor="center", x=0.5
 #         ),
-#         height=350 * rows, # Ajuster la hauteur totale de la figure
-#         margin=dict(l=50, r=50, b=100, t=80) # Ajuster les marges pour laisser de la place à la légende
+#         height=350 * rows,
+#         margin=dict(l=50, r=50, b=100, t=80)
 #     )
-    
-#     # Centrer les titres des sous-plots
-#     for i in range(num_variables):
-#         fig.layout.annotations[i].update(x=fig.layout.annotations[i].x)
 
-
+#     # Centrer les titres de sous-plots
+#     for ann in fig.layout.annotations:
+#         ann.update(x=ann.x)
 
 #     return fig
 
 
-def valeurs_manquantes_viz(df: pd.DataFrame) -> go.Figure:
-    """
-    Génère une figure Plotly contenant des diagrammes en secteurs
-    pour illustrer les pourcentages de valeurs manquantes par variable.
-    """
-    # Colonnes à exclure de l’analyse
-    exclude = {
-        'Datetime', 'Station', 'Rain_01_mm', 'Rain_02_mm',
-        'Is_Daylight', 'Day_Duration', 'sunrise_time_utc', 'sunset_time_utc', 'Day'
-    }
-
-    variables = [col for col in df.columns if col not in exclude]
-
-    if not variables:
-        return go.Figure().add_annotation(
-            x=0.5, y=0.5, text="Aucune variable à analyser pour les valeurs manquantes.",
-            showarrow=False, font=dict(size=16)
-        ).update_layout(title="Analyse des valeurs manquantes")
-
-    # Paramètres pour l'affichage
-    cols_per_row = 3
-    rows = (len(variables) + cols_per_row - 1) // cols_per_row
-    colors = ['lightgreen', 'lightcoral']
-
-    # Créer la figure avec sous-graphiques de type "camembert"
-    fig = make_subplots(
-        rows=rows,
-        cols=cols_per_row,
-        specs=[[{'type': 'domain'}]*cols_per_row]*rows,
-        subplot_titles=variables
-    )
-
-    for i, col in enumerate(variables):
-        present = df[col].count()
-        missing = df[col].isna().sum()
-        total = present + missing
-
-        if total == 0:
-            values = [1]
-            labels = ['Aucune donnée']
-            pie_colors = ['lightgray']
-            textinfo = 'none'
-        else:
-            values = [present, missing]
-            labels = ['Valeurs Présentes', 'Valeurs Manquantes']
-            pie_colors = colors
-            textinfo = 'percent'
-
-        r, c = divmod(i, cols_per_row)
-        fig.add_trace(
-            go.Pie(
-                labels=labels,
-                values=values,
-                name=col,
-                marker=dict(colors=pie_colors),
-                textinfo=textinfo,
-                hovertemplate="<b>%{label}</b><br>Nombre: %{value}<br>Pourcentage: %{percent:.2%}<extra></extra>",
-                showlegend=True if i == 0 else False  # Une seule légende affichée
-            ),
-            row=r + 1,
-            col=c + 1
-        )
-
-    # Mise en page globale
-    fig.update_layout(
-        title_text="Pourcentage de valeurs manquantes par variable",
-        showlegend=True,
-        legend=dict(
-            orientation="h", yanchor="bottom", y=-0.15,
-            xanchor="center", x=0.5
-        ),
-        height=350 * rows,
-        margin=dict(l=50, r=50, b=100, t=80)
-    )
-
-    # Centrer les titres de sous-plots
-    for ann in fig.layout.annotations:
-        ann.update(x=ann.x)
-
-    return fig
 
 
-# def _get_missing_ranges(series: pd.Series, station_name: str, variable_name: str) -> list:
-#     """
-#     Détecte les plages de valeurs manquantes (NaN) dans une série temporelle.
-#     Retourne une liste de dictionnaires, chacun représentant une plage manquante.
-#     """
-#     missing_ranges = []
-#     if series.isnull().any():
-#         # Trouver les débuts et fins des blocs de NaN
-#         # Créer une série booléenne où True indique un NaN
-#         is_nan = series.isnull()
-#         # Décalage pour trouver les bords (True quand le statut NaN change)
-#         start_nan = is_nan & (~is_nan.shift(1, fill_value=False))
-#         end_nan = is_nan & (~is_nan.shift(-1, fill_value=False))
-
-#         start_times = series.index[start_nan].tolist()
-#         end_times = series.index[end_nan].tolist()
-
-#         # S'assurer que chaque début a une fin correspondante
-#         # Si la série se termine par des NaN, la dernière end_time sera la dernière date de l'index
-#         if len(start_times) > len(end_times):
-#             end_times.append(series.index[-1])
-#         elif len(end_times) > len(start_times): # Cas où la série commence par des NaN
-#              start_times.insert(0, series.index[0]) # Ajoute le premier index comme début
-
-#         for start, end in zip(start_times, end_times):
-#             duration = (end - start).total_seconds() / 3600
-#             missing_ranges.append({
-#                 'station': station_name,
-#                 'variable': variable_name,
-#                 'start_time': start,
-#                 'end_time': end,
-#                 'duration_hours': duration
-#             })
-#     return missing_ranges
-
-
-# def interpolation(df: pd.DataFrame, limits: dict, df_gps: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-#     """
-#     Effectue le nettoyage, l'application des limites et l'interpolation des données météorologiques.
-#     Cette fonction retourne quatre DataFrames :
-#     1. Le DataFrame après nettoyage et application des limites (avec NaNs pour les valeurs manquantes/outliers).
-#     2. Le DataFrame entièrement interpolé (sans NaNs).
-#     3. Un DataFrame récapitulant les plages de valeurs manquantes pour chaque variable AVANT interpolation.
-#     4. Un DataFrame récapitulant les plages de valeurs manquantes pour chaque variable APRÈS interpolation.
-
-#     Args:
-#         df (pd.DataFrame): Le DataFrame d'entrée avec DatetimeIndex et colonne 'Station'.
-#         limits (dict): Dictionnaire définissant les limites de valeurs pour chaque variable.
-#         df_gps (pd.DataFrame): Le DataFrame contenant les informations de station
-#                                (colonnes 'Station', 'Lat', 'Long', 'Timezone').
-
-#     Returns:
-#         tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-#             - Le premier DataFrame contient les données après nettoyage et mise en NaN des outliers, mais AVANT interpolation.
-#             - Le deuxième DataFrame contient les données entièrement interpolées.
-#             - Le troisième est un DataFrame (cols: 'station', 'variable', 'start_time', 'end_time', 'duration_hours') AVANT interpolation.
-#             - Le quatrième est un DataFrame (cols: 'station', 'variable', 'start_time', 'end_time', 'duration_hours') APRÈS interpolation.
-#     """
-#     df_temp_processed = df.copy()
-
-#     # --- Vérifications initiales et nettoyage de l'index ---
-#     if not isinstance(df_temp_processed.index, pd.DatetimeIndex):
-#         raise TypeError(str(_l("Le DataFrame d'entrée pour l'interpolation DOIT avoir un DatetimeIndex.")))
-    
-#     initial_rows = len(df_temp_processed)
-#     df_temp_processed = df_temp_processed[df_temp_processed.index.notna()]
-#     if len(df_temp_processed) == 0:
-#         warnings.warn(str(_l("Après nettoyage des index temporels manquants, le DataFrame est vide. Retourne des DataFrames vides.")))
-#         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(columns=['station', 'variable', 'start_time', 'end_time', 'duration_hours']), pd.DataFrame(columns=['station', 'variable', 'start_time', 'end_time', 'duration_hours'])
-#     if initial_rows - len(df_temp_processed) > 0:
-#         warnings.warn(str(_l("Suppression de %d lignes avec index Datetime manquant ou invalide.") % (initial_rows - len(df_temp_processed))))
-    
-#     # Assurer que l'index est en UTC au début du traitement pour la cohérence
-#     if df_temp_processed.index.tz is None:
-#         df_temp_processed.index = df_temp_processed.index.tz_localize('UTC', ambiguous='NaT', nonexistent='NaT')
-#     elif df_temp_processed.index.tz != pytz.utc:
-#         df_temp_processed.index = df_temp_processed.index.tz_convert('UTC')
-    
-#     # Correction pour gérer les duplicatas d'index et de station de manière robuste
-#     if 'Station' not in df_temp_processed.columns:
-#         raise ValueError(str(_l("La colonne 'Station' est manquante dans le DataFrame d'entrée. Elle est requise.")))
-
-#     # S'assurer que le nom de l'index est défini avant de l'utiliser dans subset
-#     if df_temp_processed.index.name is None:
-#         df_temp_processed.index.name = 'Datetime'
-
-#     initial_df_len = len(df_temp_processed)
-#     df_temp_processed_reset_init = df_temp_processed.reset_index()
-#     df_temp_processed_reset_init.drop_duplicates(subset=['Station', 'Datetime'], keep='first', inplace=True)
-#     df_temp_processed = df_temp_processed_reset_init.set_index('Datetime')
-
-#     if len(df_temp_processed) < initial_df_len:
-#         warnings.warn(str(_l("Suppression de %d lignes dupliquées (même Datetime et Station).") % (initial_df_len - len(df_temp_processed))))
-
-#     df_temp_processed = df_temp_processed.sort_index()
-
-
-#     # Gestion de df_gps
-#     required_gps_cols = ['Station', 'Lat', 'Long', 'Timezone']
-#     if not all(col in df_gps.columns for col in required_gps_cols):
-#         raise ValueError(
-#             str(_l("df_gps doit contenir les colonnes %s. Colonnes actuelles dans df_gps : %s") % \
-#             (required_gps_cols, df_gps.columns.tolist()))
-#         )
-
-#     df_gps_unique = df_gps.drop_duplicates(subset=['Station'], keep='first').copy()
-#     if len(df_gps) > len(df_gps_unique):
-#         warnings.warn(str(_l("Suppression de %d doublons dans df_gps (en gardant la première occurrence).") % (len(df_gps) - len(df_gps_unique))))
-    
-#     numerical_cols = ['Air_Temp_Deg_C', 'Rel_H_%', 'BP_mbar_Avg',
-#                       'Rain_01_mm', 'Rain_02_mm', 'Rain_mm', 'Wind_Sp_m/sec',
-#                       'Solar_R_W/m^2', 'Wind_Dir_Deg']
-    
-#     # --- PHASE 1: Nettoyage et application des limites (AVANT INTERPOLATION) ---
-#     for col in numerical_cols:
-#         if col in df_temp_processed.columns:
-#             df_temp_processed[col] = pd.to_numeric(df_temp_processed[col], errors='coerce')
-            
-#             if col in limits:
-#                 min_val = limits[col].get('min')
-#                 max_val = limits[col].get('max')
-                
-#                 if min_val is not None:
-#                     df_temp_processed.loc[df_temp_processed[col] < min_val, col] = np.nan
-#                 if max_val is not None:
-#                     df_temp_processed.loc[df_temp_processed[col] > max_val, col] = np.nan
-    
-#     # Pré-calcul de Rain_mm si nécessaire, sur le DataFrame complet
-#     if 'Rain_mm' not in df_temp_processed.columns or df_temp_processed['Rain_mm'].isnull().all():
-#         # Assurez-vous que cette fonction create_rain_mm est bien définie ou importée
-#         df_temp_processed = create_rain_mm(df_temp_processed)
-#         warnings.warn(str(_l("Colonne Rain_mm créée à partir des deux capteurs (pré-interpolation).")))
-
-#     # Initialiser les colonnes de lever/coucher du soleil et de jour/nuit
-#     df_temp_processed['Is_Daylight'] = False
-#     df_temp_processed['Daylight_Duration'] = pd.NA
-#     df_temp_processed['sunrise_time_utc'] = pd.NaT 
-#     df_temp_processed['sunset_time_utc'] = pd.NaT 
-
-#     # Optimisation du calcul Astral par station
-#     temp_df_for_astral = df_temp_processed.reset_index()
-#     # 'Date_UTC_Naive' sera un Timestamp (datetime.datetime) naive à minuit pour chaque jour en UTC.
-#     temp_df_for_astral['Date_UTC_Naive'] = temp_df_for_astral['Datetime'].dt.normalize().dt.tz_localize(None) 
-    
-#     gps_info_df_for_merge = df_gps_unique[['Station', 'Lat', 'Long', 'Timezone']].set_index('Station')
-    
-#     temp_df_for_astral = pd.merge(
-#         temp_df_for_astral,
-#         gps_info_df_for_merge,
-#         on='Station',
-#         how='left'
-#     )
-
-#     unique_astral_inputs = temp_df_for_astral[['Station', 'Date_UTC_Naive', 'Lat', 'Long', 'Timezone']].drop_duplicates()
-    
-#     astral_results = []
-#     for _, row in unique_astral_inputs.iterrows():
-#         station_name = row['Station']
-#         # date_utc_naive_ts est un Timestamp pandas, qui est un type de datetime.datetime.
-#         # Il est déjà "naive" car nous avons fait .tz_localize(None) précédemment.
-#         date_utc_naive_ts = row['Date_UTC_Naive']
-#         lat = row['Lat']
-#         long = row['Long']
-#         timezone_str = row['Timezone']
-
-#         if pd.isna(lat) or pd.isna(long) or pd.isna(timezone_str):
-#             warnings.warn(str(_l("Coordonnées ou Fuseau horaire manquants/invalides pour le site '%s' à la date %s. Indicateur jour/nuit fixe sera utilisé.") % (station_name, date_utc_naive_ts.date())))
-#             astral_results.append({
-#                 'Station': station_name,
-#                 'Date_UTC_Naive': date_utc_naive_ts,
-#                 'sunrise_time_utc_calc': pd.NaT,
-#                 'sunset_time_utc_calc': pd.NaT,
-#                 'Daylight_Duration_h_calc': np.nan,
-#                 'fixed_daylight_applied': True
-#             })
-#             continue
-
-#         try:
-#             loc = LocationInfo(station_name, "Site", timezone_str, lat, long)
-            
-#             # === CORRECTION MAJEURE ICI : Ne pas appeler .date() sur le datetime.datetime avant localize ===
-#             # Convertir le Timestamp (qui est un datetime.datetime) en un objet datetime.datetime standard python,
-#             # puis le localiser avec le fuseau horaire local.
-#             date_local_aware = pytz.timezone(timezone_str).localize(date_utc_naive_ts.to_pydatetime(), is_dst=None)
-
-#             # sun.sun peut prendre un datetime.datetime ou datetime.date.
-#             s = sun.sun(loc.observer, date=date_local_aware)
-            
-#             sunrise_utc = s['sunrise'].astimezone(pytz.utc) if s['sunrise'] and pd.notna(s['sunrise']) else pd.NaT
-#             sunset_utc = s['sunset'].astimezone(pytz.utc) if s['sunset'] and pd.notna(s['sunset']) else pd.NaT
-            
-#             daylight_duration_hours = (sunset_utc - sunrise_utc).total_seconds() / 3600 if pd.notna(sunrise_utc) and pd.notna(sunset_utc) and sunset_utc > sunrise_utc else np.nan
-
-#             astral_results.append({
-#                 'Station': station_name,
-#                 'Date_UTC_Naive': date_utc_naive_ts,
-#                 'sunrise_time_utc_calc': sunrise_utc,
-#                 'sunset_time_utc_calc': sunset_utc,
-#                 'Daylight_Duration_h_calc': daylight_duration_hours,
-#                 'fixed_daylight_applied': False
-#             })
-            
-#         except Exception as e:
-#             # Pour le message d'avertissement, nous pouvons toujours afficher la date seule.
-#             warnings.warn(str(_l("Erreur lors du calcul du lever/coucher du soleil avec Astral pour %s à la date %s: %s. Utilisation de l'indicateur jour/nuit fixe.") % (station_name, date_utc_naive_ts.date(), e)))
-#             traceback.print_exc()
-#             astral_results.append({
-#                 'Station': station_name,
-#                 'Date_UTC_Naive': date_utc_naive_ts,
-#                 'sunrise_time_utc_calc': pd.NaT,
-#                 'sunset_time_utc_calc': pd.NaT,
-#                 'Daylight_Duration_h_calc': np.nan,
-#                 'fixed_daylight_applied': True
-#             })
-    
-#     astral_df = pd.DataFrame(astral_results)
-    
-#     df_temp_processed_for_merge = df_temp_processed.reset_index()
-#     df_temp_processed_for_merge['Date_UTC_Naive'] = df_temp_processed_for_merge['Datetime'].dt.normalize().dt.tz_localize(None)
-
-#     df_temp_processed = pd.merge(
-#         df_temp_processed_for_merge,
-#         astral_df,
-#         on=['Station', 'Date_UTC_Naive'],
-#         how='left'
-#     ).set_index('Datetime')
-
-#     df_temp_processed.loc[:, 'sunrise_time_utc'] = df_temp_processed['sunrise_time_utc_calc']
-#     df_temp_processed.loc[:, 'sunset_time_utc'] = df_temp_processed['sunset_time_utc_calc']
-    
-#     valid_sunrise_sunset = df_temp_processed['sunrise_time_utc'].notna() & df_temp_processed['sunset_time_utc'].notna()
-#     df_temp_processed.loc[valid_sunrise_sunset, 'Is_Daylight'] = (
-#         df_temp_processed.loc[valid_sunrise_sunset].index >= df_temp_processed.loc[valid_sunrise_sunset, 'sunrise_time_utc']
-#     ) & (
-#         df_temp_processed.loc[valid_sunrise_sunset].index < df_temp_processed.loc[valid_sunrise_sunset, 'sunset_time_utc']
-#     )
-
-#     fixed_daylight_mask = df_temp_processed['fixed_daylight_applied']
-#     df_temp_processed.loc[fixed_daylight_mask, 'Is_Daylight'] = (df_temp_processed.loc[fixed_daylight_mask].index.hour >= 7) & \
-#                                                                  (df_temp_processed.loc[fixed_daylight_mask].index.hour <= 18)
-#     df_temp_processed.loc[fixed_daylight_mask, 'Daylight_Duration'] = "11:00:00"
-#     df_temp_processed.loc[fixed_daylight_mask, 'sunrise_time_utc'] = pd.NaT 
-#     df_temp_processed.loc[fixed_daylight_mask, 'sunset_time_utc'] = pd.NaT 
-
-#     calculated_daylight_mask = ~fixed_daylight_mask & df_temp_processed['Daylight_Duration_h_calc'].notna()
-#     def format_duration_h(hours):
-#         if pd.isna(hours):
-#             return pd.NA
-#         total_seconds = int(hours * 3600)
-#         h = total_seconds // 3600
-#         m = (total_seconds % 3600) // 60
-#         s = total_seconds % 60
-#         return f"{h:02d}:{m:02d}:{s:02d}"
-
-#     df_temp_processed.loc[calculated_daylight_mask, 'Daylight_Duration'] = \
-#         df_temp_processed.loc[calculated_daylight_mask, 'Daylight_Duration_h_calc'].apply(format_duration_h)
-
-#     warnings.warn(str(_l("Calcul des indicateurs jour/nuit et durée du jour terminé pour toutes les stations.")))
-
-#     if 'Solar_R_W/m^2' in df_temp_processed.columns and 'Is_Daylight' in df_temp_processed.columns:
-#         df_temp_processed.loc[~df_temp_processed['Is_Daylight'], 'Solar_R_W/m^2'] = 0
-#         warnings.warn(str(_l("Toutes les valeurs de Solar_R_W/m^2 en dehors des heures de jour ont été mises à zéro dans le DataFrame pré-interpolation.")))
-
-#         has_rain_mm = 'Rain_mm' in df_temp_processed.columns
-#         cond_suspect_zeros = (df_temp_processed['Is_Daylight']) & \
-#                              (df_temp_processed['Solar_R_W/m^2'] == 0)
-#         if has_rain_mm:
-#             cond_suspect_zeros = cond_suspect_zeros & (df_temp_processed['Rain_mm'] == 0)
-#         else:
-#             warnings.warn(str(_l("Rain_mm manquant. Tous les 0 de radiation solaire pendant le jour sont traités comme suspects pour l'étape pré-interpolation.")))
-
-#         df_temp_processed.loc[cond_suspect_zeros, 'Solar_R_W/m^2'] = np.nan
-#         warnings.warn(str(_l("Zéros suspects de radiation solaire pendant le jour mis à NaN dans le DataFrame pré-interpolation.")))
-
-#     df_before_interpolation = df_temp_processed.copy()
-
-#     cols_to_drop_after_process = ['Date_UTC_Naive', 'Lat', 'Long', 'Timezone', 
-#                                   'sunrise_time_utc_calc', 'sunset_time_utc_calc', 
-#                                   'Daylight_Duration_h_calc', 'fixed_daylight_applied']
-#     df_before_interpolation = df_before_interpolation.drop(columns=cols_to_drop_after_process, errors='ignore')
-
-
-#     # DÉTERMINER LES PLAGES MANQUANTES AVANT INTERPOLATION
-#     all_missing_ranges_before_interp_list = [] 
-#     numerical_cols_to_check = [col for col in numerical_cols if col in df_before_interpolation.columns and col != 'Station']
-    
-#     for station_name, group in df_before_interpolation.groupby('Station'):
-#         for var in numerical_cols_to_check:
-#             # Assurez-vous que cette fonction _get_missing_ranges est bien définie ou importée
-#             all_missing_ranges_before_interp_list.extend(_get_missing_ranges(group[var], station_name, var))
-
-#     df_missing_ranges_before_interp = pd.DataFrame(all_missing_ranges_before_interp_list)
-#     if not df_missing_ranges_before_interp.empty:
-#         df_missing_ranges_before_interp = df_missing_ranges_before_interp.sort_values(by=['station', 'variable', 'start_time'])
-#     else:
-#         df_missing_ranges_before_interp = pd.DataFrame(columns=['station', 'variable', 'start_time', 'end_time', 'duration_hours'])
-
-
-#     # --- PHASE 2: Interpolation des valeurs (création de df_after_interpolation) ---
-#     df_after_interpolation = df_before_interpolation.copy()
-
-#     cols_to_interpolate_standard = [col for col in numerical_cols_to_check if col != 'Solar_R_W/m^2']
-
-#     for station_name, group in df_after_interpolation.groupby('Station'):
-#         group_copy_for_interp = group.copy() 
-#         for var in cols_to_interpolate_standard:
-#             if var in group_copy_for_interp.columns:
-#                 if isinstance(group_copy_for_interp.index, pd.DatetimeIndex):
-#                     group_copy_for_interp.loc[:, var] = group_copy_for_interp[var].interpolate(method='time', limit_direction='both')
-#                 else:
-#                     group_copy_for_interp.loc[:, var] = group_copy_for_interp[var].interpolate(method='linear', limit_direction='both')
-#                 group_copy_for_interp.loc[:, var] = group_copy_for_interp[var].bfill().ffill()
-        
-#         if 'Solar_R_W/m^2' in group_copy_for_interp.columns and 'Is_Daylight' in group_copy_for_interp.columns:
-#             is_day = group_copy_for_interp['Is_Daylight']
-            
-#             if isinstance(group_copy_for_interp.index, pd.DatetimeIndex):
-#                 group_copy_for_interp.loc[is_day, 'Solar_R_W/m^2'] = group_copy_for_interp.loc[is_day, 'Solar_R_W/m^2'].interpolate(method='time', limit_direction='both')
-#             else:
-#                 group_copy_for_interp.loc[is_day, 'Solar_R_W/m^2'] = group_copy_for_interp.loc[is_day, 'Solar_R_W/m^2'].interpolate(method='linear', limit_direction='both')
-            
-#             group_copy_for_interp.loc[is_day, 'Solar_R_W/m^2'] = group_copy_for_interp.loc[is_day, 'Solar_R_W/m^2'].bfill().ffill()
-
-#             group_copy_for_interp.loc[~is_day, 'Solar_R_W/m^2'] = 0
-            
-#         df_after_interpolation.loc[group_copy_for_interp.index, group_copy_for_interp.columns] = group_copy_for_interp 
-
-
-#     # DÉTERMINER LES PLAGES MANQUANTES APRÈS INTERPOLATION
-#     all_missing_ranges_after_interp_list = []
-#     for station_name, group in df_after_interpolation.groupby('Station'):
-#         for var in numerical_cols_to_check:
-#             # Assurez-vous que cette fonction _get_missing_ranges est bien définie ou importée
-#             all_missing_ranges_after_interp_list.extend(_get_missing_ranges(group[var], station_name, var))
-        
-#     df_missing_ranges_after_interp = pd.DataFrame(all_missing_ranges_after_interp_list)
-#     if not df_missing_ranges_after_interp.empty:
-#         df_missing_ranges_after_interp = df_missing_ranges_after_interp.sort_values(by=['station', 'variable', 'start_time'])
-#     else:
-#         df_missing_ranges_after_interp = pd.DataFrame(columns=['station', 'variable', 'start_time', 'end_time', 'duration_hours'])
-        
-#     ### Exclusion des colonnes spécifiées
-#     #To ensure the output dataframes only contain relevant meteorological data, the following columns will be removed: **'Year', 'Month', 'Minute', 'Hour', 'Date'**. These columns are often derived directly from the `DatetimeIndex` and are redundant in the final datasets.
-
-#     # Define columns to exclude
-#     cols_to_exclude = ['Year', 'Month', 'Minute', 'Hour', 'Date', 'Day']
-
-#     # Drop columns from df_before_interpolation if they exist
-#     existing_cols_before = [col for col in cols_to_exclude if col in df_before_interpolation.columns]
-#     if existing_cols_before:
-#         df_before_interpolation = df_before_interpolation.drop(columns=existing_cols_before)
-#         warnings.warn(str(_l("Colonnes %s exclues de df_before_interpolation.") % existing_cols_before))
-
-#     # Drop columns from df_after_interpolation if they exist
-#     existing_cols_after = [col for col in cols_to_exclude if col in df_after_interpolation.columns]
-#     if existing_cols_after:
-#         df_after_interpolation = df_after_interpolation.drop(columns=existing_cols_after)
-#         warnings.warn(str(_l("Colonnes %s exclues de df_after_interpolation.") % existing_cols_after))
-   
-#     return df_before_interpolation, df_after_interpolation, df_missing_ranges_before_interp, df_missing_ranges_after_interp
-
-
+################## Fonction d'interpolation #################
 
 import pandas as pd
 import numpy as np
@@ -4432,6 +1996,7 @@ def interpolation(df: pd.DataFrame, limits: dict, df_gps: pd.DataFrame) -> tuple
     return df_before_interpolation, df_after_interpolation, df_missing_ranges_before_interp, df_missing_ranges_after_interp
 
 
+########### Fin de la fonction d'interpolation #######################
 
 # def gaps_time_series_viz(df_data: pd.DataFrame, df_gaps: pd.DataFrame, station_name: str, title_suffix: str = "") -> go.Figure:
 #     """
@@ -4563,42 +2128,1746 @@ def interpolation(df: pd.DataFrame, limits: dict, df_gps: pd.DataFrame) -> tuple
 #     return fig
 
 
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import warnings
-from flask_babel import _, lazy_gettext as _l # Assuming these imports are correct
+
+# ############# Fonction pour visualiser les plages des valeurs manquantes #####################
+# import pandas as pd
+# import numpy as np
+# import plotly.graph_objects as go
+# from plotly.subplots import make_subplots
+# import warnings
+# from flask_babel import _, lazy_gettext as _l # Assuming these imports are correct
+
+# def gaps_time_series_viz(df_data: pd.DataFrame, df_gaps: pd.DataFrame, station_name: str, title_suffix: str = "") -> go.Figure:
+#     """
+#     Generates a Plotly figure showing numerical time series data
+#     with highlighted periods of missing values (gaps),
+#     where gap details are displayed in tooltips.
+
+#     Args:
+#         df_data (pd.DataFrame): The data DataFrame (raw or interpolated) for a given station.
+#                                 Must have a DatetimeIndex and a 'Station' column.
+#         df_gaps (pd.DataFrame): The DataFrame of missing ranges (e.g., GLOBAL_MISSING_VALUES_BEFORE/AFTER_INTERPOLATION_DF)
+#                                 filtered for the current station.
+#                                 Must contain 'station', 'variable', 'start_time', 'end_time', and 'duration_hours'.
+#         station_name (str): The name of the station currently being visualized.
+#         title_suffix (str): A suffix to add to the chart title (e.g., "Avant Interpolation").
+
+#     Returns:
+#         go.Figure: The Plotly figure.
+#     """
+#     # --- Initial Data Validation ---
+#     if df_data.empty:
+#         fig = go.Figure().add_annotation(
+#             x=0.5, y=0.5, text=str(_l("Aucune donnée disponible pour la station sélectionnée.")),
+#             showarrow=False, font=dict(size=16)
+#         )
+#         fig.update_layout(title=str(f"{_l('Visualisation des données et des gaps')} - {station_name} {title_suffix}"),
+#                           template="plotly_white")
+#         return fig
+
+#     # Ensure DatetimeIndex is present
+#     if not isinstance(df_data.index, pd.DatetimeIndex):
+#         warnings.warn(str(_l("Le DataFrame de données n'a pas un DatetimeIndex. Tentative de conversion.")))
+#         try:
+#             df_data.index = pd.to_datetime(df_data.index, errors='coerce')
+#             df_data = df_data[df_data.index.notna()]
+#         except Exception:
+#             fig = go.Figure().add_annotation(
+#                 x=0.5, y=0.5, text=str(_l("L'index du DataFrame n'est pas un DatetimeIndex valide et ne peut pas être converti.")),
+#                 showarrow=False, font=dict(size=16)
+#             )
+#             fig.update_layout(title=str(f"{_l('Visualisation des données et des gaps')} - {station_name} {title_suffix}"),
+#                               template="plotly_white")
+#             return fig
+#         if df_data.empty: # Check again after conversion and NaN removal
+#             fig = go.Figure().add_annotation(
+#                 x=0.5, y=0.5, text=str(_l("Aucune donnée valide disponible après conversion de l'index en DatetimeIndex.")),
+#                 showarrow=False, font=dict(size=16)
+#             )
+#             fig.update_layout(title=str(f"{_l('Visualisation des données et des gaps')} - {station_name} {title_suffix}"),
+#                               template="plotly_white")
+#             return fig
+
+
+#     # Define columns to exclude from visualization (non-numeric or flags)
+#     # Using a set for faster lookups
+#     EXCLUDE_COLS_VIZ = {
+#         'Station', 'Is_Daylight', 'Rain_01_mm', 'Rain_02_mm', 'Wind_Dir_Deg',
+#         'sunrise_time_utc', 'sunset_time_utc', 'Daylight_Duration',
+#         'Date_UTC_Naive', 'Lat', 'Long', 'Timezone',
+#         'sunrise_time_utc_calc', 'sunset_time_utc_calc',
+#         'Daylight_Duration_h_calc', 'fixed_daylight_applied',
+#         'Year', 'Month', 'Minute', 'Hour', 'Date', 'Day' # Also exclude derived date components
+#     }
+
+#     # Identify numerical columns for visualization
+#     numerical_cols_for_viz = [
+#         col for col in df_data.columns
+#         if pd.api.types.is_numeric_dtype(df_data[col]) and col not in EXCLUDE_COLS_VIZ
+#     ]
+    
+#     if not numerical_cols_for_viz:
+#         fig = go.Figure().add_annotation(
+#             x=0.5, y=0.5, text=str(_l("Aucune variable numérique exploitable pour la visualisation des gaps.")),
+#             showarrow=False, font=dict(size=16)
+#         )
+#         fig.update_layout(title=str(f"{_l('Visualisation des données et des gaps')} - {station_name} {title_suffix}"),
+#                           template="plotly_white")
+#         return fig
+
+#     # --- Subplot Configuration ---
+#     num_variables = len(numerical_cols_for_viz)
+#     rows = num_variables # One row per variable
+#     cols_per_row = 1
+
+#     fig = make_subplots(
+#         rows=rows,
+#         cols=cols_per_row,
+#         shared_xaxes=True, # Share x-axis across all subplots
+#         vertical_spacing=0.04, # Slightly reduce spacing
+#         subplot_titles=[str(f"{_l('Série temporelle')} - {col}") for col in numerical_cols_for_viz]
+#     )
+
+#     # --- Filter Gaps Data Once ---
+#     # Filter df_gaps for the current station and relevant numerical columns only once
+#     relevant_gaps_filtered = df_gaps[
+#         (df_gaps['station'] == station_name) & 
+#         (df_gaps['variable'].isin(numerical_cols_for_viz))
+#     ].copy()
+    
+#     # Ensure start_time and end_time are datetime objects in df_gaps for comparison
+#     relevant_gaps_filtered['start_time'] = pd.to_datetime(relevant_gaps_filtered['start_time'], errors='coerce')
+#     relevant_gaps_filtered['end_time'] = pd.to_datetime(relevant_gaps_filtered['end_time'], errors='coerce')
+#     relevant_gaps_filtered.dropna(subset=['start_time', 'end_time'], inplace=True) # Drop invalid gap entries
+
+#     # --- Add Traces and Gap Highlights ---
+#     for i, col in enumerate(numerical_cols_for_viz):
+#         row_idx = i + 1
+
+#         # Add data trace
+#         fig.add_trace(
+#             go.Scatter(
+#                 x=df_data.index,
+#                 y=df_data[col],
+#                 mode='lines+markers',
+#                 name=str(f"{col} - {_l('Données')}"),
+#                 line=dict(color='blue', width=1),
+#                 marker=dict(size=3, opacity=0.7),
+#                 hovertemplate="<b>%{x|%Y-%m-%d %H:%M}</b><br>" +
+#                                f"{col}: %{{y:.2f}}<extra></extra>", # Format y value
+#                 showlegend=False
+#             ),
+#             row=row_idx, col=1
+#         )
+
+#         # Get gaps specific to this column
+#         gaps_for_col = relevant_gaps_filtered[relevant_gaps_filtered['variable'] == col]
+
+#         if not gaps_for_col.empty:
+#             # Determine y-axis range for the current subplot to make shapes scale
+#             y_min = df_data[col].min()
+#             y_max = df_data[col].max()
+#             # Add a small buffer to y_min/y_max if data is constant or has very small range
+#             if pd.isna(y_min) or pd.isna(y_max) or y_max == y_min:
+#                 y_min, y_max = 0, 1 # Fallback to a default range
+#             else:
+#                 y_buffer = (y_max - y_min) * 0.05 # 5% buffer
+#                 y_min -= y_buffer
+#                 y_max += y_buffer
+
+#             # Add a single shape for each gap
+#             for _, gap_row in gaps_for_col.iterrows():
+#                 fig.add_shape(
+#                     type="rect",
+#                     xref="x", yref="y", # Use 'y' coordinates, not 'paper'
+#                     x0=gap_row['start_time'],
+#                     y0=y_min, # Scale with actual y-axis data range
+#                     y1=y_max, # Scale with actual y-axis data range
+#                     x1=gap_row['end_time'],
+#                     fillcolor="rgba(255,0,0,0.2)", # Light red transparent fill
+#                     line_width=0,
+#                     layer="below", # Place below the data trace
+#                     row=row_idx, col=1
+#                 )
+                
+#                 # --- Optimized Hover Info for Gaps ---
+#                 # Add an invisible scatter trace over the gap area for hover text
+#                 # We place a single marker in the middle of the gap for hover info.
+#                 gap_mid_time = gap_row['start_time'] + (gap_row['end_time'] - gap_row['start_time']) / 2
+                
+#                 # Use a small non-NaN value for y to ensure it's visible, but it won't be plotted visually
+#                 y_for_hover = df_data[col].mean() if df_data[col].notna().any() else 0 
+                
+#                 hover_text_gap = str(f"<b>{_l('Période Manquante')}</b><br>" +
+#                                      f"{_l('Variable')}: {gap_row['variable']}<br>" +
+#                                      f"{_l('Début')}: {gap_row['start_time'].strftime('%Y-%m-%d %H:%M')}<br>" +
+#                                      f"{_l('Fin')}: {gap_row['end_time'].strftime('%Y-%m-%d %H:%M')}<br>" +
+#                                      f"{_l('Durée')}: {gap_row['duration_hours']:.2f} {_l('heures')}")
+
+#                 fig.add_trace(
+#                     go.Scatter(
+#                         x=[gap_mid_time],
+#                         y=[y_for_hover], # A single point for hover, visually hidden
+#                         mode='markers',
+#                         marker=dict(size=1, opacity=0), # Invisible marker
+#                         showlegend=False,
+#                         hoverinfo='text',
+#                         text=hover_text_gap,
+#                         name=f"{col} {_l('Gap Info')}" # Give it a name for internal tracking
+#                     ),
+#                     row=row_idx, col=1
+#                 )
+
+#     # --- Update Layout ---
+#     fig.update_layout(
+#         title_text=str(f"{_l('Séries temporelles avec périodes manquantes/interpolées')} - {station_name} {title_suffix}"),
+#         height=max(400, 300 * rows), # Dynamic height with a minimum
+#         hovermode="x unified", # Excellent for time series analysis
+#         margin=dict(l=50, r=50, b=80, t=100), # Adjust margins
+#         template="plotly_white", # Clean template
+#     )
+
+#     # Update Y-axis titles
+#     for i, col in enumerate(numerical_cols_for_viz):
+#         fig.update_yaxes(title_text=col, row=i+1, col=1, rangemode='tozero') # rangemode='tozero' often good for time series
+
+#     # Update X-axis (shared)
+#     fig.update_xaxes(title_text=str(_l("Temps")), showgrid=True, gridwidth=1, gridcolor='LightGray')
+
+#     return fig
+
+
+# ############# Fin de la Fonction pour visualiser les plages des valeurs manquantes #####################
+
+
+
+
+
+############# Debut du code fonctionnel pour  les statistiques  ##########################
+
+
+
+
+
+import logging
+from flask_babel import Babel, _, lazy_gettext as _l, get_locale as get_current_locale
+
+
+def _calculate_rainy_season_stats_yearly(df_daily_rain_station: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calcule les statistiques de la saison des pluies (début, fin, durée, moyenne) sur une base annuelle.
+    """
+    RAIN_SEASON_GAP_THRESHOLD = pd.Timedelta(days=60)
+    NON_RELEVANT_RAIN_THRESHOLD_DAYS = 45
+    yearly_season_stats = []
+
+    # Ensure Datetime is the index for time-series operations
+    if 'Datetime' in df_daily_rain_station.columns:
+        df_daily_rain_station = df_daily_rain_station.set_index('Datetime').sort_index()
+
+    for year, year_df in df_daily_rain_station.groupby(df_daily_rain_station.index.year):
+        # Filter for actual rain events within the current year's data
+        rain_events = year_df[year_df['Rain_mm'] > 0].index
+
+        # Initialize default values for the year
+        year_stat = {
+            'Year': year,
+            'Moyenne Saison Pluvieuse': np.nan,
+            'Début Saison Pluvieuse': pd.NaT,
+            'Fin Saison Pluvieuse': pd.NaT,
+            'Durée Saison Pluvieuse Jours': np.nan
+        }
+
+        # If there are no rain events or too few to define a season, skip to next year
+        if rain_events.empty or len(rain_events) < 2:
+            yearly_season_stats.append(year_stat)
+            continue
+
+        # Group rain events into potential blocks based on the gap threshold
+        block_ids = (rain_events.to_series().diff() > RAIN_SEASON_GAP_THRESHOLD).cumsum()
+        valid_blocks = {}
+
+        for block_id, rain_dates_in_block in rain_events.to_series().groupby(block_ids):
+            if not rain_dates_in_block.empty:
+                block_start = rain_dates_in_block.min()
+                block_end = rain_dates_in_block.max()
+
+                # Get all daily data within this block
+                full_block_df = year_df.loc[block_start:block_end]
+
+                # A block is considered "valid" if it contains at least two rain days
+                if len(full_block_df[full_block_df['Rain_mm'] > 0]) > 1:
+                    valid_blocks[block_id] = full_block_df
+
+        if not valid_blocks:
+            yearly_season_stats.append(year_stat)
+            continue
+
+        # Determine the main season as the longest duration block
+        main_block_id = max(valid_blocks, key=lambda k: (valid_blocks[k].index.max() - valid_blocks[k].index.min()).days)
+        main_season_df = valid_blocks[main_block_id]
+
+        # Get sorted rain event dates within the identified main season
+        rain_events_in_main_block = main_season_df[main_season_df['Rain_mm'] > 0].index.sort_values()
+
+        # Determine start of the season
+        debut_saison = pd.NaT
+        if len(rain_events_in_main_block) >= 2:
+            first_rain_date = rain_events_in_main_block[0]
+            second_rain_date = rain_events_in_main_block[1]
+            # If gap between first two rains is too large, second rain defines start
+            if (second_rain_date - first_rain_date).days > NON_RELEVANT_RAIN_THRESHOLD_DAYS:
+                debut_saison = second_rain_date
+            else:
+                debut_saison = first_rain_date
+        elif len(rain_events_in_main_block) == 1:
+            # If only one rain event, that's the start
+            debut_saison = rain_events_in_main_block[0]
+        # Else: debut_saison remains pd.NaT if no or insufficient rain events
+
+        # Determine end of the season
+        fin_saison = pd.NaT
+        if len(rain_events_in_main_block) >= 2:
+            last_rain_date = rain_events_in_main_block[-1]
+            second_last_rain_date = rain_events_in_main_block[-2]
+            # If gap before last two rains is too large, second to last rain defines end
+            if (last_rain_date - second_last_rain_date).days > NON_RELEVANT_RAIN_THRESHOLD_DAYS:
+                fin_saison = second_last_rain_date
+            else:
+                fin_saison = last_rain_date
+        elif len(rain_events_in_main_block) == 1:
+            # If only one rain event, that's the end
+            fin_saison = rain_events_in_main_block[0]
+        # Else: fin_saison remains pd.NaT
+
+        total_days = np.nan
+        moyenne_saison = np.nan
+
+        if pd.notna(debut_saison) and pd.notna(fin_saison) and debut_saison <= fin_saison:
+            total_days = (fin_saison - debut_saison).days + 1
+            if total_days > 0:
+                season_rainfall_sum = year_df.loc[debut_saison:fin_saison]['Rain_mm'].sum()
+                moyenne_saison = season_rainfall_sum / total_days
+            else: # If total_days is 0 (start and end are the same day), handle as no duration
+                total_days = np.nan
+
+        yearly_season_stats.append({
+            'Year': year,
+            'Moyenne Saison Pluvieuse': moyenne_saison,
+            'Début Saison Pluvieuse': debut_saison,
+            'Fin Saison Pluvieuse': fin_saison,
+            'Durée Saison Pluvieuse Jours': total_days
+        })
+
+    return pd.DataFrame(yearly_season_stats).set_index('Year')
+
+def _calculate_consecutive_dry_days_yearly(df_daily_rain_station: pd.DataFrame, df_season_stats: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calcule la plus longue série de jours sans pluie (consécutifs) *dans la saison pluvieuse* pour chaque année.
+    Retourne aussi les dates de début et de fin (pluies encadrantes) de cette période sèche.
+    """
+    yearly_consecutive_dry_days = []
+    if 'Datetime' in df_daily_rain_station.columns:
+        df_daily_rain_station = df_daily_rain_station.set_index('Datetime').sort_index()
+
+    for year, year_df in df_daily_rain_station.groupby(df_daily_rain_station.index.year):
+        season_start = df_season_stats.loc[year, 'Début Saison Pluvieuse'] if year in df_season_stats.index else pd.NaT
+        season_end = df_season_stats.loc[year, 'Fin Saison Pluvieuse'] if year in df_season_stats.index else pd.NaT
+
+        longest_dry_spell_in_season = 0
+        longest_dry_spell_start_rain_date = pd.NaT # Date de la pluie précédente
+        longest_dry_spell_end_rain_date = pd.NaT # Date de la pluie suivante
+
+        if pd.notna(season_start) and pd.notna(season_end) and season_start <= season_end:
+            # Filter daily data to be strictly within the rainy season
+            daily_data_in_season = year_df.loc[season_start:season_end]
+
+            # Resample to ensure a continuous daily series, filling missing days with 0 rain
+            full_daily_series_in_season = daily_data_in_season['Rain_mm'].resample('D').sum().fillna(0)
+
+            # Identify rain events (days with > 0 rain) within the season
+            rainy_days_in_season_dates = full_daily_series_in_season[full_daily_series_in_season > 0].index.sort_values()
+
+            if len(rainy_days_in_season_dates) >= 2:
+                for i in range(len(rainy_days_in_season_dates) - 1):
+                    rain_day1_date = rainy_days_in_season_dates[i]
+                    rain_day2_date = rainy_days_in_season_dates[i+1]
+
+                    # Calculate gap: number of dry days between two consecutive rain days
+                    gap = (rain_day2_date - rain_day1_date).days - 1
+
+                    if gap > longest_dry_spell_in_season:
+                        longest_dry_spell_in_season = gap
+                        longest_dry_spell_start_rain_date = rain_day1_date
+                        longest_dry_spell_end_rain_date = rain_day2_date
+
+        yearly_consecutive_dry_days.append({
+            'Year': year,
+            'Durée Jours Sans Pluie': longest_dry_spell_in_season,
+            'Jours Sans Pluie_Date_Debut_Pluie_Prec': longest_dry_spell_start_rain_date,
+            'Jours Sans Pluie_Date_Fin_Pluie_Suiv': longest_dry_spell_end_rain_date
+        })
+
+    return pd.DataFrame(yearly_consecutive_dry_days).set_index('Year')
+
+def _calculate_dry_spell_stats_yearly(df_daily_rain_station: pd.DataFrame, df_season_stats: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calcule la plus longue période de sécheresse définie (selon la nouvelle logique basée sur le ratio P1/j)
+    *dans la saison pluvieuse* pour chaque année.
+    Retourne aussi les dates de début et de fin de cette sécheresse définie.
+    """
+    yearly_dry_spell_events = []
+    if 'Datetime' in df_daily_rain_station.columns:
+        df_daily_rain_station = df_daily_rain_station.set_index('Datetime').sort_index()
+
+    for year, year_df in df_daily_rain_station.groupby(df_daily_rain_station.index.year):
+        season_start = df_season_stats.loc[year, 'Début Saison Pluvieuse'] if year in df_season_stats.index else pd.NaT
+        season_end = df_season_stats.loc[year, 'Fin Saison Pluvieuse'] if year in df_season_stats.index else pd.NaT
+        saison_moyenne_annual = df_season_stats.loc[year, 'Moyenne Saison Pluvieuse'] if year in df_season_stats.index and pd.notna(df_season_stats.loc[year, 'Moyenne Saison Pluvieuse']) else np.nan
+
+        longest_defined_dry_spell_duration = 0
+        longest_defined_dry_spell_start_date = pd.NaT
+        longest_defined_dry_spell_end_date = pd.NaT # Date de la veille du 2e jour de pluie consécutif
+
+        # If season cannot be defined or mean is invalid, skip
+        if pd.isna(season_start) or pd.isna(season_end) or season_start >= season_end or pd.isna(saison_moyenne_annual) or saison_moyenne_annual <= 0:
+            yearly_dry_spell_events.append({
+                'Year': year,
+                'Durée Sécheresse Définie Jours': longest_defined_dry_spell_duration, # Should be 0 here
+                'Sécheresse_Date_Debut': longest_defined_dry_spell_start_date, # Should be NaT
+                'Sécheresse_Date_Fin': longest_defined_dry_spell_end_date # Should be NaT
+            })
+            continue
+
+        # Filter and resample daily data for the season
+        daily_data_in_season = year_df.loc[season_start:season_end]
+        full_daily_series_in_season = daily_data_in_season['Rain_mm'].resample('D').sum().fillna(0)
+        rainy_days_in_season_dates = full_daily_series_in_season[full_daily_series_in_season > 0].index.sort_values()
+
+        if len(rainy_days_in_season_dates) < 2:
+            yearly_dry_spell_events.append({
+                'Year': year,
+                'Durée Sécheresse Définie Jours': longest_defined_dry_spell_duration, # Should be 0
+                'Sécheresse_Date_Debut': longest_defined_dry_spell_start_date, # Should be NaT
+                'Sécheresse_Date_Fin': longest_defined_dry_spell_end_date # Should be NaT
+            })
+            continue
+
+        for i in range(len(rainy_days_in_season_dates) - 1):
+            rain_day1_date = rainy_days_in_season_dates[i]
+            rain_day2_date = rainy_days_in_season_dates[i+1]
+
+            p1_value = full_daily_series_in_season.get(rain_day1_date, 0)
+
+            # Skip if P1 is zero, as it cannot initiate the defined dry spell logic
+            if p1_value <= 0:
+                continue
+
+            current_date_in_gap = rain_day1_date + timedelta(days=1)
+            dry_day_count_in_gap = 1 # 'j' starts from 1 for the first dry day
+
+            debut_secheresse_candidate = pd.NaT
+            duree_secheresse_candidate = 0
+
+            # Loop through the dry days between rain_day1 and rain_day2
+            while current_date_in_gap < rain_day2_date:
+                current_ratio = p1_value / dry_day_count_in_gap
+
+                if current_ratio < saison_moyenne_annual:
+                    debut_secheresse_candidate = current_date_in_gap
+                    fin_secheresse_candidate = rain_day2_date - timedelta(days=1) # The day before the second rain day
+                    duree_secheresse_candidate = (fin_secheresse_candidate - debut_secheresse_candidate).days + 1
+                    break # Found the start of the dry spell for this pair, exit inner loop
+
+                current_date_in_gap += timedelta(days=1)
+                dry_day_count_in_gap += 1
+
+            # Update the longest duration and its associated dates if a candidate was found
+            if duree_secheresse_candidate > longest_defined_dry_spell_duration:
+                longest_defined_dry_spell_duration = duree_secheresse_candidate
+                longest_defined_dry_spell_start_date = debut_secheresse_candidate
+                longest_defined_dry_spell_end_date = fin_secheresse_candidate
+
+        yearly_dry_spell_events.append({
+            'Year': year,
+            'Durée Sécheresse Définie Jours': longest_defined_dry_spell_duration,
+            'Sécheresse_Date_Debut': longest_defined_dry_spell_start_date,
+            'Sécheresse_Date_Fin': longest_defined_dry_spell_end_date
+        })
+
+    return pd.DataFrame(yearly_dry_spell_events).set_index('Year')
+
+# --- Modified generate_plot_stats_over_period_plotly function ---
+
+def generate_plot_stats_over_period_plotly(df: pd.DataFrame, variable: str, station_colors: dict, time_frequency: str = 'yearly', df_original: pd.DataFrame = None, logger: logging.Logger = None) -> go.Figure:
+    """
+    Génère des graphiques de statistiques agrégées par période (Annuelle, Mensuelle, Hebdomadaire, Journalière)
+    pour une variable donnée et plusieurs stations.
+    """
+    if logger is None:
+        logger = logging.getLogger(__name__)
+        logger.addHandler(logging.NullHandler())
+
+    plot_title_prefix = _("Statistiques")
+
+    try:
+        df_processed = df.copy()
+        if 'Datetime' not in df_processed.columns and isinstance(df_processed.index, pd.DatetimeIndex):
+            df_processed = df_processed.reset_index()
+
+        df_processed['Datetime'] = pd.to_datetime(df_processed['Datetime'], errors='coerce')
+        df_processed['Year'] = df_processed['Datetime'].dt.year
+        df_processed = df_processed.dropna(subset=['Datetime', 'Station', variable])
+
+        df_original_for_extremes = None
+        if df_original is not None:
+            df_original_processed = df_original.copy()
+            if 'Datetime' not in df_original_processed.columns and isinstance(df_original_processed.index, pd.DatetimeIndex):
+                df_original_processed = df_original_processed.reset_index()
+            df_original_processed['Datetime'] = pd.to_datetime(df_original_processed['Datetime'], errors='coerce')
+            df_original_processed = df_original_processed.dropna(subset=['Datetime', 'Station'])
+            df_original_processed[variable] = pd.to_numeric(df_original_processed[variable], errors='coerce')
+            df_original_for_extremes = df_original_processed.dropna(subset=[variable])
+        else:
+            df_original_for_extremes = df_processed.copy() # Use processed if original not provided
+
+        # Drop any supplementary columns if they exist (e.g., from previous data processing)
+        col_sup = ['Rain_01_mm', 'Rain_02_mm']
+        for col_name in col_sup:
+            if col_name in df_processed.columns: df_processed = df_processed.drop(col_name, axis=1)
+            if df_original_for_extremes is not None and col_name in df_original_for_extremes.columns: df_original_for_extremes = df_original_for_extremes.drop(col_name, axis=1)
+
+        # Basic check for empty dataframe before proceeding
+        if df_processed.empty:
+            logger.warning(f"df_processed is empty after initial filtering for variable {variable}.")
+            return go.Figure().add_annotation(x=0.5, y=0.5, text=_("Aucune donnée valide pour la période ou la variable sélectionnée."), showarrow=False, font=dict(size=16)).update_layout(title=_("Statistiques par période"))
+
+        # Ensure the variable column is numeric
+        df_processed[variable] = pd.to_numeric(df_processed[variable], errors='coerce')
+        df_processed = df_processed.dropna(subset=[variable])
+
+        if df_processed.empty:
+            logger.warning(f"df_processed is empty after numeric conversion of {variable}.")
+            return go.Figure().add_annotation(x=0.5, y=0.5, text=_("Aucune donnée valide après la conversion numérique."), showarrow=False, font=dict(size=16)).update_layout(title=_("Statistiques par période"))
+
+        var_meta = METADATA_VARIABLES.get(variable, {'Nom': {'fr': variable, 'en': variable}, 'Unite': {'fr': '', 'en': ''}})
+        var_label = str(get_var_label(var_meta, 'Nom'))
+        var_unit = str(get_var_label(var_meta, 'Unite'))
+        is_rain_variable = var_meta.get('is_rain', False)
+
+        period_title_map = {
+            'yearly': get_metric_label('Annuelle'),
+            'monthly': get_metric_label('Mensuelle'),
+            'weekly': get_metric_label('Hebdomadaire'),
+            'daily': get_metric_label('Journalière')
+        }
+        plot_base_title = _("Statistiques {} de {} par Station").format(
+            period_title_map.get(time_frequency, time_frequency.capitalize()),
+            var_label
+        )
+
+        unique_stations = sorted(df_processed['Station'].unique())
+        unique_years = sorted(df_processed['Year'].unique()) # Get all unique years present in the data
+
+        # Calculate overall data period for hover texts
+        start_date_global = df_processed['Datetime'].min()
+        end_date_global = df_processed['Datetime'].max()
+        global_period_str = ""
+        if pd.notna(start_date_global) and pd.notna(end_date_global):
+            global_period_str = _("Période de Données: de {} à {}").format(start_date_global.year, end_date_global.year) if start_date_global.year != end_date_global.year else _("Période de Données: Année {}").format(start_date_global.year)
+
+
+        # --- SPECIAL HANDLING FOR YEARLY RAINFALL STATS ---
+        if time_frequency == 'yearly' and is_rain_variable:
+            all_station_yearly_data = []
+            all_station_season_stats = {} # Store season stats for potentially filtering other periods
+
+            for station_name in unique_stations:
+                station_df_full = df_processed[df_processed['Station'] == station_name]
+
+                # Create a template DataFrame for all years in the dataset, ensuring all years are present for each station
+                station_yearly_template = pd.DataFrame({'Year': unique_years}).set_index('Year')
+
+                # Filter for actual rain data for this station for daily operations
+                # Ensure daily data for rainfall calculations
+                station_rain_data_daily = station_df_full.groupby(pd.Grouper(key='Datetime', freq='D'))['Rain_mm'].sum().reset_index()
+
+
+                # Calculate annual cumulative rain
+                annual_cumulative_rain = station_df_full.groupby('Year')['Rain_mm'].sum().reset_index(name='Cumul Annuel')
+
+
+                # Number of rainy days per year (days with Rain_mm > 0)
+                annual_rainy_days_count = station_df_full[station_df_full['Rain_mm'] > 0].groupby('Year').size().reset_index(name='Nombre Jours Pluvieux')
+
+
+                # Calculate Precipitation moyenne des jours pluvieux: Cumul annuel / Nombre de jours pluvieux
+                annual_mean_rainy_days_calculated = pd.merge(annual_cumulative_rain, annual_rainy_days_count, on='Year', how='left')
+                annual_mean_rainy_days_calculated['Moyenne Jours Pluvieux'] = annual_mean_rainy_days_calculated.apply(
+                    lambda row: row['Cumul Annuel'] / row['Nombre Jours Pluvieux'] if row['Nombre Jours Pluvieux'] > 0 else np.nan, axis=1
+                )
+
+
+                # Calculate season and dry spell stats (these may produce NaNs if conditions aren't met)
+                annual_season_stats = _calculate_rainy_season_stats_yearly(station_rain_data_daily)
+                all_station_season_stats[station_name] = annual_season_stats # Store for later use by other frequencies
+
+                annual_dry_spell_stats = _calculate_dry_spell_stats_yearly(station_rain_data_daily, annual_season_stats)
+                annual_consecutive_dry_days_stats = _calculate_consecutive_dry_days_yearly(station_rain_data_daily, annual_season_stats)
+
+
+                # Max/Min daily rain on rainy days (only days with Rain_mm > 0)
+                annual_max_rain_date = station_df_full[station_df_full['Rain_mm'] > 0].loc[station_df_full[station_df_full['Rain_mm'] > 0].groupby('Year')['Rain_mm'].idxmax()]
+                annual_min_rain_date = station_df_full[station_df_full['Rain_mm'] > 0].loc[station_df_full[station_df_full['Rain_mm'] > 0].groupby('Year')['Rain_mm'].idxmin()]
+
+                annual_max_min_rainy_days = annual_max_rain_date[['Year', 'Rain_mm', 'Datetime']].rename(columns={'Rain_mm': 'Valeur Max Jours Pluvieux Annuelle', 'Datetime': 'Date Max Pluvieux Annuelle'})
+                annual_max_min_rainy_days = annual_max_min_rainy_days.merge(
+                    annual_min_rain_date[['Year', 'Rain_mm', 'Datetime']].rename(columns={'Rain_mm': 'Valeur Min Jours Pluvieux Annuelle', 'Datetime': 'Date Min Pluvieux Annuelle'}),
+                    on='Year', how='outer'
+                )
+
+
+                # Merge all calculated annual stats into a single DataFrame for the current station
+                yearly_combined_data = station_yearly_template \
+                    .merge(annual_cumulative_rain.set_index('Year'), how='left', left_index=True, right_index=True) \
+                    .merge(annual_mean_rainy_days_calculated.set_index('Year')[['Moyenne Jours Pluvieux']], how='left', left_index=True, right_index=True) \
+                    .merge(annual_season_stats, how='left', left_index=True, right_index=True) \
+                    .merge(annual_dry_spell_stats, how='left', left_index=True, right_index=True) \
+                    .merge(annual_consecutive_dry_days_stats, how='left', left_index=True, right_index=True) \
+                    .merge(annual_max_min_rainy_days.set_index('Year'), how='left', left_index=True, right_index=True) \
+                    .reset_index() # Reset index to make 'Year' a column again
+
+                yearly_combined_data['Station'] = station_name
+                all_station_yearly_data.append(yearly_combined_data)
+
+            df_yearly_metrics = pd.concat(all_station_yearly_data, ignore_index=True)
+
+            # Define subplot titles and order for existing plots
+            subplot_titles_ordered_existing = [
+                get_metric_label("Cumul Annuel des Précipitations"),
+                get_metric_label("Précipitation Moyenne des Jours Pluvieux"),
+                get_metric_label("Précipitation Moyenne de la Saison Pluvieuse"),
+                get_metric_label("Jour le plus pluvieux"),
+                get_metric_label("Jour le moins pluvieux"),
+                get_metric_label("Durée de la Saison Pluvieuse"),
+                get_metric_label("Plus Longue Durée des Jours Sans Pluie"),
+                get_metric_label("Durée de la Sécheresse Définie")
+            ]
+
+            fig_existing = make_subplots(rows=4, cols=2, subplot_titles=subplot_titles_ordered_existing,
+                                vertical_spacing=0.08, horizontal_spacing=0.05)
+
+
+            # Map metrics to their display names and corresponding columns in df_yearly_metrics for existing plots
+            metrics_to_plot_info_existing = [
+                {'metric_col': 'Cumul Annuel', 'title': get_metric_label("Cumul Annuel des Précipitations"), 'row': 1, 'col': 1, 'unit': var_unit},
+                {'metric_col': 'Moyenne Jours Pluvieux', 'title': get_metric_label("Précipitation Moyenne des Jours Pluvieux"), 'row': 1, 'col': 2, 'unit': var_unit},
+                {'metric_col': 'Moyenne Saison Pluvieuse', 'title': get_metric_label("Précipitation Moyenne de la Saison Pluvieuse"), 'row': 2, 'col': 1, 'unit': var_unit},
+                {'metric_col': 'Valeur Max Jours Pluvieux Annuelle', 'title': get_metric_label("Jour le plus pluvieux"), 'row': 2, 'col': 2, 'unit': var_unit, 'date_col': 'Date Max Pluvieux Annuelle'},
+                {'metric_col': 'Valeur Min Jours Pluvieux Annuelle', 'title': get_metric_label("Jour le moins pluvieux"), 'row': 3, 'col': 1, 'unit': var_unit, 'date_col': 'Date Min Pluvieux Annuelle'},
+                {'metric_col': 'Durée Saison Pluvieuse Jours', 'title': get_metric_label("Durée de la Saison Pluvieuse"), 'row': 3, 'col': 2, 'unit': get_metric_label("jours")},
+                {'metric_col': 'Durée Jours Sans Pluie', 'title': get_metric_label("Plus Longue Durée des Jours Sans Pluie"), 'row': 4, 'col': 1, 'unit': get_metric_label("jours")},
+                {'metric_col': 'Durée Sécheresse Définie Jours', 'title': get_metric_label("Durée de la Sécheresse Définie"), 'row': 4, 'col': 2, 'unit': get_metric_label("jours")}
+            ]
+
+            for plot_info in metrics_to_plot_info_existing:
+                metric = plot_info['metric_col']
+                row, col = plot_info['row'], plot_info['col']
+                unit = plot_info['unit']
+                date_col = plot_info.get('date_col')
+
+                for station_name in unique_stations:
+                    station_data = df_yearly_metrics[df_yearly_metrics['Station'] == station_name].copy()
+
+                    station_data[metric] = station_data[metric].fillna(0)
+
+                    y_vals, x_vals = station_data[metric].values, station_data['Year'].values
+
+                    hover_texts = []
+                    for idx, val in enumerate(y_vals):
+                        year = x_vals[idx]
+
+                        hover_text = f"<b>{_('Station')}:</b> {station_name}<br>" \
+                                     f"<b>{plot_info['title']}:</b> {val:.2f} {unit}<br>" \
+                                     f"<b>{_('Année')}:</b> {year}"
+
+                        if date_col and pd.notna(station_data.loc[station_data['Year'] == year, date_col].iloc[0]):
+                            exact_date = station_data.loc[station_data['Year'] == year, date_col].iloc[0]
+                            hover_text += f"<br><b>{_('Date')}:</b> {exact_date.strftime('%d/%m/%Y')}"
+
+                        if metric == 'Durée Saison Pluvieuse Jours':
+                            debut_saison_date = station_data.loc[station_data['Year'] == year, 'Début Saison Pluvieuse'].iloc[0]
+                            fin_saison_date = station_data.loc[station_data['Year'] == year, 'Fin Saison Pluvieuse'].iloc[0]
+                            if pd.notna(debut_saison_date) and pd.notna(fin_saison_date):
+                                hover_text += f"<br><b>{_('Période')}:</b> {debut_saison_date.strftime('%d/%m/%Y')} - {fin_saison_date.strftime('%d/%m/%Y')}"
+                        elif metric == 'Durée Jours Sans Pluie':
+                            debut_pluie_prec = station_data.loc[station_data['Year'] == year, 'Jours Sans Pluie_Date_Debut_Pluie_Prec'].iloc[0]
+                            fin_pluie_suiv = station_data.loc[station_data['Year'] == year, 'Jours Sans Pluie_Date_Fin_Pluie_Suiv'].iloc[0]
+                            if pd.notna(debut_pluie_prec) and pd.notna(fin_pluie_suiv):
+                                hover_text += f"<br><b>{_('Pluie Précédente')}:</b> {debut_pluie_prec.strftime('%d/%m/%Y')}"
+                                hover_text += f"<br><b>{_('Pluie Suivante')}:</b> {fin_pluie_suiv.strftime('%d/%m/%Y')}"
+                        elif metric == 'Durée Sécheresse Définie Jours':
+                            debut_secheresse_def = station_data.loc[station_data['Year'] == year, 'Sécheresse_Date_Debut'].iloc[0]
+                            fin_secheresse_def = station_data.loc[station_data['Year'] == year, 'Sécheresse_Date_Fin'].iloc[0]
+                            if pd.notna(debut_secheresse_def) and pd.notna(fin_secheresse_def):
+                                hover_text += f"<br><b>{_('Début Sécheresse')}:</b> {debut_secheresse_def.strftime('%d/%m/%Y')}"
+                                hover_text += f"<br><b>{_('Fin Sécheresse')}:</b> {fin_secheresse_def.strftime('%d/%m/%Y')}"
+
+                        if global_period_str: hover_text += f"<br>{global_period_str}"
+
+                        hover_texts.append(hover_text)
+
+                    current_color = station_colors.get(station_name, '#1f77b4')
+                    fig_existing.add_trace(go.Bar(x=x_vals, y=y_vals, marker_color=current_color, name=f"{station_name}", hoverinfo='text', hovertext=hover_texts, showlegend=False), row=row, col=col)
+
+
+            for station_name in unique_stations:
+                fig_existing.add_trace(go.Bar(x=[None], y=[None], marker_color=station_colors.get(station_name, '#1f77b4'), name=station_name, showlegend=True))
+
+
+            fig_existing.update_layout(height=1400, title_text=_("Statistiques Annuelles Détaillées de {} par Station").format(var_label), showlegend=True, legend_title_text=_("Station"), legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5), hovermode='closest', plot_bgcolor='white', paper_bgcolor='white', margin=dict(b=200))
+
+
+            if not fig_existing.data or len([trace for trace in fig_existing.data if trace.x is not None]) == 0:
+                logger.warning("The generated yearly rain plot has no visible data traces after all. Returning empty figure.")
+                return go.Figure().add_annotation(x=0.5, y=0.5, text=_("Aucune donnée de précipitation annuelle disponible.") + " " + _("Vérifiez que vos données contiennent bien des valeurs de pluie."), showarrow=False, font=dict(size=16)).update_layout(title=_("Statistiques Annuelles de Précipitation"))
+
+
+            # --- NEW PLOTS: Annual Means and Extremes for specific metrics ---
+            subplot_title_col1 = get_metric_label("Moyenne sur la période des données")
+            subplot_title_col2 = get_metric_label("Moyenne supérieure à la moyenne sur la période des données")
+            subplot_title_col3 = get_metric_label("Moyenne inférieure à la moyenne sur la période des données")
+
+            metrics_for_new_plots = [
+                {'col': 'Cumul Annuel', 'unit': var_unit, 'label': get_metric_label("Cumul Annuel des Précipitations")},
+                {'col': 'Moyenne Jours Pluvieux', 'unit': var_unit, 'label': get_metric_label("Précipitation Moyenne des Jours Pluvieux")},
+                {'col': 'Moyenne Saison Pluvieuse', 'unit': var_unit, 'label': get_metric_label("Précipitation Moyenne de la Saison Pluvieuse")},
+                {'col': 'Durée Saison Pluvieuse Jours', 'unit': get_metric_label("jours"), 'label': get_metric_label("Durée de la Saison Pluvieuse")},
+                {'col': 'Durée Jours Sans Pluie', 'unit': get_metric_label("jours"), 'label': get_metric_label("Plus Longue Durée des Jours Sans Pluie")},
+                {'col': 'Durée Sécheresse Définie Jours', 'unit': get_metric_label("jours"), 'label': get_metric_label("Durée de la Sécheresse Définie")}
+            ]
+
+            fig_new_stats = make_subplots(rows=len(metrics_for_new_plots), cols=3,
+                                        subplot_titles=[subplot_title_col1, subplot_title_col2, subplot_title_col3] * len(metrics_for_new_plots),
+                                        vertical_spacing=0.08, horizontal_spacing=0.05, # Reset spacing here.
+                                        row_titles=[metric['label'] for metric in metrics_for_new_plots]
+                                        )
+
+            # Adjust vertical spacing after each row of 3 plots by manipulating subplot layout directly
+            # This is a bit of a hack, but can create the desired "wide space" effect
+            # We can't insert <br> directly, so we need to adjust the plot height and vertical_spacing.
+            # Let's try to increase total height and distribute spacing.
+            # Initial vertical_spacing 0.08 means 8% of plot area is vertical spacing.
+            # With 6 rows, total spacing is 5 * 0.08 = 0.4.
+            # To "aérer", let's increase the total height and potentially slightly increase spacing.
+            total_rows = len(metrics_for_new_plots)
+            # A new way to achieve horizontal spacing (more "air") is to
+            # set fixed height per row and let plotly handle scaling,
+            # or add dummy rows if explicit wide spacing is required.
+            # For now, let's just make the plot taller to give elements more room.
+            # This simulates "aération" without using <br>.
+            row_height_per_plot = 350 # Increased from 300
+            fig_new_stats.update_layout(height=row_height_per_plot * total_rows, title_text=_("Statistiques Récapitulatives Annuelles de {} par Station").format(var_label))
+
+
+            row_idx = 0
+            for metric_info in metrics_for_new_plots:
+                row_idx += 1
+                metric_col = metric_info['col']
+                metric_label = metric_info['label']
+                unit = metric_info['unit']
+
+                overall_means_for_metric = df_yearly_metrics.groupby('Station')[metric_col].mean().reset_index()
+                overall_means_for_metric.rename(columns={metric_col: 'Overall_Mean'}, inplace=True)
+
+                station_extreme_means = []
+                for station_name in unique_stations:
+                    station_data = df_yearly_metrics[df_yearly_metrics['Station'] == station_name].copy()
+                    station_annual_values = station_data[[metric_col, 'Year']].dropna()
+
+                    overall_mean_for_station = overall_means_for_metric[overall_means_for_metric['Station'] == station_name]['Overall_Mean'].iloc[0] if not overall_means_for_metric[overall_means_for_metric['Station'] == station_name].empty else np.nan
+
+                    max_val_above_mean = np.nan
+                    min_val_below_mean = np.nan
+                    max_val_above_mean_year = pd.NaT
+                    min_val_below_mean_year = pd.NaT
+
+                    if not station_annual_values.empty and pd.notna(overall_mean_for_station):
+                        annual_means_above_overall = station_annual_values[station_annual_values[metric_col] > overall_mean_for_station]
+                        if not annual_means_above_overall.empty:
+                            idx_max = annual_means_above_overall[metric_col].idxmax()
+                            max_val_above_mean = annual_means_above_overall.loc[idx_max, metric_col]
+                            max_val_above_mean_year = annual_means_above_overall.loc[idx_max, 'Year']
+
+                        annual_means_below_overall = station_annual_values[station_annual_values[metric_col] < overall_mean_for_station]
+                        if not annual_means_below_overall.empty:
+                            idx_min = annual_means_below_overall[metric_col].idxmin()
+                            min_val_below_mean = annual_means_below_overall.loc[idx_min, metric_col]
+                            min_val_below_mean_year = annual_means_below_overall.loc[idx_min, 'Year']
+
+                    station_extreme_means.append({
+                        'Station': station_name,
+                        'Overall_Mean': overall_mean_for_station,
+                        'Max_Above_Overall': max_val_above_mean,
+                        'Max_Above_Overall_Period': max_val_above_mean_year,
+                        'Min_Below_Overall': min_val_below_mean,
+                        'Min_Below_Overall_Period': min_val_below_mean_year
+                    })
+
+                df_station_extreme_means = pd.DataFrame(station_extreme_means)
+
+                for station_name in unique_stations:
+                    station_mean_val = df_station_extreme_means[df_station_extreme_means['Station'] == station_name]['Overall_Mean'].iloc[0]
+                    hover_text_mean = f"<b>{_('Station')}:</b> {station_name}<br><b>{metric_label}:</b> {station_mean_val:.2f} {unit}"
+                    if global_period_str: hover_text_mean += f"<br>{global_period_str}"
+
+                    if pd.notna(station_mean_val):
+                        fig_new_stats.add_trace(go.Bar(
+                            x=[station_name],
+                            y=[station_mean_val],
+                            marker_color=station_colors.get(station_name, '#1f77b4'),
+                            name=f"{station_name} {metric_label}",
+                            hoverinfo='text',
+                            hovertext=hover_text_mean,
+                            showlegend=False
+                        ), row=row_idx, col=1)
+                    else:
+                        fig_new_stats.add_trace(go.Bar(x=[station_name], y=[0], marker_color='rgba(0,0,0,0)', showlegend=False, hoverinfo='none'), row=row_idx, col=1)
+
+
+                for station_name in unique_stations:
+                    station_max_val = df_station_extreme_means[df_station_extreme_means['Station'] == station_name]['Max_Above_Overall'].iloc[0]
+                    station_max_period = df_station_extreme_means[df_station_extreme_means['Station'] == station_name]['Max_Above_Overall_Period'].iloc[0]
+                    overall_mean_for_station = df_station_extreme_means[df_station_extreme_means['Station'] == station_name]['Overall_Mean'].iloc[0]
+
+                    hover_text_max = f"<b>{_('Station')}:</b> {station_name}<br><b>{metric_label}:</b> {station_max_val:.2f} {unit}"
+                    if pd.notna(station_max_period): hover_text_max += f"<br><b>{_('Année')}:</b> {int(station_max_period)}"
+                    if pd.notna(overall_mean_for_station):
+                        hover_text_max += f"<br>({_('Moyenne sur la période des données')}: {overall_mean_for_station:.2f} {unit})"
+                    if global_period_str: hover_text_max += f"<br>{global_period_str}"
+
+                    if pd.notna(station_max_val):
+                        fig_new_stats.add_trace(go.Bar(
+                            x=[station_name],
+                            y=[station_max_val],
+                            marker_color=station_colors.get(station_name, '#1f77b4'),
+                            name=f"{station_name} {metric_label}",
+                            hoverinfo='text',
+                            hovertext=hover_text_max,
+                            showlegend=False
+                        ), row=row_idx, col=2)
+                    else:
+                        fig_new_stats.add_trace(go.Bar(x=[station_name], y=[0], marker_color='rgba(0,0,0,0)', showlegend=False, hoverinfo='none'), row=row_idx, col=2)
+
+
+                for station_name in unique_stations:
+                    station_min_val = df_station_extreme_means[df_station_extreme_means['Station'] == station_name]['Min_Below_Overall'].iloc[0]
+                    station_min_period = df_station_extreme_means[df_station_extreme_means['Station'] == station_name]['Min_Below_Overall_Period'].iloc[0]
+                    overall_mean_for_station = df_station_extreme_means[df_station_extreme_means['Station'] == station_name]['Overall_Mean'].iloc[0]
+
+                    hover_text_min = f"<b>{_('Station')}:</b> {station_name}<br><b>{metric_label}:</b> {station_min_val:.2f} {unit}"
+                    if pd.notna(station_min_period): hover_text_min += f"<br><b>{_('Année')}:</b> {int(station_min_period)}"
+                    if pd.notna(overall_mean_for_station):
+                        hover_text_min += f"<br>({_('Moyenne sur la période des données')}: {overall_mean_for_station:.2f} {unit})"
+                    if global_period_str: hover_text_min += f"<br>{global_period_str}"
+
+                    if pd.notna(station_min_val):
+                        fig_new_stats.add_trace(go.Bar(
+                            x=[station_name],
+                            y=[station_min_val],
+                            marker_color=station_colors.get(station_name, '#1f77b4'),
+                            name=f"{station_name} {metric_label}",
+                            hoverinfo='text',
+                            hovertext=hover_text_min,
+                            showlegend=False
+                        ), row=row_idx, col=3)
+                    else:
+                        fig_new_stats.add_trace(go.Bar(x=[station_name], y=[0], marker_color='rgba(0,0,0,0)', showlegend=False, hoverinfo='none'), row=row_idx, col=3)
+
+                fig_new_stats.update_yaxes(title_text=f"{metric_label} ({unit})", row=row_idx, col=1)
+                fig_new_stats.update_yaxes(title_text=f"{metric_label} ({unit})", row=row_idx, col=2)
+                fig_new_stats.update_yaxes(title_text=f"{metric_label} ({unit})", row=row_idx, col=3)
+
+                fig_new_stats.update_xaxes(title_text="", row=row_idx, col=1)
+                fig_new_stats.update_xaxes(title_text="", row=row_idx, col=2)
+                fig_new_stats.update_xaxes(title_text="", row=row_idx, col=3)
+
+
+            for station_name in unique_stations:
+                fig_new_stats.add_trace(go.Bar(x=[None], y=[None], marker_color=station_colors.get(station_name, '#1f77b4'), name=station_name, showlegend=True))
+
+            fig_new_stats.update_layout(
+                title_text=_("Statistiques Récapitulatives Annuelles de {} par Station").format(var_label),
+                showlegend=True,
+                legend_title_text=_("Station"),
+                legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+                hovermode='closest',
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                margin=dict(b=150, t=100)
+            )
+
+            if not fig_new_stats.data or not any(trace.x is not None for trace in fig_new_stats.data):
+                logger.warning("The generated new yearly rain stats plot has no visible data traces. Returning empty figure.")
+                fig_new_stats_empty = go.Figure().add_annotation(x=0.5, y=0.5, text=_("Aucune statistique récapitulative annuelle de précipitation disponible."), showarrow=False, font=dict(size=16)).update_layout(title=_("Statistiques Récapitulatives Annuelles de Précipitation"))
+                return fig_existing, fig_new_stats_empty
+
+
+            return fig_existing, fig_new_stats
+
+
+        else:
+            # --- Generic Case (Monthly, Weekly, Daily, or Non-Rain Variables) ---
+
+            all_station_period_data = []
+
+            freq_map = {
+                'monthly': 'M',
+                'weekly': 'W',
+                'daily': 'D',
+                'yearly': 'Y' # This case is now handled by the specific yearly rain logic or this generic logic for non-rain
+            }
+            freq_str = freq_map.get(time_frequency)
+
+            # Define formatting for hover text based on frequency
+            period_hover_label_map = {
+                'monthly': _("Mois"),
+                'weekly': _("Semaine"),
+                'daily': _("Jour"),
+                'yearly': _("Année")
+            }
+            period_hover_label = period_hover_label_map.get(time_frequency, _("Période"))
+
+            # For rainfall data on non-yearly frequencies, filter within the rainy season
+            df_season_stats_all = {}
+            if is_rain_variable:
+                for station_name_temp in unique_stations:
+                    station_df_daily_temp = df_processed[df_processed['Station'] == station_name_temp]
+                    # Ensure we're calculating season stats from daily rainfall sums
+                    station_df_daily_rain_for_season = station_df_daily_temp.groupby(pd.Grouper(key='Datetime', freq='D'))['Rain_mm'].sum().reset_index()
+                    df_season_stats_all[station_name_temp] = _calculate_rainy_season_stats_yearly(station_df_daily_rain_for_season)
+
+            for station_name in unique_stations:
+                station_data_processed = df_processed[df_processed['Station'] == station_name].copy()
+
+                # --- NEW: Filter for daylight hours using 'Is_Daylight' for Solar_R ---
+                if variable == 'Solar_R_W/m^2':
+                    if 'Is_Daylight' in station_data_processed.columns:
+                        station_data_processed = station_data_processed[station_data_processed['Is_Daylight'] == True]
+                    else: # Fallback to hour-based filtering if Is_Daylight is not available
+                        station_data_processed['Hour'] = station_data_processed['Datetime'].dt.hour
+                        station_data_processed = station_data_processed[
+                            (station_data_processed['Hour'] >= 7) & (station_data_processed['Hour'] <= 18)
+                        ]
+                        station_data_processed = station_data_processed.drop(columns=['Hour'])
+
+                # For Rain_mm, filter data to be strictly within the rainy season for non-yearly calculations
+                if is_rain_variable and time_frequency != 'yearly':
+                    station_season_stats = df_season_stats_all.get(station_name)
+                    filtered_data_in_season = []
+                    if station_season_stats is not None:
+                        for year in station_data_processed['Datetime'].dt.year.unique():
+                            if year in station_season_stats.index:
+                                season_start = station_season_stats.loc[year, 'Début Saison Pluvieuse']
+                                season_end = station_season_stats.loc[year, 'Fin Saison Pluvieuse']
+
+                                if pd.notna(season_start) and pd.notna(season_end) and season_start <= season_end:
+                                    yearly_df = station_data_processed[station_data_processed['Datetime'].dt.year == year]
+                                    filtered_data_in_season.append(yearly_df[(yearly_df['Datetime'] >= season_start) & (yearly_df['Datetime'] <= season_end)])
+                    if filtered_data_in_season:
+                        station_data_processed = pd.concat(filtered_data_in_season)
+                    else:
+                        station_data_processed = pd.DataFrame(columns=station_data_processed.columns)
+
+
+                # Aggregate data to the desired frequency for plotting
+                aggregated_data = pd.DataFrame(columns=['Datetime', 'Agg_Value'])
+                if not station_data_processed.empty:
+                    if is_rain_variable and time_frequency != 'yearly':
+                        # For rain, non-yearly: calculate daily sum, then mean of these daily sums within the season
+                        daily_rain_in_season = station_data_processed.groupby(pd.Grouper(key='Datetime', freq='D'))['Rain_mm'].sum().reset_index(name='Daily_Rain_Sum')
+                        # Resample to target frequency and take the MEAN of daily sums within that frequency's period
+                        aggregated_data = daily_rain_in_season.groupby(pd.Grouper(key='Datetime', freq=freq_str))['Daily_Rain_Sum'].mean().reset_index(name='Agg_Value')
+                    else:
+                        # For other variables, calculate mean directly
+                        aggregated_data = station_data_processed.groupby(pd.Grouper(key='Datetime', freq=freq_str))[variable].mean().reset_index(name='Agg_Value')
+                else:
+                    logger.warning(f"No data for {variable} for station {station_name} after season filtering for {time_frequency} period.")
+
+
+                # Calculate overall mean for the station for this period
+                overall_mean_for_station = aggregated_data['Agg_Value'].mean()
+
+                max_val_above_mean = np.nan
+                min_val_below_mean = np.nan
+                max_val_above_mean_period = pd.NaT
+                min_val_below_mean_period = pd.NaT
+
+                if not aggregated_data.empty and pd.notna(overall_mean_for_station):
+                    above_mean_data = aggregated_data[aggregated_data['Agg_Value'] > overall_mean_for_station]
+                    if not above_mean_data.empty:
+                        idx_max_above = above_mean_data['Agg_Value'].idxmax()
+                        max_val_above_mean = above_mean_data.loc[idx_max_above, 'Agg_Value']
+                        max_val_above_mean_period = above_mean_data.loc[idx_max_above, 'Datetime']
+
+                    below_mean_data = aggregated_data[aggregated_data['Agg_Value'] < overall_mean_for_station]
+                    if not below_mean_data.empty:
+                        idx_min_below = below_mean_data['Agg_Value'].idxmin()
+                        min_val_below_mean = below_mean_data.loc[idx_min_below, 'Agg_Value']
+                        min_val_below_mean_period = below_mean_data.loc[idx_min_below, 'Datetime']
+
+                all_station_period_data.append({
+                    'Station': station_name,
+                    'Overall_Mean': overall_mean_for_station,
+                    'Max_Above_Overall': max_val_above_mean,
+                    'Max_Above_Overall_Period': max_val_above_mean_period,
+                    'Min_Below_Overall': min_val_below_mean,
+                    'Min_Below_Overall_Period': min_val_below_mean_period
+                })
+
+            df_period_metrics = pd.DataFrame(all_station_period_data)
+
+            subplot_titles_generic = [
+                get_metric_label("Moyenne sur la période des données"),
+                get_metric_label("Moyenne supérieure à la moyenne sur la période des données"),
+                get_metric_label("Moyenne inférieure à la moyenne sur la période des données")
+            ]
+
+            fig_generic = make_subplots(rows=1, cols=3, subplot_titles=subplot_titles_generic,
+                                        vertical_spacing=0.08, horizontal_spacing=0.05)
+
+
+            # Helper to format period for hover text
+            def format_period_for_hover(dt_obj, freq):
+                if pd.isna(dt_obj):
+                    return _("N/A")
+                if freq == 'monthly':
+                    return dt_obj.strftime('%B %Y') # Ex: Janvier 2023
+                elif freq == 'weekly':
+                    # Calculate start and end of the ISO week
+                    week_start = dt_obj - timedelta(days=dt_obj.weekday()) # Monday
+                    week_end = week_start + timedelta(days=6) # Sunday
+                    return _("du {} au {}").format(week_start.strftime('%d-%m-%Y'), week_end.strftime('%d-%m-%Y'))
+                elif freq == 'daily':
+                    return dt_obj.strftime('%d-%m-%Y')
+                elif freq == 'yearly':
+                    return dt_obj.strftime('%Y')
+                return str(dt_obj)
+
+            # Plot 1: Overall Mean
+            for station_name in unique_stations:
+                station_mean_val = df_period_metrics[df_period_metrics['Station'] == station_name]['Overall_Mean'].iloc[0] if not df_period_metrics[df_period_metrics['Station'] == station_name].empty else np.nan
+                hover_text_mean = f"<b>{_('Station')}:</b> {station_name}<br><b>{var_label}:</b> {station_mean_val:.2f} {var_unit}"
+                if global_period_str: hover_text_mean += f"<br>{global_period_str}"
+
+                if pd.notna(station_mean_val):
+                    fig_generic.add_trace(go.Bar(
+                        x=[station_name],
+                        y=[station_mean_val],
+                        marker_color=station_colors.get(station_name, '#1f77b4'),
+                        name=station_name,
+                        hoverinfo='text',
+                        hovertext=hover_text_mean,
+                        showlegend=False
+                    ), row=1, col=1)
+                else:
+                    fig_generic.add_trace(go.Bar(x=[station_name], y=[0], marker_color='rgba(0,0,0,0)', showlegend=False, hoverinfo='none'), row=1, col=1)
+
+            # Plot 2: Max Above Overall Mean
+            for station_name in unique_stations:
+                station_max_val = df_period_metrics[df_period_metrics['Station'] == station_name]['Max_Above_Overall'].iloc[0] if not df_period_metrics[df_period_metrics['Station'] == station_name].empty else np.nan
+                station_max_period = df_period_metrics[df_period_metrics['Station'] == station_name]['Max_Above_Overall_Period'].iloc[0]
+                station_mean_val = df_period_metrics[df_period_metrics['Station'] == station_name]['Overall_Mean'].iloc[0] if not df_period_metrics[df_period_metrics['Station'] == station_name].empty else np.nan
+
+                hover_text_max = f"<b>{_('Station')}:</b> {station_name}<br><b>{var_label}:</b> {station_max_val:.2f} {var_unit}"
+                if pd.notna(station_max_period): hover_text_max += f"<br><b>{period_hover_label}:</b> {format_period_for_hover(station_max_period, time_frequency)}"
+                if pd.notna(station_mean_val):
+                    hover_text_max += f"<br>({_('Moyenne sur la période des données')}: {station_mean_val:.2f} {var_unit})"
+                if global_period_str: hover_text_max += f"<br>{global_period_str}"
+
+                if pd.notna(station_max_val):
+                    fig_generic.add_trace(go.Bar(
+                        x=[station_name],
+                        y=[station_max_val],
+                        marker_color=station_colors.get(station_name, '#1f77b4'),
+                        name=station_name,
+                        hoverinfo='text',
+                        hovertext=hover_text_max,
+                        showlegend=False
+                    ), row=1, col=2)
+                else:
+                    fig_generic.add_trace(go.Bar(x=[station_name], y=[0], marker_color='rgba(0,0,0,0)', showlegend=False, hoverinfo='none'), row=1, col=2)
+
+            # Plot 3: Min Below Overall Mean
+            for station_name in unique_stations:
+                station_min_val = df_period_metrics[df_period_metrics['Station'] == station_name]['Min_Below_Overall'].iloc[0] if not df_period_metrics[df_period_metrics['Station'] == station_name].empty else np.nan
+                station_min_period = df_period_metrics[df_period_metrics['Station'] == station_name]['Min_Below_Overall_Period'].iloc[0]
+                station_mean_val = df_period_metrics[df_period_metrics['Station'] == station_name]['Overall_Mean'].iloc[0] if not df_period_metrics[df_period_metrics['Station'] == station_name].empty else np.nan
+
+                hover_text_min = f"<b>{_('Station')}:</b> {station_name}<br><b>{var_label}:</b> {station_min_val:.2f} {var_unit}"
+                if pd.notna(station_min_period): hover_text_min += f"<br><b>{period_hover_label}:</b> {format_period_for_hover(station_min_period, time_frequency)}"
+                if pd.notna(station_mean_val):
+                    hover_text_min += f"<br>({_('Moyenne sur la période des données')}: {station_mean_val:.2f} {var_unit})"
+                if global_period_str: hover_text_min += f"<br>{global_period_str}"
+
+                if pd.notna(station_min_val):
+                    fig_generic.add_trace(go.Bar(
+                        x=[station_name],
+                        y=[station_min_val],
+                        marker_color=station_colors.get(station_name, '#1f77b4'),
+                        name=station_name,
+                        hoverinfo='text',
+                        hovertext=hover_text_min,
+                        showlegend=False
+                    ), row=1, col=3)
+                else:
+                    fig_generic.add_trace(go.Bar(x=[station_name], y=[0], marker_color='rgba(0,0,0,0)', showlegend=False, hoverinfo='none'), row=1, col=3)
+
+
+            for station_name in unique_stations:
+                fig_generic.add_trace(go.Bar(x=[None], y=[None], marker_color=station_colors.get(station_name, '#1f77b4'), name=station_name, showlegend=True))
+
+            fig_generic.update_layout(
+                height=500,
+                title_text=plot_base_title,
+                showlegend=True,
+                legend_title_text=_("Station"),
+                legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+                hovermode='closest',
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                margin=dict(b=150, t=100)
+            )
+
+            fig_generic.update_xaxes(title_text="", row=1, col=1)
+            fig_generic.update_xaxes(title_text="", row=1, col=2)
+            fig_generic.update_xaxes(title_text="", row=1, col=3)
+
+            fig_generic.update_yaxes(title_text=f"{var_label} ({var_unit})", row=1, col=1)
+            fig_generic.update_yaxes(title_text=f"{var_label} ({var_unit})", row=1, col=2)
+            fig_generic.update_yaxes(title_text=f"{var_label} ({var_unit})", row=1, col=3)
+
+            if not fig_generic.data or not any(trace.x is not None for trace in fig_generic.data):
+                logger.warning(f"The generated generic plot for {variable} at {time_frequency} has no visible data traces. Returning empty figure.")
+                return go.Figure().add_annotation(x=0.5, y=0.5, text=_("Aucune statistique à afficher pour cette variable et fréquence."), showarrow=False, font=dict(size=16)).update_layout(title=plot_base_title)
+
+            return fig_generic
+
+    except Exception as e:
+        if logger:
+            logger.error(_("Une erreur est survenue dans generate_plot_stats_over_period_plotly: {}").format(str(e)), exc_info=True)
+            return go.Figure().add_annotation(x=0.5, y=0.5, text=_("Une erreur est survenue lors de la génération du graphique: {}").format(str(e)), showarrow=False, font=dict(size=16)).update_layout(title=plot_title_prefix)
+
+############# Fin du code fonctionnel pour  les statistiques  ##########################
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ###############  Fonction pour visualiser les valeurs aberantes #######################
+
+# def outliers_viz(df: pd.DataFrame, coef: float = 1.5) -> go.Figure:
+#     """
+#     Visualisation des outliers pour chaque variable numérique via des scatter plots Plotly.
+#     """
+#     df = df.copy()
+#     if df.index.name == 'Datetime':
+#         df.reset_index(inplace=True)
+#     elif 'Datetime' not in df.columns:
+#         return go.Figure().add_annotation(
+#             x=0.5, y=0.5, text=_l("Colonne 'Datetime' manquante pour la visualisation des outliers."),
+#             showarrow=False, font=dict(size=16)
+#         )
+
+#     # Conversion des colonnes numériques (hors colonnes à exclure)
+#     exclude_cols = {
+#         'Datetime', 'Station', 'Is_Daylight', 'Day', 
+#         'sunrise_time_utc', 'sunset_time_utc', 'Daylight_Duration',
+#         'Rain_01_mm', 'Rain_02_mm', 'Day_Duration'
+#     }
+
+#     for col in df.columns:
+#         if col not in exclude_cols:
+#             df[col] = pd.to_numeric(df[col], errors='coerce')
+
+#     numeric_cols = [
+#         col for col in df.select_dtypes(include='number').columns
+#         if col not in exclude_cols
+#     ]
+
+#     if not numeric_cols:
+#         return go.Figure().add_annotation(
+#             x=0.5, y=0.5, text=_l("Aucune variable numérique pour l'analyse des outliers après nettoyage."),
+#             showarrow=False, font=dict(size=16)
+#         ).update_layout(title=_l("Analyse des Outliers"))
+
+#     # Détection des outliers par station et par variable
+#     df_out = df.copy()
+#     for col in numeric_cols:
+#         df_out[f'{col}_is_outlier'] = False
+
+#     for station, group in df.groupby('Station'):
+#         for col in numeric_cols:
+#             if group[col].count() > 1:
+#                 Q1, Q3 = group[col].quantile([0.25, 0.75])
+#                 IQR = Q3 - Q1
+#                 lower, upper = Q1 - coef * IQR, Q3 + coef * IQR
+#                 outlier_idx = group[(group[col] < lower) | (group[col] > upper)].index
+#                 df_out.loc[outlier_idx, f'{col}_is_outlier'] = True
+#             else:
+#                 warnings.warn(_l("Pas assez de données pour calculer les outliers pour la station '%s' et la variable '%s'.") % (station, col))
+
+#     # Préparation des subplots
+#     cols_per_row = 2
+#     n = len(numeric_cols)
+#     rows = (n + cols_per_row - 1) // cols_per_row
+
+#     fig = make_subplots(rows=rows, cols=cols_per_row, subplot_titles=numeric_cols)
+
+#     # Génération des traces
+#     for i, col in enumerate(numeric_cols):
+#         r, c = divmod(i, cols_per_row)
+#         r += 1; c += 1
+
+#         for outlier_status, color, label, marker_opts in [
+#             (False, 'blue', _l('Valeurs normales'), dict(size=5)),
+#             (True, 'red', _l('Outliers'), dict(size=7, symbol='circle-open', line=dict(width=2, color='red')))
+#         ]:
+#             subset = df_out[df_out[f'{col}_is_outlier'] == outlier_status]
+#             fig.add_trace(
+#                 go.Scatter(
+#                     x=subset['Datetime'], y=subset[col],
+#                     mode='markers',
+#                     name=label,
+#                     marker=dict(color=color, **marker_opts),
+#                     hovertemplate=(
+#                         "<b>Station:</b> %{customdata[0]}<br>"
+#                         "<b>Date:</b> %{x|%Y-%m-%d %H:%M:%S}<br>"
+#                         f"<b>{col}:</b> %{{y}}<br><extra></extra>"
+#                     ),
+#                     customdata=subset[['Station']],
+#                     showlegend=(i == 0)  # Ne montrer qu'une fois la légende
+#                 ),
+#                 row=r, col=c
+#             )
+
+#         fig.update_xaxes(title_text=_l("Date"), row=r, col=c)
+#         fig.update_yaxes(title_text=col, row=r, col=c)
+
+#     # Mise en forme finale
+#     fig.update_layout(
+#         title=_l("Analyse des Outliers par Variable"),
+#         height=400 * rows,
+#         showlegend=True,
+#         legend_title_text=_l("Statut d'Outlier")
+#     )
+
+#     return fig
+# def valeurs_manquantes_viz(df: pd.DataFrame) -> go.Figure:
+#     """
+#     Génère une figure Plotly contenant des diagrammes en secteurs
+#     pour illustrer les pourcentages de valeurs manquantes par variable.
+#     """
+#     # Colonnes à exclure de l’analyse
+#     exclude = {
+#         'Datetime', 'Station', 'Rain_01_mm', 'Rain_02_mm',
+#         'Is_Daylight', 'Day_Duration', 'sunrise_time_utc', 'sunset_time_utc', 'Day'
+#     }
+
+#     variables = [col for col in df.columns if col not in exclude]
+
+#     if not variables:
+#         return go.Figure().add_annotation(
+#             x=0.5, y=0.5, text="Aucune variable à analyser pour les valeurs manquantes.",
+#             showarrow=False, font=dict(size=16)
+#         ).update_layout(title="Analyse des valeurs manquantes")
+
+#     # Paramètres pour l'affichage
+#     cols_per_row = 3
+#     rows = (len(variables) + cols_per_row - 1) // cols_per_row
+#     colors = ['lightgreen', 'lightcoral']
+
+#     # Créer la figure avec sous-graphiques de type "camembert"
+#     fig = make_subplots(
+#         rows=rows,
+#         cols=cols_per_row,
+#         specs=[[{'type': 'domain'}]*cols_per_row]*rows,
+#         subplot_titles=variables
+#     )
+
+#     for i, col in enumerate(variables):
+#         present = df[col].count()
+#         missing = df[col].isna().sum()
+#         total = present + missing
+
+#         if total == 0:
+#             values = [1]
+#             labels = ['Aucune donnée']
+#             pie_colors = ['lightgray']
+#             textinfo = 'none'
+#         else:
+#             values = [present, missing]
+#             labels = ['Valeurs Présentes', 'Valeurs Manquantes']
+#             pie_colors = colors
+#             textinfo = 'percent'
+
+#         r, c = divmod(i, cols_per_row)
+#         fig.add_trace(
+#             go.Pie(
+#                 labels=labels,
+#                 values=values,
+#                 name=col,
+#                 marker=dict(colors=pie_colors),
+#                 textinfo=textinfo,
+#                 hovertemplate="<b>%{label}</b><br>Nombre: %{value}<br>Pourcentage: %{percent:.2%}<extra></extra>",
+#                 showlegend=True if i == 0 else False  # Une seule légende affichée
+#             ),
+#             row=r + 1,
+#             col=c + 1
+#         )
+
+#     # Mise en page globale
+#     fig.update_layout(
+#         title_text="Pourcentage de valeurs manquantes par variable",
+#         showlegend=True,
+#         legend=dict(
+#             orientation="h", yanchor="bottom", y=-0.15,
+#             xanchor="center", x=0.5
+#         ),
+#         height=350 * rows,
+#         margin=dict(l=50, r=50, b=100, t=80)
+#     )
+
+#     # Centrer les titres de sous-plots
+#     for ann in fig.layout.annotations:
+#         ann.update(x=ann.x)
+
+#     return fig
+
+
+# ############# Fin de la Fonction pour visualiser les valeurs aberantes #####################
+
+
+
+# ############# Fonction pour visualiser les plages des valeurs manquantes #####################
+# import pandas as pd
+# import numpy as np
+# import plotly.graph_objects as go
+# from plotly.subplots import make_subplots
+# import warnings
+# from flask_babel import _, lazy_gettext as _l # Assuming these imports are correct
+
+
+# def gaps_time_series_viz(df_data: pd.DataFrame, df_gaps: pd.DataFrame, station_name: str, title_suffix: str = "") -> go.Figure:
+#     """
+#     Generates a Plotly figure showing numerical time series data
+#     with highlighted periods of missing values (gaps),
+#     where gap details are displayed in tooltips.
+
+#     Args:
+#         df_data (pd.DataFrame): The data DataFrame (raw or interpolated) for a given station.
+#                                 Must have a DatetimeIndex and a 'Station' column.
+#         df_gaps (pd.DataFrame): The DataFrame of missing ranges (e.g., GLOBAL_MISSING_VALUES_BEFORE/AFTER_INTERPOLATION_DF)
+#                                 filtered for the current station.
+#                                 Must contain 'station', 'variable', 'start_time', 'end_time', and 'duration_hours'.
+#         station_name (str): The name of the station currently being visualized.
+#         title_suffix (str): A suffix to add to the chart title (e.g., "Avant Interpolation").
+
+#     Returns:
+#         go.Figure: The Plotly figure.
+#     """
+#     # --- Initial Data Validation ---
+#     if df_data.empty:
+#         fig = go.Figure().add_annotation(
+#             x=0.5, y=0.5, text=str(_l("Aucune donnée disponible pour la station sélectionnée.")),
+#             showarrow=False, font=dict(size=16)
+#         )
+#         fig.update_layout(title=str(f"{_l('Visualisation des données et des gaps')} - {station_name} {title_suffix}"),
+#                           template="plotly_white")
+#         return fig
+
+#     # Ensure DatetimeIndex is present
+#     if not isinstance(df_data.index, pd.DatetimeIndex):
+#         warnings.warn(str(_l("Le DataFrame de données n'a pas un DatetimeIndex. Tentative de conversion.")))
+#         try:
+#             df_data.index = pd.to_datetime(df_data.index, errors='coerce')
+#             df_data = df_data[df_data.index.notna()]
+#         except Exception:
+#             fig = go.Figure().add_annotation(
+#                 x=0.5, y=0.5, text=str(_l("L'index du DataFrame n'est pas un DatetimeIndex valide et ne peut pas être converti.")),
+#                 showarrow=False, font=dict(size=16)
+#             )
+#             fig.update_layout(title=str(f"{_l('Visualisation des données et des gaps')} - {station_name} {title_suffix}"),
+#                               template="plotly_white")
+#             return fig
+#         if df_data.empty: # Check again after conversion and NaN removal
+#             fig = go.Figure().add_annotation(
+#                 x=0.5, y=0.5, text=str(_l("Aucune donnée valide disponible après conversion de l'index en DatetimeIndex.")),
+#                 showarrow=False, font=dict(size=16)
+#             )
+#             fig.update_layout(title=str(f"{_l('Visualisation des données et des gaps')} - {station_name} {title_suffix}"),
+#                               template="plotly_white")
+#             return fig
+
+
+#     # Define columns to exclude from visualization (non-numeric or flags)
+#     # Using a set for faster lookups
+#     EXCLUDE_COLS_VIZ = {
+#         'Station', 'Is_Daylight', 'Rain_01_mm', 'Rain_02_mm', 'Wind_Dir_Deg',
+#         'sunrise_time_utc', 'sunset_time_utc', 'Daylight_Duration',
+#         'Date_UTC_Naive', 'Lat', 'Long', 'Timezone',
+#         'sunrise_time_utc_calc', 'sunset_time_utc_calc',
+#         'Daylight_Duration_h_calc', 'fixed_daylight_applied',
+#         'Year', 'Month', 'Minute', 'Hour', 'Date', 'Day' # Also exclude derived date components
+#     }
+
+#     # Identify numerical columns for visualization
+#     numerical_cols_for_viz = [
+#         col for col in df_data.columns
+#         if pd.api.types.is_numeric_dtype(df_data[col]) and col not in EXCLUDE_COLS_VIZ
+#     ]
+    
+#     if not numerical_cols_for_viz:
+#         fig = go.Figure().add_annotation(
+#             x=0.5, y=0.5, text=str(_l("Aucune variable numérique exploitable pour la visualisation des gaps.")),
+#             showarrow=False, font=dict(size=16)
+#         )
+#         fig.update_layout(title=str(f"{_l('Visualisation des données et des gaps')} - {station_name} {title_suffix}"),
+#                           template="plotly_white")
+#         return fig
+
+#     # --- Subplot Configuration ---
+#     num_variables = len(numerical_cols_for_viz)
+#     rows = num_variables # One row per variable
+#     cols_per_row = 1
+
+#     fig = make_subplots(
+#         rows=rows,
+#         cols=cols_per_row,
+#         shared_xaxes=True, # Share x-axis across all subplots
+#         vertical_spacing=0.04, # Slightly reduce spacing
+#         subplot_titles=[str(f"{_l('Série temporelle')} - {col}") for col in numerical_cols_for_viz]
+#     )
+
+#     # --- Filter Gaps Data Once ---
+#     # Filter df_gaps for the current station and relevant numerical columns only once
+#     relevant_gaps_filtered = df_gaps[
+#         (df_gaps['station'] == station_name) & 
+#         (df_gaps['variable'].isin(numerical_cols_for_viz))
+#     ].copy()
+    
+#     # Ensure start_time and end_time are datetime objects in df_gaps for comparison
+#     relevant_gaps_filtered['start_time'] = pd.to_datetime(relevant_gaps_filtered['start_time'], errors='coerce')
+#     relevant_gaps_filtered['end_time'] = pd.to_datetime(relevant_gaps_filtered['end_time'], errors='coerce')
+#     relevant_gaps_filtered.dropna(subset=['start_time', 'end_time'], inplace=True) # Drop invalid gap entries
+
+#     # --- Add Traces and Gap Highlights ---
+#     for i, col in enumerate(numerical_cols_for_viz):
+#         row_idx = i + 1
+
+#         # Add data trace
+#         fig.add_trace(
+#             go.Scatter(
+#                 x=df_data.index,
+#                 y=df_data[col],
+#                 mode='lines+markers',
+#                 name=str(f"{col} - {_l('Données')}"),
+#                 line=dict(color='blue', width=1),
+#                 marker=dict(size=3, opacity=0.7),
+#                 hovertemplate="<b>%{x|%Y-%m-%d %H:%M}</b><br>" +
+#                                f"{col}: %{{y:.2f}}<extra></extra>", # Format y value
+#                 showlegend=False
+#             ),
+#             row=row_idx, col=1
+#         )
+
+#         # Get gaps specific to this column
+#         gaps_for_col = relevant_gaps_filtered[relevant_gaps_filtered['variable'] == col]
+
+#         if not gaps_for_col.empty:
+#             # Determine y-axis range for the current subplot to make shapes scale
+#             y_min = df_data[col].min()
+#             y_max = df_data[col].max()
+#             # Add a small buffer to y_min/y_max if data is constant or has very small range
+#             if pd.isna(y_min) or pd.isna(y_max) or y_max == y_min:
+#                 y_min, y_max = 0, 1 # Fallback to a default range
+#             else:
+#                 y_buffer = (y_max - y_min) * 0.05 # 5% buffer
+#                 y_min -= y_buffer
+#                 y_max += y_buffer
+
+#             # Add a single shape for each gap
+#             for _, gap_row in gaps_for_col.iterrows():
+#                 fig.add_shape(
+#                     type="rect",
+#                     xref="x", yref="y", # Use 'y' coordinates, not 'paper'
+#                     x0=gap_row['start_time'],
+#                     y0=y_min, # Scale with actual y-axis data range
+#                     y1=y_max, # Scale with actual y-axis data range
+#                     x1=gap_row['end_time'],
+#                     fillcolor="rgba(255,0,0,0.2)", # Light red transparent fill
+#                     line_width=0,
+#                     layer="below", # Place below the data trace
+#                     row=row_idx, col=1
+#                 )
+                
+#                 # --- Optimized Hover Info for Gaps ---
+#                 # Add an invisible scatter trace over the gap area for hover text
+#                 # We place a single marker in the middle of the gap for hover info.
+#                 gap_mid_time = gap_row['start_time'] + (gap_row['end_time'] - gap_row['start_time']) / 2
+                
+#                 # Use a small non-NaN value for y to ensure it's visible, but it won't be plotted visually
+#                 y_for_hover = df_data[col].mean() if df_data[col].notna().any() else 0 
+                
+#                 hover_text_gap = str(f"<b>{_l('Période Manquante')}</b><br>" +
+#                                      f"{_l('Variable')}: {gap_row['variable']}<br>" +
+#                                      f"{_l('Début')}: {gap_row['start_time'].strftime('%Y-%m-%d %H:%M')}<br>" +
+#                                      f"{_l('Fin')}: {gap_row['end_time'].strftime('%Y-%m-%d %H:%M')}<br>" +
+#                                      f"{_l('Durée')}: {gap_row['duration_hours']:.2f} {_l('heures')}")
+
+#                 fig.add_trace(
+#                     go.Scatter(
+#                         x=[gap_mid_time],
+#                         y=[y_for_hover], # A single point for hover, visually hidden
+#                         mode='markers',
+#                         marker=dict(size=1, opacity=0), # Invisible marker
+#                         showlegend=False,
+#                         hoverinfo='text',
+#                         text=hover_text_gap,
+#                         name=f"{col} {_l('Gap Info')}" # Give it a name for internal tracking
+#                     ),
+#                     row=row_idx, col=1
+#                 )
+
+#     # --- Update Layout ---
+#     fig.update_layout(
+#         title_text=str(f"{_l('Séries temporelles avec périodes manquantes/interpolées')} - {station_name} {title_suffix}"),
+#         height=max(400, 300 * rows), # Dynamic height with a minimum
+#         hovermode="x unified", # Excellent for time series analysis
+#         margin=dict(l=50, r=50, b=80, t=100), # Adjust margins
+#         template="plotly_white", # Clean template
+#     )
+
+#     # Update Y-axis titles
+#     for i, col in enumerate(numerical_cols_for_viz):
+#         fig.update_yaxes(title_text=col, row=i+1, col=1, rangemode='tozero') # rangemode='tozero' often good for time series
+
+#     # Update X-axis (shared)
+#     fig.update_xaxes(title_text=str(_l("Temps")), showgrid=True, gridwidth=1, gridcolor='LightGray')
+
+#     return fig
+
+
+
+############ Fin de la Fonction pour visualiser les plages des valeurs manquantes #####################
+
+
+def outliers_viz(df: pd.DataFrame, coef: float = 1.5) -> go.Figure:
+    """
+    Visualisation des outliers pour chaque variable numérique via des scatter plots Plotly.
+    """
+    df = df.copy()
+    if df.index.name == 'Datetime':
+        df.reset_index(inplace=True)
+    elif 'Datetime' not in df.columns:
+        return go.Figure().add_annotation(
+            x=0.5, y=0.5, text=str(_l("Colonne 'Datetime' manquante pour la visualisation des outliers.")),
+            showarrow=False, font=dict(size=16)
+        )
+
+    # Conversion des colonnes numériques (hors colonnes à exclure)
+    exclude_cols = {
+        'Datetime', 'Station', 'Is_Daylight', 'Day', 
+        'sunrise_time_utc', 'sunset_time_utc', 'Daylight_Duration',
+        'Rain_01_mm', 'Rain_02_mm', 'Day_Duration'
+    }
+
+    for col in df.columns:
+        if col not in exclude_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    numeric_cols = [
+        col for col in df.select_dtypes(include='number').columns
+        if col not in exclude_cols
+    ]
+
+    if not numeric_cols:
+        return go.Figure().add_annotation(
+            x=0.5, y=0.5, text=str(_l("Aucune variable numérique pour l'analyse des outliers après nettoyage.")),
+            showarrow=False, font=dict(size=16)
+        ).update_layout(title=str(_l("Analyse des Outliers")))
+
+    # Détection des outliers par station et par variable
+    df_out = df.copy()
+    for col in numeric_cols:
+        df_out[f'{col}_is_outlier'] = False
+
+    for station, group in df.groupby('Station'):
+        for col in numeric_cols:
+            if group[col].count() > 1:
+                Q1, Q3 = group[col].quantile([0.25, 0.75])
+                IQR = Q3 - Q1
+                lower, upper = Q1 - coef * IQR, Q3 + coef * IQR
+                outlier_idx = group[(group[col] < lower) | (group[col] > upper)].index
+                df_out.loc[outlier_idx, f'{col}_is_outlier'] = True
+            else:
+                warnings.warn(str(_l("Pas assez de données pour calculer les outliers pour la station '%s' et la variable '%s'.") % (station, col)))
+
+    # Préparation des subplots
+    cols_per_row = 2
+    n = len(numeric_cols)
+    rows = (n + cols_per_row - 1) // cols_per_row
+
+    fig = make_subplots(rows=rows, cols=cols_per_row, subplot_titles=numeric_cols)
+
+    # Génération des traces
+    for i, col in enumerate(numeric_cols):
+        r, c = divmod(i, cols_per_row)
+        r += 1; c += 1
+
+        # Convertir les labels LazyString en strings
+        normal_label = str(_l('Valeurs normales'))
+        outlier_label = str(_l('Outliers'))
+
+        for outlier_status, color, label, marker_opts in [
+            (False, 'blue', normal_label, dict(size=5)),
+            (True, 'red', outlier_label, dict(size=7, symbol='circle-open', line=dict(width=2, color='red')))
+        ]:
+            subset = df_out[df_out[f'{col}_is_outlier'] == outlier_status]
+            fig.add_trace(
+                go.Scatter(
+                    x=subset['Datetime'], y=subset[col],
+                    mode='markers',
+                    name=label,
+                    marker=dict(color=color, **marker_opts),
+                    hovertemplate=(
+                        "<b>Station:</b> %{customdata[0]}<br>"
+                        "<b>Date:</b> %{x|%Y-%m-%d %H:%M:%S}<br>"
+                        f"<b>{col}:</b> %{{y}}<br><extra></extra>"
+                    ),
+                    customdata=subset[['Station']],
+                    showlegend=(i == 0)
+                ),
+                row=r, col=c
+            )
+
+        fig.update_xaxes(title_text=str(_l("Date")), row=r, col=c)
+        fig.update_yaxes(title_text=col, row=r, col=c)
+
+    # Mise en forme finale
+    fig.update_layout(
+        title=str(_l("Analyse des Outliers par Variable")),
+        height=400 * rows,
+        showlegend=True,
+        legend_title_text=str(_l("Statut d'Outlier"))
+    )
+
+    return fig
+
+def valeurs_manquantes_viz(df: pd.DataFrame) -> go.Figure:
+    """
+    Génère une figure Plotly contenant des diagrammes en secteurs
+    pour illustrer les pourcentages de valeurs manquantes par variable.
+    """
+    # Colonnes à exclure de l'analyse
+    exclude = {
+        'Datetime', 'Station', 'Rain_01_mm', 'Rain_02_mm',
+        'Is_Daylight', 'Day_Duration', 'sunrise_time_utc', 'sunset_time_utc', 'Day'
+    }
+
+    variables = [col for col in df.columns if col not in exclude]
+
+    if not variables:
+        return go.Figure().add_annotation(
+            x=0.5, y=0.5, text="Aucune variable à analyser pour les valeurs manquantes.",
+            showarrow=False, font=dict(size=16)
+        ).update_layout(title="Analyse des valeurs manquantes")
+
+    # Paramètres pour l'affichage
+    cols_per_row = 3
+    rows = (len(variables) + cols_per_row - 1) // cols_per_row
+    colors = ['lightgreen', 'lightcoral']
+
+    # Convertir les labels LazyString en strings
+    present_label = str(_l('Valeurs Présentes'))
+    missing_label = str(_l('Valeurs Manquantes'))
+    no_data_label = str(_l('Aucune donnée'))
+
+    # Créer la figure avec sous-graphiques de type "camembert"
+    fig = make_subplots(
+        rows=rows,
+        cols=cols_per_row,
+        specs=[[{'type': 'domain'}]*cols_per_row]*rows,
+        subplot_titles=variables
+    )
+
+    for i, col in enumerate(variables):
+        present = df[col].count()
+        missing = df[col].isna().sum()
+        total = present + missing
+
+        if total == 0:
+            values = [1]
+            labels = [no_data_label]
+            pie_colors = ['lightgray']
+            textinfo = 'none'
+        else:
+            values = [present, missing]
+            labels = [present_label, missing_label]
+            pie_colors = colors
+            textinfo = 'percent'
+
+        r, c = divmod(i, cols_per_row)
+        fig.add_trace(
+            go.Pie(
+                labels=labels,
+                values=values,
+                name=col,
+                marker=dict(colors=pie_colors),
+                textinfo=textinfo,
+                hovertemplate="<b>%{label}</b><br>Nombre: %{value}<br>Pourcentage: %{percent:.2%}<extra></extra>",
+                showlegend=(i == 0)
+            ),
+            row=r + 1,
+            col=c + 1
+        )
+
+    # Mise en page globale
+    fig.update_layout(
+        title_text=str(_l("Pourcentage de valeurs manquantes par variable")),
+        showlegend=True,
+        legend=dict(
+            orientation="h", yanchor="bottom", y=-0.15,
+            xanchor="center", x=0.5
+        ),
+        height=350 * rows,
+        margin=dict(l=50, r=50, b=100, t=80)
+    )
+
+    return fig
 
 def gaps_time_series_viz(df_data: pd.DataFrame, df_gaps: pd.DataFrame, station_name: str, title_suffix: str = "") -> go.Figure:
     """
     Generates a Plotly figure showing numerical time series data
-    with highlighted periods of missing values (gaps),
-    where gap details are displayed in tooltips.
-
-    Args:
-        df_data (pd.DataFrame): The data DataFrame (raw or interpolated) for a given station.
-                                Must have a DatetimeIndex and a 'Station' column.
-        df_gaps (pd.DataFrame): The DataFrame of missing ranges (e.g., GLOBAL_MISSING_VALUES_BEFORE/AFTER_INTERPOLATION_DF)
-                                filtered for the current station.
-                                Must contain 'station', 'variable', 'start_time', 'end_time', and 'duration_hours'.
-        station_name (str): The name of the station currently being visualized.
-        title_suffix (str): A suffix to add to the chart title (e.g., "Avant Interpolation").
-
-    Returns:
-        go.Figure: The Plotly figure.
+    with highlighted periods of missing values (gaps).
     """
-    # --- Initial Data Validation ---
     if df_data.empty:
         fig = go.Figure().add_annotation(
             x=0.5, y=0.5, text=str(_l("Aucune donnée disponible pour la station sélectionnée.")),
             showarrow=False, font=dict(size=16)
         )
-        fig.update_layout(title=str(f"{_l('Visualisation des données et des gaps')} - {station_name} {title_suffix}"),
+        fig.update_layout(title=str(f"{str(_l('Visualisation des données et des gaps'))} - {station_name} {title_suffix}"),
                           template="plotly_white")
         return fig
 
-    # Ensure DatetimeIndex is present
     if not isinstance(df_data.index, pd.DatetimeIndex):
         warnings.warn(str(_l("Le DataFrame de données n'a pas un DatetimeIndex. Tentative de conversion.")))
         try:
@@ -4609,31 +3878,27 @@ def gaps_time_series_viz(df_data: pd.DataFrame, df_gaps: pd.DataFrame, station_n
                 x=0.5, y=0.5, text=str(_l("L'index du DataFrame n'est pas un DatetimeIndex valide et ne peut pas être converti.")),
                 showarrow=False, font=dict(size=16)
             )
-            fig.update_layout(title=str(f"{_l('Visualisation des données et des gaps')} - {station_name} {title_suffix}"),
+            fig.update_layout(title=str(f"{str(_l('Visualisation des données et des gaps'))} - {station_name} {title_suffix}"),
                               template="plotly_white")
             return fig
-        if df_data.empty: # Check again after conversion and NaN removal
+        if df_data.empty:
             fig = go.Figure().add_annotation(
                 x=0.5, y=0.5, text=str(_l("Aucune donnée valide disponible après conversion de l'index en DatetimeIndex.")),
                 showarrow=False, font=dict(size=16)
             )
-            fig.update_layout(title=str(f"{_l('Visualisation des données et des gaps')} - {station_name} {title_suffix}"),
+            fig.update_layout(title=str(f"{str(_l('Visualisation des données et des gaps'))} - {station_name} {title_suffix}"),
                               template="plotly_white")
             return fig
 
-
-    # Define columns to exclude from visualization (non-numeric or flags)
-    # Using a set for faster lookups
     EXCLUDE_COLS_VIZ = {
         'Station', 'Is_Daylight', 'Rain_01_mm', 'Rain_02_mm', 'Wind_Dir_Deg',
         'sunrise_time_utc', 'sunset_time_utc', 'Daylight_Duration',
         'Date_UTC_Naive', 'Lat', 'Long', 'Timezone',
         'sunrise_time_utc_calc', 'sunset_time_utc_calc',
         'Daylight_Duration_h_calc', 'fixed_daylight_applied',
-        'Year', 'Month', 'Minute', 'Hour', 'Date', 'Day' # Also exclude derived date components
+        'Year', 'Month', 'Minute', 'Hour', 'Date', 'Day'
     }
 
-    # Identify numerical columns for visualization
     numerical_cols_for_viz = [
         col for col in df_data.columns
         if pd.api.types.is_numeric_dtype(df_data[col]) and col not in EXCLUDE_COLS_VIZ
@@ -4644,1278 +3909,101 @@ def gaps_time_series_viz(df_data: pd.DataFrame, df_gaps: pd.DataFrame, station_n
             x=0.5, y=0.5, text=str(_l("Aucune variable numérique exploitable pour la visualisation des gaps.")),
             showarrow=False, font=dict(size=16)
         )
-        fig.update_layout(title=str(f"{_l('Visualisation des données et des gaps')} - {station_name} {title_suffix}"),
+        fig.update_layout(title=str(f"{str(_l('Visualisation des données et des gaps'))} - {station_name} {title_suffix}"),
                           template="plotly_white")
         return fig
 
-    # --- Subplot Configuration ---
-    num_variables = len(numerical_cols_for_viz)
-    rows = num_variables # One row per variable
-    cols_per_row = 1
-
     fig = make_subplots(
-        rows=rows,
-        cols=cols_per_row,
-        shared_xaxes=True, # Share x-axis across all subplots
-        vertical_spacing=0.04, # Slightly reduce spacing
-        subplot_titles=[str(f"{_l('Série temporelle')} - {col}") for col in numerical_cols_for_viz]
+        rows=len(numerical_cols_for_viz), cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.04,
+        subplot_titles=[str(f"{str(_l('Série temporelle'))} - {col}") for col in numerical_cols_for_viz]
     )
 
-    # --- Filter Gaps Data Once ---
-    # Filter df_gaps for the current station and relevant numerical columns only once
     relevant_gaps_filtered = df_gaps[
         (df_gaps['station'] == station_name) & 
         (df_gaps['variable'].isin(numerical_cols_for_viz))
     ].copy()
     
-    # Ensure start_time and end_time are datetime objects in df_gaps for comparison
     relevant_gaps_filtered['start_time'] = pd.to_datetime(relevant_gaps_filtered['start_time'], errors='coerce')
     relevant_gaps_filtered['end_time'] = pd.to_datetime(relevant_gaps_filtered['end_time'], errors='coerce')
-    relevant_gaps_filtered.dropna(subset=['start_time', 'end_time'], inplace=True) # Drop invalid gap entries
+    relevant_gaps_filtered.dropna(subset=['start_time', 'end_time'], inplace=True)
 
-    # --- Add Traces and Gap Highlights ---
-    for i, col in enumerate(numerical_cols_for_viz):
-        row_idx = i + 1
-
-        # Add data trace
+    for i, col in enumerate(numerical_cols_for_viz, 1):
         fig.add_trace(
             go.Scatter(
                 x=df_data.index,
                 y=df_data[col],
                 mode='lines+markers',
-                name=str(f"{col} - {_l('Données')}"),
+                name=str(f"{col} - {str(_l('Données'))}"),
                 line=dict(color='blue', width=1),
                 marker=dict(size=3, opacity=0.7),
                 hovertemplate="<b>%{x|%Y-%m-%d %H:%M}</b><br>" +
-                               f"{col}: %{{y:.2f}}<extra></extra>", # Format y value
+                               f"{col}: %{{y:.2f}}<extra></extra>",
                 showlegend=False
             ),
-            row=row_idx, col=1
+            row=i, col=1
         )
 
-        # Get gaps specific to this column
         gaps_for_col = relevant_gaps_filtered[relevant_gaps_filtered['variable'] == col]
-
         if not gaps_for_col.empty:
-            # Determine y-axis range for the current subplot to make shapes scale
             y_min = df_data[col].min()
             y_max = df_data[col].max()
-            # Add a small buffer to y_min/y_max if data is constant or has very small range
             if pd.isna(y_min) or pd.isna(y_max) or y_max == y_min:
-                y_min, y_max = 0, 1 # Fallback to a default range
+                y_min, y_max = 0, 1
             else:
-                y_buffer = (y_max - y_min) * 0.05 # 5% buffer
+                y_buffer = (y_max - y_min) * 0.05
                 y_min -= y_buffer
                 y_max += y_buffer
 
-            # Add a single shape for each gap
             for _, gap_row in gaps_for_col.iterrows():
                 fig.add_shape(
                     type="rect",
-                    xref="x", yref="y", # Use 'y' coordinates, not 'paper'
+                    xref="x", yref="y",
                     x0=gap_row['start_time'],
-                    y0=y_min, # Scale with actual y-axis data range
-                    y1=y_max, # Scale with actual y-axis data range
+                    y0=y_min,
+                    y1=y_max,
                     x1=gap_row['end_time'],
-                    fillcolor="rgba(255,0,0,0.2)", # Light red transparent fill
+                    fillcolor="rgba(255,0,0,0.2)",
                     line_width=0,
-                    layer="below", # Place below the data trace
-                    row=row_idx, col=1
+                    layer="below",
+                    row=i, col=1
                 )
                 
-                # --- Optimized Hover Info for Gaps ---
-                # Add an invisible scatter trace over the gap area for hover text
-                # We place a single marker in the middle of the gap for hover info.
                 gap_mid_time = gap_row['start_time'] + (gap_row['end_time'] - gap_row['start_time']) / 2
-                
-                # Use a small non-NaN value for y to ensure it's visible, but it won't be plotted visually
                 y_for_hover = df_data[col].mean() if df_data[col].notna().any() else 0 
                 
-                hover_text_gap = str(f"<b>{_l('Période Manquante')}</b><br>" +
-                                     f"{_l('Variable')}: {gap_row['variable']}<br>" +
-                                     f"{_l('Début')}: {gap_row['start_time'].strftime('%Y-%m-%d %H:%M')}<br>" +
-                                     f"{_l('Fin')}: {gap_row['end_time'].strftime('%Y-%m-%d %H:%M')}<br>" +
-                                     f"{_l('Durée')}: {gap_row['duration_hours']:.2f} {_l('heures')}")
+                hover_text_gap = str(f"<b>{str(_l('Période Manquante'))}</b><br>" +
+                                     f"{str(_l('Variable'))}: {gap_row['variable']}<br>" +
+                                     f"{str(_l('Début'))}: {gap_row['start_time'].strftime('%Y-%m-%d %H:%M')}<br>" +
+                                     f"{str(_l('Fin'))}: {gap_row['end_time'].strftime('%Y-%m-%d %H:%M')}<br>" +
+                                     f"{str(_l('Durée'))}: {gap_row['duration_hours']:.2f} {str(_l('heures'))}")
 
                 fig.add_trace(
                     go.Scatter(
                         x=[gap_mid_time],
-                        y=[y_for_hover], # A single point for hover, visually hidden
+                        y=[y_for_hover],
                         mode='markers',
-                        marker=dict(size=1, opacity=0), # Invisible marker
+                        marker=dict(size=1, opacity=0),
                         showlegend=False,
                         hoverinfo='text',
                         text=hover_text_gap,
-                        name=f"{col} {_l('Gap Info')}" # Give it a name for internal tracking
+                        name=f"{col} {str(_l('Gap Info'))}"
                     ),
-                    row=row_idx, col=1
+                    row=i, col=1
                 )
 
-    # --- Update Layout ---
     fig.update_layout(
-        title_text=str(f"{_l('Séries temporelles avec périodes manquantes/interpolées')} - {station_name} {title_suffix}"),
-        height=max(400, 300 * rows), # Dynamic height with a minimum
-        hovermode="x unified", # Excellent for time series analysis
-        margin=dict(l=50, r=50, b=80, t=100), # Adjust margins
-        template="plotly_white", # Clean template
+        title_text=str(f"{str(_l('Séries temporelles avec périodes manquantes/interpolées'))} - {station_name} {title_suffix}"),
+        height=max(400, 300 * len(numerical_cols_for_viz)),
+        hovermode="x unified",
+        margin=dict(l=50, r=50, b=80, t=100),
+        template="plotly_white",
     )
 
-    # Update Y-axis titles
-    for i, col in enumerate(numerical_cols_for_viz):
-        fig.update_yaxes(title_text=col, row=i+1, col=1, rangemode='tozero') # rangemode='tozero' often good for time series
+    for i, col in enumerate(numerical_cols_for_viz, 1):
+        fig.update_yaxes(title_text=col, row=i, col=1, rangemode='tozero')
 
-    # Update X-axis (shared)
     fig.update_xaxes(title_text=str(_l("Temps")), showgrid=True, gridwidth=1, gridcolor='LightGray')
 
     return fig
-
-
-    ####################
-
-
-# def _l(text):
-#     return text
-
-# # --- Helper Functions for Rainfall Specific Calculations (Remain yearly) ---
-
-# def _calculate_rainy_season_stats_yearly(df_daily_rain_station: pd.DataFrame) -> pd.DataFrame:
-#     RAIN_SEASON_GAP_THRESHOLD = pd.Timedelta(days=60)
-#     NON_RELEVANT_RAIN_THRESHOLD_DAYS = 25
-    
-#     yearly_season_stats = []
-    
-#     df_daily_rain_station = df_daily_rain_station.set_index('Datetime').sort_index()
-
-#     for year, year_df in df_daily_rain_station.groupby(df_daily_rain_station.index.year):
-#         rain_events = year_df[year_df['Rain_mm'] > 0].index
-        
-#         if rain_events.empty or len(rain_events) < 2:
-#             yearly_season_stats.append({
-#                 'Year': year,
-#                 'Moyenne Saison Pluvieuse': np.nan, 'Début Saison Pluvieuse': pd.NaT,
-#                 'Fin Saison Pluvieuse': pd.NaT, 'Durée Saison Pluvieuse Jours': np.nan
-#             })
-#             continue
-
-#         block_ids = (rain_events.to_series().diff() > RAIN_SEASON_GAP_THRESHOLD).cumsum()
-#         valid_blocks = {}
-#         for block_id, rain_dates_in_block in rain_events.to_series().groupby(block_ids):
-#             if not rain_dates_in_block.empty:
-#                 block_start = rain_dates_in_block.min()
-#                 block_end = rain_dates_in_block.max()
-#                 full_block_df = year_df.loc[block_start:block_end]
-#                 if len(full_block_df[full_block_df['Rain_mm'] > 0]) > 1:
-#                      valid_blocks[block_id] = full_block_df
-        
-#         if not valid_blocks:
-#             yearly_season_stats.append({
-#                 'Year': year,
-#                 'Moyenne Saison Pluvieuse': np.nan, 'Début Saison Pluvieuse': pd.NaT,
-#                 'Fin Saison Pluvieuse': pd.NaT, 'Durée Saison Pluvieuse Jours': np.nan
-#             })
-#             continue
-
-#         main_block_id = max(valid_blocks, key=lambda k: (valid_blocks[k].index.max() - valid_blocks[k].index.min()).days)
-#         main_season_df = valid_blocks[main_block_id]
-        
-#         rain_events_in_main_block = main_season_df[main_season_df['Rain_mm'] > 0].index.sort_values()
-
-#         debut_saison = pd.NaT
-#         if len(rain_events_in_main_block) >= 2:
-#             first_rain_date = rain_events_in_main_block[0]
-#             second_rain_date = rain_events_in_main_block[1]
-#             if (second_rain_date - first_rain_date).days > NON_RELEVANT_RAIN_THRESHOLD_DAYS:
-#                 debut_saison = second_rain_date
-#             else:
-#                 debut_saison = first_rain_date
-#         elif len(rain_events_in_main_block) == 1:
-#             debut_saison = rain_events_in_main_block[0]
-#         else:
-#             debut_saison = pd.NaT
-
-#         fin_saison = pd.NaT
-#         if len(rain_events_in_main_block) >= 2:
-#             last_rain_date = rain_events_in_main_block[-1]
-#             second_last_rain_date = rain_events_in_main_block[-2]
-#             if (last_rain_date - second_last_rain_date).days > NON_RELEVANT_RAIN_THRESHOLD_DAYS:
-#                 fin_saison = second_last_rain_date
-#             else:
-#                 fin_saison = last_rain_date
-#         elif len(rain_events_in_main_block) == 1:
-#             fin_saison = rain_events_in_main_block[0]
-#         else:
-#             fin_saison = pd.NaT
-
-#         total_days = (fin_saison - debut_saison).days + 1 if pd.notna(debut_saison) and pd.notna(fin_saison) else np.nan
-        
-#         if pd.notna(debut_saison) and pd.notna(fin_saison) and total_days > 0:
-#             season_rainfall_sum = year_df.loc[debut_saison:fin_saison]['Rain_mm'].sum()
-#             moyenne_saison = season_rainfall_sum / total_days
-#         else:
-#             moyenne_saison = np.nan
-
-#         yearly_season_stats.append({
-#             'Year': year,
-#             'Moyenne Saison Pluvieuse': moyenne_saison, 'Début Saison Pluvieuse': debut_saison,
-#             'Fin Saison Pluvieuse': fin_saison, 'Durée Saison Pluvieuse Jours': total_days
-#         })
-#     return pd.DataFrame(yearly_season_stats).set_index('Year')
-
-# def _calculate_dry_spell_stats_yearly(df_daily_rain_station: pd.DataFrame, df_season_stats: pd.DataFrame) -> pd.DataFrame:
-#     yearly_dry_spell_events = []
-    
-#     df_daily_rain_station = df_daily_rain_station.set_index('Datetime').sort_index()
-
-#     for year, year_df in df_daily_rain_station.groupby(df_daily_rain_station.index.year):
-#         # Retrieve the determined rainy season start and end dates for the current year
-#         season_start = df_season_stats.loc[year, 'Début Saison Pluvieuse'] if year in df_season_stats.index else pd.NaT
-#         season_end = df_season_stats.loc[year, 'Fin Saison Pluvieuse'] if year in df_season_stats.index else pd.NaT
-
-#         # If no valid rainy season is defined for the year, skip dry spell calculation
-#         if pd.isna(season_start) or pd.isna(season_end) or season_start >= season_end:
-#             yearly_dry_spell_events.append({
-#                 'Year': year,
-#                 'Début Sécheresse Définie': pd.NaT,
-#                 'Fin Sécheresse Définie': pd.NaT,
-#                 'Durée Sécheresse Définie Jours': 0
-#             })
-#             continue
-
-#         # Filter daily rain data to include only the rainy season period
-#         daily_data_in_season = year_df.loc[season_start:season_end]
-        
-#         full_daily_series_in_season = daily_data_in_season['Rain_mm'].resample('D').sum().fillna(0)
-#         rainy_days_index = full_daily_series_in_season[full_daily_series_in_season > 0].index
-        
-#         if rainy_days_index.empty:
-#             # If no rain days in the defined season, the entire season is a dry spell
-#             duration = (season_end - season_start).days + 1
-#             yearly_dry_spell_events.append({
-#                 'Year': year,
-#                 'Début Sécheresse Définie': season_start,
-#                 'Fin Sécheresse Définie': season_end,
-#                 'Durée Sécheresse Définie Jours': duration
-#             })
-#             continue
-        
-#         saison_moyenne_annual = df_season_stats.loc[year, 'Moyenne Saison Pluvieuse'] if year in df_season_stats.index and pd.notna(df_season_stats.loc[year, 'Moyenne Saison Pluvieuse']) else np.nan
-
-#         if pd.isna(saison_moyenne_annual) or saison_moyenne_annual == 0:
-#             yearly_dry_spell_events.append({
-#                 'Year': year,
-#                 'Début Sécheresse Définie': pd.NaT,
-#                 'Fin Sécheresse Définie': pd.NaT,
-#                 'Durée Sécheresse Définie Jours': 0
-#             })
-#             continue
-
-#         longest_dry_spell_for_year = {
-#             'Year': year,
-#             'Début Sécheresse Définie': pd.NaT,
-#             'Fin Sécheresse Définie': pd.NaT,
-#             'Durée Sécheresse Définie Jours': 0
-#         }
-        
-#         # Add the start of the season as a "virtual" rain event if the first actual rain is not at the very beginning
-#         # This allows us to potentially calculate a dry spell from the season start if it's dry until the first rain.
-#         effective_rainy_days_index = rainy_days_index.to_list()
-#         if effective_rainy_days_index[0] > season_start:
-#             effective_rainy_days_index.insert(0, season_start)
-        
-#         # Add the end of the season as a "virtual" rain event if the last actual rain is not at the very end
-#         # This allows us to potentially calculate a dry spell until the season end if it's dry after the last rain.
-#         if effective_rainy_days_index[-1] < season_end:
-#             effective_rainy_days_index.append(season_end)
-        
-#         # Ensure unique and sorted
-#         effective_rainy_days_index = pd.to_datetime(list(set(effective_rainy_days_index))).sort_values()
-
-#         for i in range(1, len(effective_rainy_days_index)):
-#             prev_rain_date = effective_rainy_days_index[i-1]
-#             current_rain_date = effective_rainy_days_index[i]
-#             dry_days_in_period = (current_rain_date - prev_rain_date).days - 1
-
-#             if dry_days_in_period > 0:
-#                 # Get the rainfall on the 'previous rain date' - this needs to be from the actual data if prev_rain_date is not season_start
-#                 rain_prev_day_val = full_daily_series_in_season.get(prev_rain_date, 0) # Use .get() with default 0 for virtual start_season
-                
-#                 # Iterate through potential dry spell days
-#                 for j in range(1, dry_days_in_period + 1):
-#                     current_dry_date_in_loop = prev_rain_date + timedelta(days=j)
-                    
-#                     # Calculate ratio (rain_prev_day_val over days since last rain including current dry days)
-#                     current_ratio = rain_prev_day_val / (j)
-
-#                     if current_ratio < saison_moyenne_annual:
-#                         debut_secheresse = current_dry_date_in_loop
-#                         # The dry spell ends the day *before* the current_rain_date
-#                         fin_secheresse = current_rain_date - timedelta(days=1)
-#                         duree_secheresse_current = (fin_secheresse - debut_secheresse).days + 1
-                        
-#                         if duree_secheresse_current > longest_dry_spell_for_year['Durée Sécheresse Définie Jours']:
-#                             longest_dry_spell_for_year['Début Sécheresse Définie'] = debut_secheresse
-#                             longest_dry_spell_for_year['Fin Sécheresse Définie'] = fin_secheresse
-#                             longest_dry_spell_for_year['Durée Sécheresse Définie Jours'] = duree_secheresse_current
-#                         break
-
-#         # If no dry spell was found (e.g., constant rain), ensure a default value
-#         if longest_dry_spell_for_year['Durée Sécheresse Définie Jours'] == 0:
-#              yearly_dry_spell_events.append({
-#                 'Year': year,
-#                 'Début Sécheresse Définie': pd.NaT,
-#                 'Fin Sécheresse Définie': pd.NaT,
-#                 'Durée Sécheresse Définie Jours': 0
-#             })
-#         elif longest_dry_spell_for_year['Durée Sécheresse Définie Jours'] > 0:
-#             yearly_dry_spell_events.append(longest_dry_spell_for_year)
-    
-#     return pd.DataFrame(yearly_dry_spell_events).set_index('Year')
-
-# # --- Main Visualization Function (unchanged from previous version) ---
-
-# def generate_daily_stats_plot_plotly(df: pd.DataFrame, variable: str, station_colors: dict) -> go.Figure:
-#     """
-#     Generates interactive Plotly graphs showing a single bar per station for each metric.
-#     For each metric (except minimum), it displays the maximum of the annual values.
-#     For the minimum metric, it displays the minimum of the annual minimum values.
-#     Bars are colored by station and include dates and *years* for Max/Min and season/dry spell durations.
-#     """
-#     try:
-#         df_processed = df.copy()
-
-#         col_sup = ['Rain_01_mm', 'Rain_02_mm']
-#         for var in col_sup:
-#             if var in df_processed.columns:
-#                 df_processed = df_processed.drop(var, axis=1)
-
-#         if isinstance(df_processed.index, pd.DatetimeIndex):
-#             df_processed = df_processed.reset_index()
-            
-#         df_processed['Datetime'] = pd.to_datetime(df_processed['Datetime'], errors='coerce')
-#         df_processed = df_processed.dropna(subset=['Datetime', 'Station'])
-        
-#         if df_processed.empty:
-#             return go.Figure().add_annotation(
-#                 x=0.5, y=0.5, text=str(_l("Aucune donnée valide après le nettoyage initial.")),
-#                 showarrow=False, font=dict(size=16)
-#             ).update_layout(title=str(_l("Statistiques Annuelles")))
-
-#         df_processed['Year'] = df_processed['Datetime'].dt.year
-
-#         if 'Is_Daylight' not in df_processed.columns:
-#             df_processed['Is_Daylight'] = (df_processed['Datetime'].dt.hour >= 7) & (df_processed['Datetime'].dt.hour <= 18)
-
-#         if variable not in df_processed.columns:
-#             return go.Figure().add_annotation(
-#                 x=0.5, y=0.5, text=str(_l("La variable sélectionnée n'est pas présente dans les données.")),
-#                 showarrow=False, font=dict(size=16)
-#             ).update_layout(title=str(_l("Statistiques Annuelles")))
-
-#         var_meta = METADATA_VARIABLES.get(variable, {'Nom': {'fr': variable, 'en': variable}, 'Unite': {'fr': '', 'en': ''}})
-#         var_label = str(get_var_label(var_meta, 'Nom'))
-#         var_unit = str(get_var_label(var_meta, 'Unite'))
-
-#         df_processed[variable] = pd.to_numeric(df_processed[variable], errors='coerce')
-        
-#         final_stats_list = []
-
-#         for station_name, station_df_full in df_processed.groupby('Station'):
-            
-#             station_agg_data = {'Station': station_name}
-
-#             df_clean_station = station_df_full.dropna(subset=[variable])
-#             if variable == 'Solar_R_W/m^2':
-#                 df_clean_station = df_clean_station[df_clean_station['Is_Daylight']]
-
-#             if df_clean_station.empty:
-#                 final_stats_list.append(station_agg_data)
-#                 continue
-
-#             annual_variable_mean_median = df_clean_station.groupby('Year')[variable].agg(
-#                 Mediane='median',
-#                 Moyenne='mean'
-#             ).reset_index()
-
-#             overall_max_row = df_clean_station.loc[df_clean_station[variable].idxmax()]
-#             station_agg_data[get_metric_label('Maximum')] = overall_max_row[variable]
-#             station_agg_data[get_metric_label('Date Max')] = overall_max_row['Datetime']
-#             station_agg_data[get_metric_label('Year Max')] = overall_max_row['Year']
-
-#             overall_min_row = df_clean_station.loc[df_clean_station[variable].idxmin()]
-#             station_agg_data[get_metric_label('Minimum')] = overall_min_row[variable]
-#             station_agg_data[get_metric_label('Date Min')] = overall_min_row['Datetime']
-#             station_agg_data[get_metric_label('Year Min')] = overall_min_row['Year']
-            
-#             if not annual_variable_mean_median.empty:
-#                 max_median_row = annual_variable_mean_median.loc[annual_variable_mean_median['Mediane'].idxmax()]
-#                 station_agg_data[get_metric_label('Mediane')] = max_median_row['Mediane']
-#                 station_agg_data[get_metric_label('Year Mediane')] = max_median_row['Year']
-
-#                 max_mean_row = annual_variable_mean_median.loc[annual_variable_mean_median['Moyenne'].idxmax()]
-#                 station_agg_data[get_metric_label('Moyenne')] = max_mean_row['Moyenne']
-#                 station_agg_data[get_metric_label('Year Moyenne')] = max_mean_row['Year']
-#             else:
-#                 station_agg_data[get_metric_label('Mediane')] = np.nan
-#                 station_agg_data[get_metric_label('Year Mediane')] = np.nan
-#                 station_agg_data[get_metric_label('Moyenne')] = np.nan
-#                 station_agg_data[get_metric_label('Year Moyenne')] = np.nan
-
-
-#             if var_meta.get('is_rain', False) and variable == 'Rain_mm':
-#                 df_daily_rain_station = station_df_full.groupby(pd.Grouper(key='Datetime', freq='D'))['Rain_mm'].sum().reset_index()
-                
-#                 annual_cumulative_rain = station_df_full.groupby('Year')['Rain_mm'].sum().reset_index()
-#                 if not annual_cumulative_rain.empty:
-#                     max_cumul_row = annual_cumulative_rain.loc[annual_cumulative_rain['Rain_mm'].idxmax()]
-#                     station_agg_data[get_metric_label('Cumul Annuel')] = max_cumul_row['Rain_mm']
-#                     station_agg_data[get_metric_label('Year Cumul Annuel')] = max_cumul_row['Year']
-#                 else:
-#                     station_agg_data[get_metric_label('Cumul Annuel')] = np.nan
-#                     station_agg_data[get_metric_label('Year Cumul Annuel')] = np.nan
-
-#                 mean_rainy_days_annual = station_df_full[station_df_full['Rain_mm'] > 0].groupby('Year')['Rain_mm'].mean().reset_index()
-#                 if not mean_rainy_days_annual.empty:
-#                     max_mean_rainy_days_row = mean_rainy_days_annual.loc[mean_rainy_days_annual['Rain_mm'].idxmax()]
-#                     station_agg_data[get_metric_label('Moyenne Jours Pluvieux')] = max_mean_rainy_days_row['Rain_mm']
-#                     station_agg_data[get_metric_label('Year Moyenne Jours Pluvieux')] = max_mean_rainy_days_row['Year']
-#                 else:
-#                     station_agg_data[get_metric_label('Moyenne Jours Pluvieux')] = np.nan
-#                     station_agg_data[get_metric_label('Year Moyenne Jours Pluvieux')] = np.nan
-
-#                 df_season_stats_yearly = _calculate_rainy_season_stats_yearly(df_daily_rain_station)
-#                 if not df_season_stats_yearly.empty:
-#                     max_mean_season_row = df_season_stats_yearly.loc[df_season_stats_yearly['Moyenne Saison Pluvieuse'].idxmax()] if not df_season_stats_yearly['Moyenne Saison Pluvieuse'].isnull().all() else pd.Series()
-#                     if not max_mean_season_row.empty:
-#                         station_agg_data[get_metric_label('Moyenne Saison Pluvieuse')] = max_mean_season_row['Moyenne Saison Pluvieuse']
-#                         station_agg_data[get_metric_label('Début Saison Pluvieuse')] = max_mean_season_row['Début Saison Pluvieuse']
-#                         station_agg_data[get_metric_label('Fin Saison Pluvieuse')] = max_mean_season_row['Fin Saison Pluvieuse']
-#                         station_agg_data[get_metric_label('Durée Saison Pluvieuse Jours')] = max_mean_season_row['Durée Saison Pluvieuse Jours']
-#                         station_agg_data[get_metric_label('Year Durée Saison Pluvieuse Jours')] = max_mean_season_row.name
-#                     else:
-#                         station_agg_data[get_metric_label('Moyenne Saison Pluvieuse')] = np.nan
-#                         station_agg_data[get_metric_label('Début Saison Pluvieuse')] = pd.NaT
-#                         station_agg_data[get_metric_label('Fin Saison Pluvieuse')] = pd.NaT
-#                         station_agg_data[get_metric_label('Durée Saison Pluvieuse Jours')] = np.nan
-#                         station_agg_data[get_metric_label('Year Durée Saison Pluvieuse Jours')] = np.nan
-
-#                 df_dry_spell_events_yearly = _calculate_dry_spell_stats_yearly(df_daily_rain_station, df_season_stats_yearly)
-#                 if not df_dry_spell_events_yearly.empty:
-#                     longest_dry_spell_row = df_dry_spell_events_yearly.loc[df_dry_spell_events_yearly['Durée Sécheresse Définie Jours'].idxmax()] if not df_dry_spell_events_yearly['Durée Sécheresse Définie Jours'].isnull().all() else pd.Series()
-#                     if not longest_dry_spell_row.empty:
-#                         station_agg_data[get_metric_label('Durée Sécheresse Définie Jours')] = longest_dry_spell_row['Durée Sécheresse Définie Jours']
-#                         station_agg_data[get_metric_label('Début Sécheresse Définie')] = longest_dry_spell_row['Début Sécheresse Définie']
-#                         station_agg_data[get_metric_label('Fin Sécheresse Définie')] = longest_dry_spell_row['Fin Sécheresse Définie']
-#                         station_agg_data[get_metric_label('Year Durée Sécheresse Définie Jours')] = longest_dry_spell_row.name
-#                     else:
-#                         station_agg_data[get_metric_label('Durée Sécheresse Définie Jours')] = np.nan
-#                         station_agg_data[get_metric_label('Début Sécheresse Définie')] = pd.NaT
-#                         station_agg_data[get_metric_label('Fin Sécheresse Définie')] = pd.NaT
-#                         station_agg_data[get_metric_label('Year Durée Sécheresse Définie Jours')] = np.nan
-            
-#             final_stats_list.append(station_agg_data)
-
-#         final_stats_df = pd.DataFrame(final_stats_list)
-
-#         if final_stats_df.empty:
-#             return go.Figure().add_annotation(
-#                 x=0.5, y=0.5, text=str(_l("Aucune statistique à afficher pour les variables et stations sélectionnées.")),
-#                 showarrow=False, font=dict(size=16)
-#             ).update_layout(title=str(_l("Statistiques Annuelles")))
-
-#         if var_meta.get('is_rain', False) and variable == 'Rain_mm':
-#             metrics_to_plot_display_names = [
-#                 get_metric_label('Maximum'), get_metric_label('Minimum'), get_metric_label('Mediane'), get_metric_label('Moyenne'),
-#                 get_metric_label('Cumul Annuel'), get_metric_label('Moyenne Jours Pluvieux'),
-#                 get_metric_label('Moyenne Saison Pluvieuse'), get_metric_label('Durée Saison Pluvieuse Jours'),
-#                 get_metric_label('Durée Sécheresse Définie Jours')
-#             ]
-#         else:
-#             metrics_to_plot_display_names = [
-#                 get_metric_label('Maximum'), get_metric_label('Minimum'), get_metric_label('Mediane'), get_metric_label('Moyenne')
-#             ]
-
-#         metrics_to_plot_filtered = [
-#             col for col in metrics_to_plot_display_names
-#             if col in final_stats_df.columns and not final_stats_df[col].isnull().all()
-#         ]
-        
-#         if not metrics_to_plot_filtered:
-#              return go.Figure().add_annotation(
-#                 x=0.5, y=0.5, text=str(_l("Aucune statistique à afficher pour les variables et stations sélectionnées.")),
-#                 showarrow=False, font=dict(size=16)
-#             ).update_layout(title=str(_l("Statistiques Annuelles")))
-
-#         num_metrics = len(metrics_to_plot_filtered)
-#         cols_plot = 2
-#         rows_plot = (num_metrics + cols_plot - 1) // cols_plot
-
-#         height_plot = 400 * rows_plot if rows_plot <= 2 else 300 * rows_plot
-
-#         subplot_titles = [f"{var_label} {metric}" for metric in metrics_to_plot_filtered]
-
-#         fig = make_subplots(
-#             rows=rows_plot, cols=cols_plot,
-#             subplot_titles=subplot_titles,
-#             vertical_spacing=0.1
-#         )
-        
-#         unique_stations = sorted(final_stats_df['Station'].unique())
-#         final_stats_df = final_stats_df.set_index('Station').reindex(unique_stations).reset_index()
-
-#         for i, display_metric_col_name in enumerate(metrics_to_plot_filtered):
-#             row = (i // cols_plot) + 1
-#             col = (i % cols_plot) + 1
-            
-#             hover_text_list = []
-#             station_colors_for_trace = []
-            
-#             for _, row_data in final_stats_df.iterrows():
-#                 station_name = row_data['Station']
-#                 station_color = station_colors.get(station_name, '#1f77b4')
-#                 station_colors_for_trace.append(station_color)
-                
-#                 value = row_data[display_metric_col_name]
-                
-#                 if pd.isna(value):
-#                     hover_text_list.append("")
-#                     continue
-
-#                 hover_text = ""
-#                 associated_year = np.nan
-
-#                 if display_metric_col_name == get_metric_label('Maximum'):
-#                     date_val = row_data.get(get_metric_label('Date Max'))
-#                     date_str = date_val.strftime('%d/%m/%Y') if pd.notna(date_val) else str(_l('Unknown date'))
-#                     associated_year = row_data.get(get_metric_label('Year Max'))
-#                     hover_text = str(_l("<b>Maximum</b><br>Value: {:.1f} {}<br>Date: {}")).format(value, var_unit, date_str)
-#                     if pd.notna(associated_year):
-#                         hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-                
-#                 elif display_metric_col_name == get_metric_label('Minimum'):
-#                     date_val = row_data.get(get_metric_label('Date Min'))
-#                     date_str = date_val.strftime('%d/%m/%Y') if pd.notna(date_val) else str(_l('Unknown date'))
-#                     associated_year = row_data.get(get_metric_label('Year Min'))
-#                     hover_text = str(_l("<b>Minimum</b><br>Value: {:.1f} {}<br>Date: {}")).format(value, var_unit, date_str)
-#                     if pd.notna(associated_year):
-#                         hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-                
-#                 elif display_metric_col_name == get_metric_label('Mediane'):
-#                     associated_year = row_data.get(get_metric_label('Year Mediane'))
-#                     hover_text = str(_l("<b>Mediane</b><br>Value: {:.1f} {}")).format(value, var_unit)
-#                     if pd.notna(associated_year):
-#                         hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-
-#                 elif display_metric_col_name == get_metric_label('Moyenne'):
-#                     associated_year = row_data.get(get_metric_label('Year Moyenne'))
-#                     hover_text = str(_l("<b>Moyenne</b><br>Value: {:.1f} {}")).format(value, var_unit)
-#                     if pd.notna(associated_year):
-#                         hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-
-#                 elif display_metric_col_name == get_metric_label('Cumul Annuel'):
-#                     associated_year = row_data.get(get_metric_label('Year Cumul Annuel'))
-#                     hover_text = str(_l("<b>Cumul Annuel</b><br>Value: {:.1f} {}")).format(value, var_unit)
-#                     if pd.notna(associated_year):
-#                         hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-
-#                 elif display_metric_col_name == get_metric_label('Moyenne Jours Pluvieux'):
-#                     associated_year = row_data.get(get_metric_label('Year Moyenne Jours Pluvieux'))
-#                     hover_text = str(_l("<b>Moyenne Jours Pluvieux</b><br>Value: {:.1f} {}")).format(value, var_unit)
-#                     if pd.notna(associated_year):
-#                         hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-                
-#                 elif display_metric_col_name == get_metric_label('Durée Saison Pluvieuse Jours'):
-#                     date_debut = row_data.get(get_metric_label('Début Saison Pluvieuse'))
-#                     date_fin = row_data.get(get_metric_label('Fin Saison Pluvieuse'))
-#                     date_debut_str = date_debut.strftime('%d/%m/%Y') if pd.notna(date_debut) else str(_l('Unknown date'))
-#                     date_fin_str = date_fin.strftime('%d/%m/%Y') if pd.notna(date_fin) else str(_l('Unknown date'))
-#                     associated_year = row_data.get(get_metric_label('Year Durée Saison Pluvieuse Jours'))
-                    
-#                     hover_text = str(_l("<b>Durée Saison Pluvieuse Jours</b><br>"))
-#                     if pd.notna(date_debut) and pd.notna(date_fin):
-#                         hover_text += str(_l("From {} to {}")).format(date_debut_str, date_fin_str) + "<br>"
-#                     hover_text += str(_l("Duration: {} days")).format(int(value))
-#                     if pd.notna(associated_year):
-#                         hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-
-#                 elif display_metric_col_name == get_metric_label('Durée Sécheresse Définie Jours'):
-#                     date_debut = row_data.get(get_metric_label('Début Sécheresse Définie'))
-#                     date_fin = row_data.get(get_metric_label('Fin Sécheresse Définie'))
-#                     date_debut_str = date_debut.strftime('%d/%m/%Y') if pd.notna(date_debut) else str(_l('Unknown date'))
-#                     date_fin_str = date_fin.strftime('%d/%m/%Y') if pd.notna(date_fin) else str(_l('Unknown date'))
-#                     associated_year = row_data.get(get_metric_label('Year Durée Sécheresse Définie Jours'))
-                    
-#                     hover_text = str(_l("<b>Durée Sécheresse Définie Jours</b><br>"))
-#                     if pd.notna(date_debut) and pd.notna(date_fin):
-#                         hover_text += str(_l("From {} to {}")).format(date_debut_str, date_fin_str) + "<br>"
-#                     hover_text += str(_l("Duration: {} days")).format(int(value))
-#                     if pd.notna(associated_year):
-#                         hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-                
-#                 else:
-#                     hover_text = str(_l("<b>{}</b><br>Value: {:.1f} {}")).format(display_metric_col_name, value, var_unit)
-#                     year_col = f"Year {display_metric_col_name}"
-#                     if year_col in row_data and pd.notna(row_data[year_col]):
-#                         hover_text += f"<br>{str(_l('Year: {}')).format(int(row_data[year_col]))}"
-
-
-#                 hover_text_list.append(hover_text)
-
-#             fig.add_trace(
-#                 go.Bar(
-#                     x=final_stats_df[display_metric_col_name],
-#                     y=final_stats_df['Station'],
-#                     orientation='h',
-#                     marker_color=station_colors_for_trace,
-#                     name=display_metric_col_name,
-#                     hovertext=hover_text_list,
-#                     hoverinfo='text',
-#                     showlegend=False,
-#                     textposition='none'
-#                 ),
-#                 row=row,
-#                 col=col
-#             )
-
-#             xaxis_title = str(_l("Jours")) if (get_metric_label("Durée") in display_metric_col_name or "Duration" in display_metric_col_name) else f"{var_label} ({var_unit})"
-#             fig.update_xaxes(
-#                 title_text=xaxis_title,
-#                 showgrid=False,
-#                 row=row, col=col
-#             )
-            
-#             fig.update_yaxes(
-#                 title_text=str(_l("Station")),
-#                 showgrid=False,
-#                 row=row, col=col,
-#                 categoryorder='array',
-#                 categoryarray=unique_stations,
-#                 automargin=True
-#             )
-
-#         for station_name in unique_stations:
-#             fig.add_trace(
-#                 go.Bar(
-#                     x=[0], y=[station_name],
-#                     marker_color=station_colors.get(station_name, '#1f77b4'),
-#                     name=station_name,
-#                     showlegend=True,
-#                     visible='legendonly'
-#                 )
-#             )
-
-#         fig.update_layout(
-#             height=height_plot,
-#             title_text=str(get_metric_label("Statistics of {} by Station")).format(var_label),
-#             showlegend=True,
-#             legend_title_text=str(_l("Station")),
-#             legend=dict(
-#                 orientation="h",
-#                 yanchor="bottom",
-#                 y=-0.15,
-#                 xanchor="center",
-#                 x=0.5
-#             ),
-#             hovermode='closest',
-#             plot_bgcolor='white',
-#             paper_bgcolor='white'
-#         )
-        
-#         return fig
-        
-#     except Exception as e:
-#         print(f"Erreur dans generate_daily_stats_plot_plotly: {str(e)}")
-#         traceback.print_exc()
-#         return go.Figure().add_annotation(
-#             x=0.5, y=0.5, text=str(_l("Une erreur est survenue lors de la génération du graphique: {}")).format(str(e)),
-#             showarrow=False, font=dict(size=16)
-#         ).update_layout(title=str(_l("Erreur de visualisation")))
-
-
-####################
-
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from datetime import timedelta
-import warnings
-import traceback
-
-
-
-def _l(text):
-    return text
-
-# --- Helper Functions for Rainfall Specific Calculations (Remain yearly) ---
-
-def _calculate_rainy_season_stats_yearly(df_daily_rain_station: pd.DataFrame) -> pd.DataFrame:
-    RAIN_SEASON_GAP_THRESHOLD = pd.Timedelta(days=60)
-    NON_RELEVANT_RAIN_THRESHOLD_DAYS = 45 
-    
-    yearly_season_stats = []
-    
-    df_daily_rain_station = df_daily_rain_station.set_index('Datetime').sort_index()
-
-    for year, year_df in df_daily_rain_station.groupby(df_daily_rain_station.index.year):
-        rain_events = year_df[year_df['Rain_mm'] > 0].index
-        
-        if rain_events.empty or len(rain_events) < 2:
-            yearly_season_stats.append({
-                'Year': year,
-                'Moyenne Saison Pluvieuse': np.nan, 'Début Saison Pluvieuse': pd.NaT,
-                'Fin Saison Pluvieuse': pd.NaT, 'Durée Saison Pluvieuse Jours': np.nan
-            })
-            continue
-
-        block_ids = (rain_events.to_series().diff() > RAIN_SEASON_GAP_THRESHOLD).cumsum()
-        valid_blocks = {}
-        for block_id, rain_dates_in_block in rain_events.to_series().groupby(block_ids):
-            if not rain_dates_in_block.empty:
-                block_start = rain_dates_in_block.min()
-                block_end = rain_dates_in_block.max()
-                full_block_df = year_df.loc[block_start:block_end]
-                if len(full_block_df[full_block_df['Rain_mm'] > 0]) > 1:
-                     valid_blocks[block_id] = full_block_df
-        
-        if not valid_blocks:
-            yearly_season_stats.append({
-                'Year': year,
-                'Moyenne Saison Pluvieuse': np.nan, 'Début Saison Pluvieuse': pd.NaT,
-                'Fin Saison Pluvieuse': pd.NaT, 'Durée Saison Pluvieuse Jours': np.nan
-            })
-            continue
-
-        main_block_id = max(valid_blocks, key=lambda k: (valid_blocks[k].index.max() - valid_blocks[k].index.min()).days)
-        main_season_df = valid_blocks[main_block_id]
-        
-        rain_events_in_main_block = main_season_df[main_season_df['Rain_mm'] > 0].index.sort_values()
-
-        debut_saison = pd.NaT
-        if len(rain_events_in_main_block) >= 2:
-            first_rain_date = rain_events_in_main_block[0]
-            second_rain_date = rain_events_in_main_block[1]
-            if (second_rain_date - first_rain_date).days > NON_RELEVANT_RAIN_THRESHOLD_DAYS:
-                debut_saison = second_rain_date
-            else:
-                debut_saison = first_rain_date
-        elif len(rain_events_in_main_block) == 1:
-            debut_saison = rain_events_in_main_block[0]
-        else:
-            debut_saison = pd.NaT
-
-        fin_saison = pd.NaT
-        if len(rain_events_in_main_block) >= 2:
-            last_rain_date = rain_events_in_main_block[-1]
-            second_last_rain_date = rain_events_in_main_block[-2]
-            if (last_rain_date - second_last_rain_date).days > NON_RELEVANT_RAIN_THRESHOLD_DAYS:
-                fin_saison = second_last_rain_date
-            else:
-                fin_saison = last_rain_date
-        elif len(rain_events_in_main_block) == 1:
-            fin_saison = rain_events_in_main_block[0]
-        else:
-            fin_saison = pd.NaT
-
-        total_days = (fin_saison - debut_saison).days + 1 if pd.notna(debut_saison) and pd.notna(fin_saison) else np.nan
-        
-        if pd.notna(debut_saison) and pd.notna(fin_saison) and total_days > 0:
-            season_rainfall_sum = year_df.loc[debut_saison:fin_saison]['Rain_mm'].sum()
-            moyenne_saison = season_rainfall_sum / total_days
-        else:
-            moyenne_saison = np.nan
-
-        yearly_season_stats.append({
-            'Year': year,
-            'Moyenne Saison Pluvieuse': moyenne_saison, 'Début Saison Pluvieuse': debut_saison,
-            'Fin Saison Pluvieuse': fin_saison, 'Durée Saison Pluvieuse Jours': total_days
-        })
-    return pd.DataFrame(yearly_season_stats).set_index('Year')
-
-def _calculate_dry_spell_stats_yearly(df_daily_rain_station: pd.DataFrame, df_season_stats: pd.DataFrame) -> pd.DataFrame:
-    yearly_dry_spell_events = []
-    
-    df_daily_rain_station = df_daily_rain_station.set_index('Datetime').sort_index()
-
-    for year, year_df in df_daily_rain_station.groupby(df_daily_rain_station.index.year):
-        season_start = df_season_stats.loc[year, 'Début Saison Pluvieuse'] if year in df_season_stats.index else pd.NaT
-        season_end = df_season_stats.loc[year, 'Fin Saison Pluvieuse'] if year in df_season_stats.index else pd.NaT
-
-        if pd.isna(season_start) or pd.isna(season_end) or season_start >= season_end:
-            yearly_dry_spell_events.append({
-                'Year': year,
-                'Début Sécheresse Définie': pd.NaT,
-                'Fin Sécheresse Définie': pd.NaT,
-                'Durée Sécheresse Définie Jours': 0
-            })
-            continue
-
-        daily_data_in_season = year_df.loc[season_start:season_end]
-        
-        full_daily_series_in_season = daily_data_in_season['Rain_mm'].resample('D').sum().fillna(0)
-        rainy_days_index = full_daily_series_in_season[full_daily_series_in_season > 0].index
-        
-        if rainy_days_index.empty:
-            duration = (season_end - season_start).days + 1
-            yearly_dry_spell_events.append({
-                'Year': year,
-                'Début Sécheresse Définie': season_start,
-                'Fin Sécheresse Définie': season_end,
-                'Durée Sécheresse Définie Jours': duration
-            })
-            continue
-        
-        saison_moyenne_annual = df_season_stats.loc[year, 'Moyenne Saison Pluvieuse'] if year in df_season_stats.index and pd.notna(df_season_stats.loc[year, 'Moyenne Saison Pluvieuse']) else np.nan
-
-        if pd.isna(saison_moyenne_annual) or saison_moyenne_annual == 0:
-            yearly_dry_spell_events.append({
-                'Year': year,
-                'Début Sécheresse Définie': pd.NaT,
-                'Fin Sécheresse Définie': pd.NaT,
-                'Durée Sécheresse Définie Jours': 0
-            })
-            continue
-
-        longest_dry_spell_for_year = {
-            'Year': year,
-            'Début Sécheresse Définie': pd.NaT,
-            'Fin Sécheresse Définie': pd.NaT,
-            'Durée Sécheresse Définie Jours': 0
-        }
-        
-        effective_rainy_days_index = rainy_days_index.to_list()
-        if effective_rainy_days_index[0] > season_start:
-            effective_rainy_days_index.insert(0, season_start)
-        
-        if effective_rainy_days_index[-1] < season_end:
-            effective_rainy_days_index.append(season_end)
-        
-        effective_rainy_days_index = pd.to_datetime(list(set(effective_rainy_days_index))).sort_values()
-
-        for i in range(1, len(effective_rainy_days_index)):
-            prev_rain_date = effective_rainy_days_index[i-1]
-            current_rain_date = effective_rainy_days_index[i]
-            dry_days_in_period = (current_rain_date - prev_rain_date).days - 1
-
-            if dry_days_in_period > 0:
-                rain_prev_day_val = full_daily_series_in_season.get(prev_rain_date, 0)
-                
-                for j in range(1, dry_days_in_period + 1):
-                    current_dry_date_in_loop = prev_rain_date + timedelta(days=j)
-                    
-                    current_ratio = rain_prev_day_val / (j)
-
-                    if current_ratio < saison_moyenne_annual:
-                        debut_secheresse = current_dry_date_in_loop
-                        fin_secheresse = current_rain_date - timedelta(days=1)
-                        duree_secheresse_current = (fin_secheresse - debut_secheresse).days + 1
-                        
-                        if duree_secheresse_current > longest_dry_spell_for_year['Durée Sécheresse Définie Jours']:
-                            longest_dry_spell_for_year['Début Sécheresse Définie'] = debut_secheresse
-                            longest_dry_spell_for_year['Fin Sécheresse Définie'] = fin_secheresse
-                            longest_dry_spell_for_year['Durée Sécheresse Définie Jours'] = duree_secheresse_current
-                        break
-
-        if longest_dry_spell_for_year['Durée Sécheresse Définie Jours'] == 0:
-             yearly_dry_spell_events.append({
-                'Year': year,
-                'Début Sécheresse Définie': pd.NaT,
-                'Fin Sécheresse Définie': pd.NaT,
-                'Durée Sécheresse Définie Jours': 0
-            })
-        elif longest_dry_spell_for_year['Durée Sécheresse Définie Jours'] > 0:
-            yearly_dry_spell_events.append(longest_dry_spell_for_year)
-    
-    return pd.DataFrame(yearly_dry_spell_events).set_index('Year')
-
-# --- Main Visualization Function ---
-
-def generate_daily_stats_plot_plotly(df: pd.DataFrame, variable: str, station_colors: dict, df_original: pd.DataFrame = None) -> go.Figure:
-    """
-    Generates interactive Plotly graphs showing a single bar per station for each metric.
-    For Max/Min, it uses values from df_original (raw data) if provided, otherwise from df.
-    For other metrics, it uses df (potentially interpolated).
-    Bars are colored by station and include dates and years for Max/Min and season/dry spell durations.
-    """
-    try:
-        df_processed = df.copy()
-
-        # Handle df_original for Max/Min calculations
-        if df_original is not None:
-            df_original_processed = df_original.copy()
-            if isinstance(df_original_processed.index, pd.DatetimeIndex):
-                df_original_processed = df_original_processed.reset_index()
-            df_original_processed['Datetime'] = pd.to_datetime(df_original_processed['Datetime'], errors='coerce')
-            df_original_processed = df_original_processed.dropna(subset=['Datetime', 'Station'])
-            df_original_processed['Year'] = df_original_processed['Datetime'].dt.year
-            df_original_processed[variable] = pd.to_numeric(df_original_processed[variable], errors='coerce')
-            # Filter out NaNs for original Max/Min to ensure they are true observed values
-            df_original_for_extremes = df_original_processed.dropna(subset=[variable])
-        else:
-            # If no original DF, use the processed DF for max/min as well (old behavior)
-            df_original_for_extremes = df_processed.copy()
-
-        col_sup = ['Rain_01_mm', 'Rain_02_mm']
-        for var in col_sup:
-            if var in df_processed.columns:
-                df_processed = df_processed.drop(var, axis=1)
-            if df_original is not None and var in df_original_processed.columns:
-                 df_original_processed = df_original_processed.drop(var, axis=1) # Keep df_original_processed clean too
-
-        if isinstance(df_processed.index, pd.DatetimeIndex):
-            df_processed = df_processed.reset_index()
-            
-        df_processed['Datetime'] = pd.to_datetime(df_processed['Datetime'], errors='coerce')
-        df_processed = df_processed.dropna(subset=['Datetime', 'Station'])
-        
-        if df_processed.empty:
-            return go.Figure().add_annotation(
-                x=0.5, y=0.5, text=str(_l("Aucune donnée valide après le nettoyage initial.")),
-                showarrow=False, font=dict(size=16)
-            ).update_layout(title=str(_l("Statistiques Annuelles")))
-
-        df_processed['Year'] = df_processed['Datetime'].dt.year
-
-        if 'Is_Daylight' not in df_processed.columns:
-            df_processed['Is_Daylight'] = (df_processed['Datetime'].dt.hour >= 7) & (df_processed['Datetime'].dt.hour <= 18)
-
-        if variable not in df_processed.columns:
-            return go.Figure().add_annotation(
-                x=0.5, y=0.5, text=str(_l("La variable sélectionnée n'est pas présente dans les données.")),
-                showarrow=False, font=dict(size=16)
-            ).update_layout(title=str(_l("Statistiques Annuelles")))
-
-        var_meta = METADATA_VARIABLES.get(variable, {'Nom': {'fr': variable, 'en': variable}, 'Unite': {'fr': '', 'en': ''}})
-        var_label = str(get_var_label(var_meta, 'Nom'))
-        var_unit = str(get_var_label(var_meta, 'Unite'))
-
-        df_processed[variable] = pd.to_numeric(df_processed[variable], errors='coerce')
-        
-        final_stats_list = []
-
-        for station_name, station_df_full in df_processed.groupby('Station'):
-            
-            station_agg_data = {'Station': station_name}
-
-            # For Max/Min, use the original (non-interpolated) data for the specific station
-            station_df_original_extremes = df_original_for_extremes[df_original_for_extremes['Station'] == station_name]
-            
-            # For other calculations, continue using the potentially interpolated data (df_processed)
-            df_clean_station = station_df_full.dropna(subset=[variable])
-            if variable == 'Solar_R_W/m^2':
-                df_clean_station = df_clean_station[df_clean_station['Is_Daylight']]
-
-            if df_clean_station.empty and station_df_original_extremes.empty:
-                final_stats_list.append(station_agg_data)
-                continue
-
-            # --- CALCULATE MAX/MIN FROM ORIGINAL DATA ---
-            if not station_df_original_extremes.empty and not station_df_original_extremes[variable].isnull().all():
-                overall_max_row_orig = station_df_original_extremes.loc[station_df_original_extremes[variable].idxmax()]
-                station_agg_data[get_metric_label('Maximum')] = overall_max_row_orig[variable]
-                station_agg_data[get_metric_label('Date Max')] = overall_max_row_orig['Datetime']
-                station_agg_data[get_metric_label('Year Max')] = overall_max_row_orig['Year']
-
-                overall_min_row_orig = station_df_original_extremes.loc[station_df_original_extremes[variable].idxmin()]
-                station_agg_data[get_metric_label('Minimum')] = overall_min_row_orig[variable]
-                station_agg_data[get_metric_label('Date Min')] = overall_min_row_orig['Datetime']
-                station_agg_data[get_metric_label('Year Min')] = overall_min_row_orig['Year']
-            else:
-                station_agg_data[get_metric_label('Maximum')] = np.nan
-                station_agg_data[get_metric_label('Date Max')] = pd.NaT
-                station_agg_data[get_metric_label('Year Max')] = np.nan
-                station_agg_data[get_metric_label('Minimum')] = np.nan
-                station_agg_data[get_metric_label('Date Min')] = pd.NaT
-                station_agg_data[get_metric_label('Year Min')] = np.nan
-            # --- END MAX/MIN ORIGINAL DATA CALCULATION ---
-            
-            # Calculate annual aggregates for mean and median (using potentially interpolated data)
-            annual_variable_mean_median = df_clean_station.groupby('Year')[variable].agg(
-                Mediane='median',
-                Moyenne='mean'
-            ).reset_index()
-
-            if not annual_variable_mean_median.empty:
-                max_median_row = annual_variable_mean_median.loc[annual_variable_mean_median['Mediane'].idxmax()]
-                station_agg_data[get_metric_label('Mediane')] = max_median_row['Mediane']
-                station_agg_data[get_metric_label('Year Mediane')] = max_median_row['Year']
-
-                max_mean_row = annual_variable_mean_median.loc[annual_variable_mean_median['Moyenne'].idxmax()]
-                station_agg_data[get_metric_label('Moyenne')] = max_mean_row['Moyenne']
-                station_agg_data[get_metric_label('Year Moyenne')] = max_mean_row['Year']
-            else:
-                station_agg_data[get_metric_label('Mediane')] = np.nan
-                station_agg_data[get_metric_label('Year Mediane')] = np.nan
-                station_agg_data[get_metric_label('Moyenne')] = np.nan
-                station_agg_data[get_metric_label('Year Moyenne')] = np.nan
-
-
-            # Rainfall specific calculations (using potentially interpolated data)
-            if var_meta.get('is_rain', False) and variable == 'Rain_mm':
-                df_daily_rain_station = station_df_full.groupby(pd.Grouper(key='Datetime', freq='D'))['Rain_mm'].sum().reset_index()
-                
-                annual_cumulative_rain = station_df_full.groupby('Year')['Rain_mm'].sum().reset_index()
-                if not annual_cumulative_rain.empty:
-                    max_cumul_row = annual_cumulative_rain.loc[annual_cumulative_rain['Rain_mm'].idxmax()]
-                    station_agg_data[get_metric_label('Cumul Annuel')] = max_cumul_row['Rain_mm']
-                    station_agg_data[get_metric_label('Year Cumul Annuel')] = max_cumul_row['Year']
-                else:
-                    station_agg_data[get_metric_label('Cumul Annuel')] = np.nan
-                    station_agg_data[get_metric_label('Year Cumul Annuel')] = np.nan
-
-                mean_rainy_days_annual = station_df_full[station_df_full['Rain_mm'] > 0].groupby('Year')['Rain_mm'].mean().reset_index()
-                if not mean_rainy_days_annual.empty:
-                    max_mean_rainy_days_row = mean_rainy_days_annual.loc[mean_rainy_days_annual['Rain_mm'].idxmax()]
-                    station_agg_data[get_metric_label('Moyenne Jours Pluvieux')] = max_mean_rainy_days_row['Rain_mm']
-                    station_agg_data[get_metric_label('Year Moyenne Jours Pluvieux')] = max_mean_rainy_days_row['Year']
-                else:
-                    station_agg_data[get_metric_label('Moyenne Jours Pluvieux')] = np.nan
-                    station_agg_data[get_metric_label('Year Moyenne Jours Pluvieux')] = np.nan
-
-                df_season_stats_yearly = _calculate_rainy_season_stats_yearly(df_daily_rain_station)
-                if not df_season_stats_yearly.empty:
-                    max_mean_season_row = df_season_stats_yearly.loc[df_season_stats_yearly['Moyenne Saison Pluvieuse'].idxmax()] if not df_season_stats_yearly['Moyenne Saison Pluvieuse'].isnull().all() else pd.Series()
-                    if not max_mean_season_row.empty:
-                        station_agg_data[get_metric_label('Moyenne Saison Pluvieuse')] = max_mean_season_row['Moyenne Saison Pluvieuse']
-                        station_agg_data[get_metric_label('Début Saison Pluvieuse')] = max_mean_season_row['Début Saison Pluvieuse']
-                        station_agg_data[get_metric_label('Fin Saison Pluvieuse')] = max_mean_season_row['Fin Saison Pluvieuse']
-                        station_agg_data[get_metric_label('Durée Saison Pluvieuse Jours')] = max_mean_season_row['Durée Saison Pluvieuse Jours']
-                        station_agg_data[get_metric_label('Year Durée Saison Pluvieuse Jours')] = max_mean_season_row.name
-                    else:
-                        station_agg_data[get_metric_label('Moyenne Saison Pluvieuse')] = np.nan
-                        station_agg_data[get_metric_label('Début Saison Pluvieuse')] = pd.NaT
-                        station_agg_data[get_metric_label('Fin Saison Pluvieuse')] = pd.NaT
-                        station_agg_data[get_metric_label('Durée Saison Pluvieuse Jours')] = np.nan
-                        station_agg_data[get_metric_label('Year Durée Saison Pluvieuse Jours')] = np.nan
-
-                df_dry_spell_events_yearly = _calculate_dry_spell_stats_yearly(df_daily_rain_station, df_season_stats_yearly)
-                if not df_dry_spell_events_yearly.empty:
-                    longest_dry_spell_row = df_dry_spell_events_yearly.loc[df_dry_spell_events_yearly['Durée Sécheresse Définie Jours'].idxmax()] if not df_dry_spell_events_yearly['Durée Sécheresse Définie Jours'].isnull().all() else pd.Series()
-                    if not longest_dry_spell_row.empty:
-                        station_agg_data[get_metric_label('Durée Sécheresse Définie Jours')] = longest_dry_spell_row['Durée Sécheresse Définie Jours']
-                        station_agg_data[get_metric_label('Début Sécheresse Définie')] = longest_dry_spell_row['Début Sécheresse Définie']
-                        station_agg_data[get_metric_label('Fin Sécheresse Définie')] = longest_dry_spell_row['Fin Sécheresse Définie']
-                        station_agg_data[get_metric_label('Year Durée Sécheresse Définie Jours')] = longest_dry_spell_row.name
-                    else:
-                        station_agg_data[get_metric_label('Durée Sécheresse Définie Jours')] = np.nan
-                        station_agg_data[get_metric_label('Début Sécheresse Définie')] = pd.NaT
-                        station_agg_data[get_metric_label('Fin Sécheresse Définie')] = pd.NaT
-                        station_agg_data[get_metric_label('Year Durée Sécheresse Définie Jours')] = np.nan
-            
-            final_stats_list.append(station_agg_data)
-
-        final_stats_df = pd.DataFrame(final_stats_list)
-
-        if final_stats_df.empty:
-            return go.Figure().add_annotation(
-                x=0.5, y=0.5, text=str(_l("Aucune statistique à afficher pour les variables et stations sélectionnées.")),
-                showarrow=False, font=dict(size=16)
-            ).update_layout(title=str(_l("Statistiques Annuelles")))
-
-        if var_meta.get('is_rain', False) and variable == 'Rain_mm':
-            metrics_to_plot_display_names = [
-                get_metric_label('Maximum'), get_metric_label('Minimum'), get_metric_label('Mediane'), get_metric_label('Moyenne'),
-                get_metric_label('Cumul Annuel'), get_metric_label('Moyenne Jours Pluvieux'),
-                get_metric_label('Moyenne Saison Pluvieuse'), get_metric_label('Durée Saison Pluvieuse Jours'),
-                get_metric_label('Durée Sécheresse Définie Jours')
-            ]
-        else:
-            metrics_to_plot_display_names = [
-                get_metric_label('Maximum'), get_metric_label('Minimum'), get_metric_label('Mediane'), get_metric_label('Moyenne')
-            ]
-
-        metrics_to_plot_filtered = [
-            col for col in metrics_to_plot_display_names
-            if col in final_stats_df.columns and not final_stats_df[col].isnull().all()
-        ]
-        
-        if not metrics_to_plot_filtered:
-             return go.Figure().add_annotation(
-                x=0.5, y=0.5, text=str(_l("Aucune statistique à afficher pour les variables et stations sélectionnées.")),
-                showarrow=False, font=dict(size=16)
-            ).update_layout(title=str(_l("Statistiques Annuelles")))
-
-        num_metrics = len(metrics_to_plot_filtered)
-        cols_plot = 2
-        rows_plot = (num_metrics + cols_plot - 1) // cols_plot
-
-        height_plot = 400 * rows_plot if rows_plot <= 2 else 300 * rows_plot
-
-        subplot_titles = [f"{var_label} {metric}" for metric in metrics_to_plot_filtered]
-
-        fig = make_subplots(
-            rows=rows_plot, cols=cols_plot,
-            subplot_titles=subplot_titles,
-            vertical_spacing=0.1
-        )
-        
-        unique_stations = sorted(final_stats_df['Station'].unique())
-        final_stats_df = final_stats_df.set_index('Station').reindex(unique_stations).reset_index()
-
-        for i, display_metric_col_name in enumerate(metrics_to_plot_filtered):
-            row = (i // cols_plot) + 1
-            col = (i % cols_plot) + 1
-            
-            hover_text_list = []
-            station_colors_for_trace = []
-            
-            for _, row_data in final_stats_df.iterrows():
-                station_name = row_data['Station']
-                station_color = station_colors.get(station_name, '#1f77b4')
-                station_colors_for_trace.append(station_color)
-                
-                value = row_data[display_metric_col_name]
-                
-                if pd.isna(value):
-                    hover_text_list.append("")
-                    continue
-
-                hover_text = ""
-                associated_year = np.nan
-
-                if display_metric_col_name == get_metric_label('Maximum'):
-                    date_val = row_data.get(get_metric_label('Date Max'))
-                    date_str = date_val.strftime('%d/%m/%Y') if pd.notna(date_val) else str(_l('Unknown date'))
-                    associated_year = row_data.get(get_metric_label('Year Max'))
-                    hover_text = str(_l("<b>Maximum</b><br>Value: {:.1f} {}<br>Date: {}{}").format(value, var_unit, date_str, str(_l(" (Observed)")))) # Added (Observed)
-                    if pd.notna(associated_year):
-                        hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-                
-                elif display_metric_col_name == get_metric_label('Minimum'):
-                    date_val = row_data.get(get_metric_label('Date Min'))
-                    date_str = date_val.strftime('%d/%m/%Y') if pd.notna(date_val) else str(_l('Unknown date'))
-                    associated_year = row_data.get(get_metric_label('Year Min'))
-                    hover_text = str(_l("<b>Minimum</b><br>Value: {:.1f} {}<br>Date: {}{}").format(value, var_unit, date_str, str(_l(" (Observed)")))) # Added (Observed)
-                    if pd.notna(associated_year):
-                        hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-                
-                elif display_metric_col_name == get_metric_label('Mediane'):
-                    associated_year = row_data.get(get_metric_label('Year Mediane'))
-                    hover_text = str(_l("<b>Mediane</b><br>Value: {:.1f} {}")).format(value, var_unit)
-                    if pd.notna(associated_year):
-                        hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-
-                elif display_metric_col_name == get_metric_label('Moyenne'):
-                    associated_year = row_data.get(get_metric_label('Year Moyenne'))
-                    hover_text = str(_l("<b>Moyenne</b><br>Value: {:.1f} {}")).format(value, var_unit)
-                    if pd.notna(associated_year):
-                        hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-
-                elif display_metric_col_name == get_metric_label('Cumul Annuel'):
-                    associated_year = row_data.get(get_metric_label('Year Cumul Annuel'))
-                    hover_text = str(_l("<b>Cumul Annuel</b><br>Value: {:.1f} {}")).format(value, var_unit)
-                    if pd.notna(associated_year):
-                        hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-
-                elif display_metric_col_name == get_metric_label('Moyenne Jours Pluvieux'):
-                    associated_year = row_data.get(get_metric_label('Year Moyenne Jours Pluvieux'))
-                    hover_text = str(_l("<b>Moyenne Jours Pluvieux</b><br>Value: {:.1f} {}")).format(value, var_unit)
-                    if pd.notna(associated_year):
-                        hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-                
-                elif display_metric_col_name == get_metric_label('Durée Saison Pluvieuse Jours'):
-                    date_debut = row_data.get(get_metric_label('Début Saison Pluvieuse'))
-                    date_fin = row_data.get(get_metric_label('Fin Saison Pluvieuse'))
-                    date_debut_str = date_debut.strftime('%d/%m/%Y') if pd.notna(date_debut) else str(_l('Unknown date'))
-                    date_fin_str = date_fin.strftime('%d/%m/%Y') if pd.notna(date_fin) else str(_l('Unknown date'))
-                    associated_year = row_data.get(get_metric_label('Year Durée Saison Pluvieuse Jours'))
-                    
-                    hover_text = str(_l("<b>Durée Saison Pluvieuse Jours</b><br>"))
-                    if pd.notna(date_debut) and pd.notna(date_fin):
-                        hover_text += str(_l("From {} to {}")).format(date_debut_str, date_fin_str) + "<br>"
-                    hover_text += str(_l("Duration: {} days")).format(int(value))
-                    if pd.notna(associated_year):
-                        hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-
-                elif display_metric_col_name == get_metric_label('Durée Sécheresse Définie Jours'):
-                    date_debut = row_data.get(get_metric_label('Début Sécheresse Définie'))
-                    date_fin = row_data.get(get_metric_label('Fin Sécheresse Définie'))
-                    date_debut_str = date_debut.strftime('%d/%m/%Y') if pd.notna(date_debut) else str(_l('Unknown date'))
-                    date_fin_str = date_fin.strftime('%d/%m/%Y') if pd.notna(date_fin) else str(_l('Unknown date'))
-                    associated_year = row_data.get(get_metric_label('Year Durée Sécheresse Définie Jours'))
-                    
-                    hover_text = str(_l("<b>Durée Sécheresse Définie Jours</b><br>"))
-                    if pd.notna(date_debut) and pd.notna(date_fin):
-                        hover_text += str(_l("From {} to {}")).format(date_debut_str, date_fin_str) + "<br>"
-                    hover_text += str(_l("Duration: {} days")).format(int(value))
-                    if pd.notna(associated_year):
-                        hover_text += f"<br>{str(_l('Year: {}')).format(int(associated_year))}"
-                
-                else:
-                    hover_text = str(_l("<b>{}</b><br>Value: {:.1f} {}")).format(display_metric_col_name, value, var_unit)
-                    year_col = f"Year {display_metric_col_name}"
-                    if year_col in row_data and pd.notna(row_data[year_col]):
-                        hover_text += f"<br>{str(_l('Year: {}')).format(int(row_data[year_col]))}"
-
-
-                hover_text_list.append(hover_text)
-
-            fig.add_trace(
-                go.Bar(
-                    x=final_stats_df[display_metric_col_name],
-                    y=final_stats_df['Station'],
-                    orientation='h',
-                    marker_color=station_colors_for_trace,
-                    name=display_metric_col_name,
-                    hovertext=hover_text_list,
-                    hoverinfo='text',
-                    showlegend=False,
-                    textposition='none'
-                ),
-                row=row,
-                col=col
-            )
-
-            xaxis_title = str(_l("Jours")) if (get_metric_label("Durée") in display_metric_col_name or "Duration" in display_metric_col_name) else f"{var_label} ({var_unit})"
-            fig.update_xaxes(
-                title_text=xaxis_title,
-                showgrid=False,
-                row=row, col=col
-            )
-            
-            fig.update_yaxes(
-                title_text=str(_l("Station")),
-                showgrid=False,
-                row=row, col=col,
-                categoryorder='array',
-                categoryarray=unique_stations,
-                automargin=True
-            )
-
-        for station_name in unique_stations:
-            fig.add_trace(
-                go.Bar(
-                    x=[0], y=[station_name],
-                    marker_color=station_colors.get(station_name, '#1f77b4'),
-                    name=station_name,
-                    showlegend=True,
-                    visible='legendonly'
-                )
-            )
-
-        fig.update_layout(
-            height=height_plot,
-            title_text=str(get_metric_label("Statistics of {} by Station")).format(var_label),
-            showlegend=True,
-            legend_title_text=str(_l("Station")),
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=-0.15,
-                xanchor="center",
-                x=0.5
-            ),
-            hovermode='closest',
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            margin=dict(b=150)
-        )
-        
-        return fig
-        
-    except Exception as e:
-        print(f"Erreur dans generate_daily_stats_plot_plotly: {str(e)}")
-        traceback.print_exc()
-        return go.Figure().add_annotation(
-            x=0.5, y=0.5, text=str(_l("Une erreur est survenue lors de la génération du graphique: {}")).format(str(e)),
-            showarrow=False, font=dict(size=16)
-        ).update_layout(title=str(_l("Erreur de visualisation")))
