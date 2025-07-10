@@ -393,41 +393,80 @@ ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'} # Ajouté pour résoudre l'ImportErr
 
 CUSTOM_STATION_COLORS = {
     # Bassin DANO (8 stations)
-    'Dreyer Foundation': '#FF0000',  # Rouge vif
-    'Lare': '#00AA00',       # Vert foncé
-    'Bankandi': '#0000FF',   # Bleu pur
-    'Wahablé': '#FF00FF',    # Magenta
-    'Fafo': '#FFA500',       # Orange
-    'Yabogane': '#00FFFF',   # Cyan
-    'Tambiri 1': '#A52A2A',  # Marron
-    'Tambiri 2': '#FFD700',  # Or
+    'Dreyer Foundation': '#8B4513',  # Brun Sienne
+    'Lare': '#DAA520',       # Jaune doré
+    'Bankandi': '#FF6347',   # Rouge Tomate
+    'Wahablé': '#40E0D0',    # Turquoise
+    'Fafo': '#8A2BE2',       # Bleu Violet
+    'Yabogane': '#FF007F',   # Rose Vif
+    'Tambiri 1': '#ADFF2F',  # Vert Chartreuse
+    'Tambiri 2': '#BA55D3',  # Violet Clair
     
     # Bassin DASSARI (9 stations)
-    'Pouri (Fandohoun)': '#9400D3',  # Violet foncé
-    'Nagasséga': '#008000',   # Vert sapin
-    'Koundri': '#4B0082',     # Indigo
-    'Koupendri': '#FF4500',   # Orange-rouge
-    'Ouriyori 2': '#20B2AA',  # Vert mer clair
-    'Ouriyori 1': '#9932CC',  # Orchidée foncée
-    'Wantéhoun': '#8B0000',   # Rouge foncé
-    'Pouri': '#000080',       # Bleu marine
-    'Fandohoun': '#556B2F',   # Vert olive
+    'Pouri (Fandohoun)': '#F08080',  # Corail clair
+    'Nagasséga': '#20B2AA',   # Vert Mer Clair
+    'Koundri': '#C71585',     # Rouge Violet
+    'Koupendri': '#D2B48C',   # Tan (couleur chamois)
+    'Ouriyori 2': '#6B8E23',  # Vert Olive Foncé
+    'Ouriyori 1': '#FFDAB9',  # Pêche
+    'Wantéhoun': '#AFEEEE',   # Turquoise Pâle
+    'Pouri': '#CD853F',       # Peru (couleur terre de Sienne)
+    'Fandohoun': '#DA70D6',   # Orchidée
     
     # Bassin VEA_SISSILI (13 stations)
-    'Kayoro EC': '#E60000',    # Rouge vif
-    'Doninga ': '#00CED1',     # Bleu turquoise
-    'Bongo Soe': '#32CD32',    # Vert lime
-    'Nabugubulle ': '#8A2BE2', # Bleu violet
-    'Gwosi': '#FF8C00',        # Orange foncé
-    'Bongo Atampisi': '#EE82EE', # Violet clair
-    'Manyoro': '#006400',      # Vert très foncé
-    'Aniabiisi': '#800000',    # Rouge bordeaux
-    'Nazinga EC': '#0000CD',   # Bleu moyen
-    'Oualem ': '#FF69B4',      # Rose vif
-    'Nebou': '#808000',        # Olive
-    'Tabou ': '#7CFC00',       # Vert prairie
-    'Nazinga': '#BA55D3'       # Violet moyen
+    'Kayoro EC': '#00BFFF',    # Bleu ciel profond
+    'Doninga ': '#FF4500',     # Orange Rouge
+    'Bongo Soe': '#9ACD32',    # Vert Jaune
+    'Nabugubulle ': '#DB7093', # Rose pâle
+    'Gwosi': '#BDB76B',        # Olive Foncé
+    'Bongo Atampisi': '#8B008B', # Magenta Foncé
+    'Manyoro': '#48D1CC',      # Turquoise Moyen
+    'Aniabiisi': '#8FBC8F',    # Vert Mer Foncé
+    'Nazinga EC': '#C0C0C0',   # Argent
+    'Oualem ': '#F0E68C',      # Kaki
+    'Nebou': '#4682B4',        # Bleu Acier
+    'Tabou ': '#ADD8E6',       # Bleu Clair
+    'Nazinga': '#EE6363'       # Rose saumon clair
 }
+
+
+# CUSTOM_STATION_COLORS = {
+#     # Bassin DANO (8 stations)
+#     'Dreyer Foundation': '#FF6B6B',  # Rouge doux
+#     'Lare': '#51A851',              # Vert pomme
+#     'Bankandi': '#5E72E4',          # Bleu doux
+#     'Wahablé': '#F368E0',           # Rose vif
+#     'Fafo': '#FF9F43',              # Orange doux
+#     'Yabogane': '#00D2D3',          # Turquoise
+#     'Tambiri 1': '#A1785D',         # Marron clair
+#     'Tambiri 2': '#FFD166',         # Jaune doré
+    
+#     # Bassin DASSARI (9 stations)
+#     'Pouri (Fandohoun)': '#A55EEA', # Violet moyen
+#     'Nagasséga': '#2ECC71',         # Vert émeraude
+#     'Koundri': '#6C5CE7',           # Indigo doux
+#     'Koupendri': '#FF7F50',         # Corail
+#     'Ouriyori 2': '#1DD1A1',        # Vert menthe
+#     'Ouriyori 1': '#9B59B6',        # Violet orchidée
+#     'Wantéhoun': '#E74C3C',         # Rouge tomate
+#     'Pouri': '#3498DB',             # Bleu ciel
+#     'Fandohoun': '#27AE60',         # Vert forêt
+    
+#     # Bassin VEA_SISSILI (13 stations)
+#     'Kayoro EC': '#FF5252',         # Rouge clair
+#     'Doninga ': '#00CEC9',          # Bleu piscine
+#     'Bongo Soe': '#55EFC4',         # Vert menthe clair
+#     'Nabugubulle ': '#A29BFE',      # Lavande
+#     'Gwosi': '#F39C12',             # Orange foncé
+#     'Bongo Atampisi': '#FD79A8',    # Rose bonbon
+#     'Manyoro': '#1E8449',           # Vert foncé
+#     'Aniabiisi': '#D63031',         # Rouge brique
+#     'Nazinga EC': '#0984E3',        # Bleu azur
+#     'Oualem ': '#FF9FF3',           # Rose pâle
+#     'Nebou': '#B8E994',             # Vert pistache
+#     'Tabou ': '#00B894',            # Vert turquoise
+#     'Nazinga': '#D6A2E8'            # Lilas
+# }
 
 # Palette de couleurs personnalisée pour les variables (DOIT ÊTRE UN DICTIONNAIRE)
 # Note: Les clés du dictionnaire (e.g., "Air_Temp_Deg_C") ne sont pas traduites car ce sont des identifiants techniques.

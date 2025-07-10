@@ -593,8 +593,262 @@ def reset_data():
 
 
 
+# @app.route('/statistiques', methods=['GET', 'POST'])
+# # @login_required # Uncomment if you use a login system
+# def statistiques():
+#     """Displays statistics for a selected variable, aggregated by different periods."""
+
+#     if GLOBAL_PROCESSED_DATA_DF.empty:
+#         flash(_('No data available. Please upload files first.'), 'error')
+#         return redirect(url_for('index'))
+
+#     df_original_to_pass = None
+#     if not GLOBAL_BEFORE_INTERPOLATION_DATA_DF.empty:
+#         df_original_to_pass = GLOBAL_BEFORE_INTERPOLATION_DATA_DF
+#     else:
+#         app.logger.warning("GLOBAL_BEFORE_INTERPOLATION_DATA_DF is empty. Max/Min will not be verified against raw data, and some annual rain stats might be inaccurate.")
+
+#     try:
+#         variable = request.args.get('variable') if request.method == 'GET' else request.form.get('variable')
+
+#         if not variable or variable not in METADATA_VARIABLES:
+#             flash(_('Invalid or unknown variable. Please select a valid variable.'), 'error')
+#             return redirect(url_for('visualisations_options'))
+
+#         var_meta = METADATA_VARIABLES.get(variable, {'Nom': {'fr': variable, 'en': variable}, 'Unite': {'fr': '', 'en': ''}})
+#         var_label = str(get_var_label(var_meta, 'Nom'))
+#         var_unit = str(get_var_label(var_meta, 'Unite'))
+#         is_rain_variable = var_meta.get('is_rain', False)
+
+#         plots_html = {}
+#         plots_html_rain_yearly_detailed = None
+#         plots_html_rain_yearly_summary = None
+
+#         # --- Handle Yearly Plot Generation ---
+#         yearly_plot_output = generate_plot_stats_over_period_plotly(
+#             df=GLOBAL_PROCESSED_DATA_DF,
+#             variable=variable,
+#             station_colors=CUSTOM_STATION_COLORS,
+#             time_frequency='yearly',
+#             df_original=df_original_to_pass,
+#             logger=app.logger
+#         )
+
+#         if is_rain_variable and isinstance(yearly_plot_output, tuple):
+#             fig_yearly_detailed_rain, fig_yearly_summary_rain = yearly_plot_output
+#             app.logger.info(f"Unpacked two figures for yearly rain data: {variable}")
+
+#             if fig_yearly_detailed_rain and (fig_yearly_detailed_rain.data and any(trace.visible != 'legendonly' for trace in fig_yearly_detailed_rain.data)):
+#                 plots_html_rain_yearly_detailed = fig_yearly_detailed_rain.to_html(full_html=False, include_plotlyjs='cdn')
+#                 app.logger.info(f"Detailed yearly rain plot for {variable} generated successfully.")
+#             else:
+#                 app.logger.info(f"No visible data traces for detailed yearly rain plot of {variable}.")
+
+#             if fig_yearly_summary_rain and (fig_yearly_summary_rain.data and any(trace.x is not None for trace in fig_yearly_summary_rain.data)):
+#                 plots_html_rain_yearly_summary = fig_yearly_summary_rain.to_html(full_html=False, include_plotlyjs='cdn')
+#                 app.logger.info(f"Summary yearly rain plot for {variable} generated successfully.")
+#             else:
+#                 app.logger.info(f"No visible data traces for summary yearly rain plot of {variable}.")
+
+#         else: # Generic yearly plot (single 3-subplot figure)
+#             fig_yearly_generic = yearly_plot_output
+#             app.logger.info(f"Received single generic figure for yearly data: {variable}")
+#             if fig_yearly_generic and (fig_yearly_generic.data and any(trace.x is not None for trace in fig_yearly_generic.data)):
+#                 plots_html['yearly'] = fig_yearly_generic.to_html(full_html=False, include_plotlyjs='cdn')
+#                 app.logger.info(f"Generic yearly plot for {variable} generated successfully.")
+#             else:
+#                 app.logger.info(f"No visible data traces for generic yearly plot of {variable}.")
+
+
+#         # 6. Generate plots for other frequencies (Monthly, Weekly, Daily)
+#         for freq in ['monthly', 'weekly', 'daily']:
+#             fig_freq = generate_plot_stats_over_period_plotly(
+#                 df=GLOBAL_PROCESSED_DATA_DF, variable=variable, station_colors=CUSTOM_STATION_COLORS, time_frequency=freq, logger=app.logger
+#             )
+#             if fig_freq and (fig_freq.data and any(trace.x is not None for trace in fig_freq.data)):
+#                 plots_html[freq] = fig_freq.to_html(full_html=False, include_plotlyjs='cdn')
+#                 app.logger.info(f"Plot for {variable} at {freq} frequency generated successfully.")
+#             else:
+#                 app.logger.info(f"No visible data traces for plot of {variable} at {freq} frequency.")
+
+#         if not (any(plots_html.values()) or plots_html_rain_yearly_detailed or plots_html_rain_yearly_summary):
+#             flash(_('No statistics available for this variable. Please refine your selection or check the data.'), 'warning')
+#             return redirect(url_for('visualisations_options'))
+
+#         return render_template('statistiques.html',
+#                                variable_name=var_label,
+#                                unit=var_unit,
+#                                plots_html=plots_html,
+#                                plots_html_rain_yearly_detailed=plots_html_rain_yearly_detailed,
+#                                plots_html_rain_yearly_summary=plots_html_rain_yearly_summary,
+#                                variable_selectionnee=variable,
+#                                is_rain_variable=is_rain_variable)
+
+#     except Exception as e:
+#         app.logger.error(f"ERROR in /statistiques: {str(e)}", exc_info=True)
+#         flash(_('Technical error occurred while generating statistics.'), 'error')
+#         return redirect(url_for('visualisations_options'))
+
+
+# @app.route('/statistiques', methods=['GET', 'POST'])
+# def statistiques():
+#     """Displays statistics for a selected variable, aggregated by different periods."""
+
+#     if GLOBAL_PROCESSED_DATA_DF.empty:
+#         flash(_('No data available. Please upload files first.'), 'error')
+#         return redirect(url_for('index'))
+
+#     df_original_to_pass = None
+#     if not GLOBAL_BEFORE_INTERPOLATION_DATA_DF.empty:
+#         df_original_to_pass = GLOBAL_BEFORE_INTERPOLATION_DATA_DF
+#     else:
+#         app.logger.warning("GLOBAL_BEFORE_INTERPOLATION_DATA_DF is empty. Max/Min will not be verified against raw data, and some annual rain stats might be inaccurate.")
+
+#     try:
+#         variable = request.args.get('variable') if request.method == 'GET' else request.form.get('variable')
+
+#         if not variable or variable not in METADATA_VARIABLES:
+#             flash(_('Invalid or unknown variable. Please select a valid variable.'), 'error')
+#             return redirect(url_for('visualisations_options'))
+
+#         var_meta = METADATA_VARIABLES.get(variable, {'Nom': {'fr': variable, 'en': variable}, 'Unite': {'fr': '', 'en': ''}})
+#         var_label = str(get_var_label(var_meta, 'Nom'))
+#         var_unit = str(get_var_label(var_meta, 'Unite'))
+#         is_rain_variable = var_meta.get('is_rain', False)
+
+#         plots_html = {}
+#         plots_html_rain_yearly_detailed = None
+#         plots_html_rain_yearly_summary = []
+        
+#         # Get all unique stations
+#         stations = sorted(GLOBAL_PROCESSED_DATA_DF['Station'].unique())
+#         if not stations:
+#             flash(_('No stations found in the data.'), 'error')
+#             return redirect(url_for('visualisations_options'))
+
+#         # --- Handle Yearly Plot Generation ---
+#         yearly_plot_output = generate_plot_stats_over_period_plotly(
+#             df=GLOBAL_PROCESSED_DATA_DF,
+#             variable=variable,
+#             station_colors=CUSTOM_STATION_COLORS,
+#             time_frequency='yearly',
+#             df_original=df_original_to_pass,
+#             logger=app.logger
+#         )
+
+#         if is_rain_variable and isinstance(yearly_plot_output, tuple):
+#             fig_yearly_detailed_rain, fig_yearly_summary_rain = yearly_plot_output
+#             app.logger.info(f"Unpacked two figures for yearly rain data: {variable}")
+
+#             if fig_yearly_detailed_rain and (fig_yearly_detailed_rain.data and any(trace.visible != 'legendonly' for trace in fig_yearly_detailed_rain.data)):
+#                 plots_html_rain_yearly_detailed = fig_yearly_detailed_rain.to_html(full_html=False, include_plotlyjs='cdn')
+#                 app.logger.info(f"Detailed yearly rain plot for {variable} generated successfully.")
+#             else:
+#                 app.logger.info(f"No visible data traces for detailed yearly rain plot of {variable}.")
+
+#             if fig_yearly_summary_rain and (fig_yearly_summary_rain.data and any(trace.x is not None for trace in fig_yearly_summary_rain.data)):
+#                 # Create separate figures for each metric row (6 rows x 3 plots)
+#                 metric_info = [
+#                     {'title': _('Cumul Annuel des Précipitations'), 'unit': var_unit},
+#                     {'title': _('Précipitation Moyenne des Jours Pluvieux'), 'unit': var_unit},
+#                     {'title': _('Précipitation Moyenne de la Saison Pluvieuse'), 'unit': var_unit},
+#                     {'title': _('Durée de la Saison Pluvieuse'), 'unit': _('jours')},
+#                     {'title': _('Plus Longue Durée des Jours Sans Pluie'), 'unit': _('jours')},
+#                     {'title': _('Durée de la Sécheresse Définie'), 'unit': _('jours')}
+#                 ]
+
+#                 for row_idx in range(6):
+#                     row_plots = []
+#                     for col_idx in range(3):  # 3 columns: Mean, Max, Min
+#                         fig = go.Figure()
+                        
+#                         # Add all stations' data for this subplot
+#                         for station in stations:
+#                             trace_idx = row_idx * 3 * len(stations) + col_idx * len(stations) + list(stations).index(station)
+#                             if trace_idx < len(fig_yearly_summary_rain.data):
+#                                 trace = fig_yearly_summary_rain.data[trace_idx]
+#                                 fig.add_trace(trace)
+                        
+#                         if fig.data:
+#                             # Update layout for the subplot
+#                             subplot_titles = [
+#                                 _('Moyenne sur la période'),
+#                                 _('Valeur maximale'),
+#                                 _('Valeur minimale')
+#                             ]
+                            
+#                             fig.update_layout(
+#                                 title=f"{subplot_titles[col_idx]}",
+#                                 plot_bgcolor='white',
+#                                 paper_bgcolor='white',
+#                                 margin=dict(l=50, r=50, b=80, t=50, pad=4),
+#                                 height=400,
+#                                 yaxis_title=f"{metric_info[row_idx]['title']} ({metric_info[row_idx]['unit']})",
+#                                 legend_title=_('Station')
+#                             )
+                            
+#                             row_plots.append(fig.to_html(
+#                                 full_html=False, 
+#                                 include_plotlyjs='cdn' if row_idx == 0 and col_idx == 0 else False
+#                             ))
+                    
+#                     if row_plots:
+#                         plots_html_rain_yearly_summary.append({
+#                             'title': metric_info[row_idx]['title'],
+#                             'unit': metric_info[row_idx]['unit'],
+#                             'plots': row_plots
+#                         })
+                
+#                 app.logger.info(f"Summary yearly rain plot for {variable} separated into individual rows with all stations.")
+#             else:
+#                 app.logger.info(f"No visible data traces for summary yearly rain plot of {variable}.")
+
+#         else:  # Generic yearly plot (single 3-subplot figure)
+#             fig_yearly_generic = yearly_plot_output
+#             app.logger.info(f"Received single generic figure for yearly data: {variable}")
+#             if fig_yearly_generic and (fig_yearly_generic.data and any(trace.x is not None for trace in fig_yearly_generic.data)):
+#                 plots_html['yearly'] = fig_yearly_generic.to_html(full_html=False, include_plotlyjs='cdn')
+#                 app.logger.info(f"Generic yearly plot for {variable} generated successfully.")
+#             else:
+#                 app.logger.info(f"No visible data traces for generic yearly plot of {variable}.")
+
+#         # Generate plots for other frequencies (Monthly, Weekly, Daily)
+#         for freq in ['monthly', 'weekly', 'daily']:
+#             fig_freq = generate_plot_stats_over_period_plotly(
+#                 df=GLOBAL_PROCESSED_DATA_DF, 
+#                 variable=variable, 
+#                 station_colors=CUSTOM_STATION_COLORS, 
+#                 time_frequency=freq, 
+#                 logger=app.logger
+#             )
+#             if fig_freq and (fig_freq.data and any(trace.x is not None for trace in fig_freq.data)):
+#                 plots_html[freq] = fig_freq.to_html(full_html=False, include_plotlyjs='cdn')
+#                 app.logger.info(f"Plot for {variable} at {freq} frequency generated successfully.")
+#             else:
+#                 app.logger.info(f"No visible data traces for plot of {variable} at {freq} frequency.")
+
+#         if not (any(plots_html.values()) or plots_html_rain_yearly_detailed or plots_html_rain_yearly_summary):
+#             flash(_('No statistics available for this variable. Please refine your selection or check the data.'), 'warning')
+#             return redirect(url_for('visualisations_options'))
+
+#         return render_template('statistiques.html',
+#                                variable_name=var_label,
+#                                unit=var_unit,
+#                                plots_html=plots_html,
+#                                plots_html_rain_yearly_detailed=plots_html_rain_yearly_detailed,
+#                                plots_html_rain_yearly_summary=plots_html_rain_yearly_summary,
+#                                stations=stations,
+#                                variable_selectionnee=variable,
+#                                CUSTOM_STATION_COLORS=CUSTOM_STATION_COLORS , # Ajoutez cette ligne
+#                                is_rain_variable=is_rain_variable)
+
+#     except Exception as e:
+#         app.logger.error(f"ERROR in /statistiques: {str(e)}", exc_info=True)
+#         flash(_('Technical error occurred while generating statistics.'), 'error')
+#         return redirect(url_for('visualisations_options'))
+ 
+
 @app.route('/statistiques', methods=['GET', 'POST'])
-# @login_required # Uncomment if you use a login system
 def statistiques():
     """Displays statistics for a selected variable, aggregated by different periods."""
 
@@ -622,9 +876,13 @@ def statistiques():
 
         plots_html = {}
         plots_html_rain_yearly_detailed = None
-        plots_html_rain_yearly_summary = None
+        plots_html_rain_yearly_summary = []
+        
+        stations = sorted(GLOBAL_PROCESSED_DATA_DF['Station'].unique())
+        if not stations:
+            flash(_('No stations found in the data.'), 'error')
+            return redirect(url_for('visualisations_options'))
 
-        # --- Handle Yearly Plot Generation ---
         yearly_plot_output = generate_plot_stats_over_period_plotly(
             df=GLOBAL_PROCESSED_DATA_DF,
             variable=variable,
@@ -645,12 +903,60 @@ def statistiques():
                 app.logger.info(f"No visible data traces for detailed yearly rain plot of {variable}.")
 
             if fig_yearly_summary_rain and (fig_yearly_summary_rain.data and any(trace.x is not None for trace in fig_yearly_summary_rain.data)):
-                plots_html_rain_yearly_summary = fig_yearly_summary_rain.to_html(full_html=False, include_plotlyjs='cdn')
-                app.logger.info(f"Summary yearly rain plot for {variable} generated successfully.")
+                metric_info = [
+                    {'title': _('Cumul Annuel des Précipitations'), 'unit': var_unit},
+                    {'title': _('Précipitation Moyenne des Jours Pluvieux'), 'unit': var_unit},
+                    {'title': _('Précipitation Moyenne de la Saison Pluvieuse'), 'unit': var_unit},
+                    {'title': _('Durée de la Saison Pluvieuse'), 'unit': _('jours')},
+                    {'title': _('Plus Longue Durée des Jours Sans Pluie'), 'unit': _('jours')},
+                    {'title': _('Durée de la Sécheresse Définie'), 'unit': _('jours')}
+                ]
+
+                for row_idx in range(6):
+                    row_plots = []
+                    for col_idx in range(3):
+                        fig = go.Figure()
+                        
+                        for station in stations:
+                            trace_idx = row_idx * 3 * len(stations) + col_idx * len(stations) + list(stations).index(station)
+                            if trace_idx < len(fig_yearly_summary_rain.data):
+                                trace = fig_yearly_summary_rain.data[trace_idx]
+                                fig.add_trace(trace)
+                        
+                        if fig.data:
+                            subplot_titles = [
+                                _('Moyenne sur la période'),
+                                _('Valeur maximale'),
+                                _('Valeur minimale')
+                            ]
+                            
+                            fig.update_layout(
+                                title=f"{subplot_titles[col_idx]}",
+                                plot_bgcolor='white',
+                                paper_bgcolor='white',
+                                margin=dict(l=50, r=50, b=80, t=50, pad=4),
+                                height=400,
+                                yaxis_title=f"{metric_info[row_idx]['title']} ({metric_info[row_idx]['unit']})",
+                                legend_title=_('Station')
+                            )
+                            
+                            row_plots.append(fig.to_html(
+                                full_html=False, 
+                                include_plotlyjs='cdn' if row_idx == 0 and col_idx == 0 else False
+                            ))
+                    
+                    if row_plots:
+                        plots_html_rain_yearly_summary.append({
+                            'title': metric_info[row_idx]['title'],
+                            'unit': metric_info[row_idx]['unit'],
+                            'plots': row_plots
+                        })
+                
+                app.logger.info(f"Summary yearly rain plot for {variable} separated into individual rows with all stations.")
             else:
                 app.logger.info(f"No visible data traces for summary yearly rain plot of {variable}.")
 
-        else: # Generic yearly plot (single 3-subplot figure)
+        else:
             fig_yearly_generic = yearly_plot_output
             app.logger.info(f"Received single generic figure for yearly data: {variable}")
             if fig_yearly_generic and (fig_yearly_generic.data and any(trace.x is not None for trace in fig_yearly_generic.data)):
@@ -659,11 +965,13 @@ def statistiques():
             else:
                 app.logger.info(f"No visible data traces for generic yearly plot of {variable}.")
 
-
-        # 6. Generate plots for other frequencies (Monthly, Weekly, Daily)
         for freq in ['monthly', 'weekly', 'daily']:
             fig_freq = generate_plot_stats_over_period_plotly(
-                df=GLOBAL_PROCESSED_DATA_DF, variable=variable, station_colors=CUSTOM_STATION_COLORS, time_frequency=freq, logger=app.logger
+                df=GLOBAL_PROCESSED_DATA_DF, 
+                variable=variable, 
+                station_colors=CUSTOM_STATION_COLORS, 
+                time_frequency=freq, 
+                logger=app.logger
             )
             if fig_freq and (fig_freq.data and any(trace.x is not None for trace in fig_freq.data)):
                 plots_html[freq] = fig_freq.to_html(full_html=False, include_plotlyjs='cdn')
@@ -676,19 +984,21 @@ def statistiques():
             return redirect(url_for('visualisations_options'))
 
         return render_template('statistiques.html',
-                               variable_name=var_label,
-                               unit=var_unit,
-                               plots_html=plots_html,
-                               plots_html_rain_yearly_detailed=plots_html_rain_yearly_detailed,
-                               plots_html_rain_yearly_summary=plots_html_rain_yearly_summary,
-                               variable_selectionnee=variable,
-                               is_rain_variable=is_rain_variable)
+                           variable_name=var_label,
+                           unit=var_unit,
+                           plots_html=plots_html,
+                           plots_html_rain_yearly_detailed=plots_html_rain_yearly_detailed,
+                           plots_html_rain_yearly_summary=plots_html_rain_yearly_summary,
+                           stations=stations,
+                           variable_selectionnee=variable,
+                           CUSTOM_STATION_COLORS=CUSTOM_STATION_COLORS,
+                           is_rain_variable=is_rain_variable)
 
     except Exception as e:
         app.logger.error(f"ERROR in /statistiques: {str(e)}", exc_info=True)
         flash(_('Technical error occurred while generating statistics.'), 'error')
         return redirect(url_for('visualisations_options'))
- 
+    
 ########### Fin de la route pour la visualisation des statistiques quotidiennes ###########
 
 
@@ -820,7 +1130,7 @@ def upload_file():
             'success'
         )
 
-        return redirect(url_for('preprocessing'))
+        return redirect(url_for('data_preview'))
 
     except Exception as e:
         app.logger.error(f"Erreur critique lors du traitement global des données: {str(e)}", exc_info=True)
