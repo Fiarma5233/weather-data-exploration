@@ -30,3 +30,7 @@ docker run -d --network=host meteo
 sur le navigateur, lancer l'url:
 http://188.40.150.184:8089/
  
+ 
+ ######## Questions 
+ 
+ N'est-il bien que je prenne directement les 2e pluies comme debut de la saison pluvieuse et les avant dernieres pluies comme  fin de la saison pluvieuse  au lieu de definir un intervalle de 45 jours
