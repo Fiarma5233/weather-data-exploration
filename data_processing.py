@@ -406,20 +406,20 @@ from flask_babel import lazy_gettext as _l
 
 
 ########### fonction pour filtrer les donnees des stations de Vea
-def filter_colonnes(df, renamed_columns, delete_columns=None):
+# def filter_colonnes(df, renamed_columns, delete_columns=None):
     
-    #Supprimer la colonne TIMESTAMP (or other columns in delete_columns list)
-    # Add a check to only drop columns if delete_columns is not None
-    if delete_columns is not None:
-        # Add errors='ignore' to handle cases where columns in the list do not exist
-        df.drop(columns=delete_columns, inplace=True, errors='ignore')
+#     #Supprimer la colonne TIMESTAMP (or other columns in delete_columns list)
+#     # Add a check to only drop columns if delete_columns is not None
+#     if delete_columns is not None:
+#         # Add errors='ignore' to handle cases where columns in the list do not exist
+#         df.drop(columns=delete_columns, inplace=True, errors='ignore')
 
-    #Renommer les colonnes
-    # Use errors='ignore' here too, in case a column to be renamed doesn't exist
-    df.rename(columns=renamed_columns, inplace=True, errors='ignore')
+#     #Renommer les colonnes
+#     # Use errors='ignore' here too, in case a column to be renamed doesn't exist
+#     df.rename(columns=renamed_columns, inplace=True, errors='ignore')
 
   
-    return df
+#     return df
 
 # def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.DataFrame:
 #     """
@@ -884,6 +884,102 @@ from typing import Dict, List
 #     cols = ['Datetime'] + [col for col in df.columns if col != 'Datetime']
 #     return df[cols]
 
+
+
+
+
+
+
+
+
+#colonnes renommees
+def filter_colonnes(df, renamed_columns, delete_columns=None):
+    """
+    Lit un fichier Excel de données météo avec des lignes de métadonnées,
+    nettoie le DataFrame et ajoute les colonnes Year, Month, Day, Hour, Minute.
+
+    Args:
+        df (pd.DataFrame): DataFrame à traiter.
+        renamed_columns (dict): Dictionnaire pour renommer les colonnes.
+        delete_columns (list, optional): Liste des colonnes à supprimer. Defaults to None.
+
+    Returns:
+        pd.DataFrame: DataFrame nettoyé et enrichi
+    """
+    # Lire le fichier en ignorant la première ligne
+    #df = pd.read_excel(chemin_fichier, skiprows=1)
+
+    # Supprimer les lignes d'en-tête secondaires (souvent aux lignes 2 et 3)
+    df = df[~df["TIMESTAMP"].astype(str).isin(["TS", "NaN", "nan"])]
+    df.reset_index(drop=True, inplace=True)
+
+    # Renommer la dernière colonne en "Station"
+    #df.rename(columns={df.columns[-1]: "Station"}, inplace=True)
+
+    # Conversion de Date en datetime
+    # Assuming the 'Date' column exists and needs conversion
+    # if 'Date' in df.columns:
+    #      df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    #      # Supprimer les lignes avec dates invalides si 'Date' was just created/converted
+    #      df.dropna(subset=["Date"], inplace=True)
+
+
+    # # Extraire année, mois, jour, heure, minute
+    # # Check if 'Date' column exists after potential dropna
+    # if 'Date' in df.columns:
+    #     df["Year"] = df["Date"].dt.year
+    #     df["Month"] = df["Date"].dt.month
+    #     df["Day"] = df["Date"].dt.day
+    #     df["Hour"] = df["Date"].dt.hour
+    #     df["Minute"] = df["Date"].dt.minute
+    # else:
+    #     print("Avertissement: Colonne 'Date' manquante, impossible d'extraire les composantes temporelles.")
+
+
+    #Supprimer la colonne TIMESTAMP (or other columns in delete_columns list)
+    # Add a check to only drop columns if delete_columns is not None
+    if delete_columns is not None:
+        # Add errors='ignore' to handle cases where columns in the list do not exist
+        df.drop(columns=delete_columns, inplace=True, errors='ignore')
+
+    #Renommer les colonnes
+    # Use errors='ignore' here too, in case a column to be renamed doesn't exist
+    df.rename(columns=renamed_columns, inplace=True, errors='ignore')
+
+    #Nommer la station
+    # df['Station'] = station
+
+    return df
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.DataFrame:
     """
     Prétraite les données d'une station spécifique et crée une colonne Datetime standardisée.
@@ -921,7 +1017,7 @@ def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.D
         # Stations Vea Sissili
         'Oualem': 'VEA_SISSILI',
         'Nebou': 'VEA_SISSILI',
-        'Nabugubelle': 'VEA_SISSILI',
+        'Nabugubulle': 'VEA_SISSILI',
         'Manyoro': 'VEA_SISSILI',
         'Gwosi': 'VEA_SISSILI',
         'Doninga': 'VEA_SISSILI',
@@ -1013,22 +1109,25 @@ def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.D
                 'WindDir_D1_WVT': 'Wind_Dir_Deg'
             }
             
-            if 'TIMESTAMP' in df_copy.columns:
-                df_copy["TIMESTAMP"] = pd.to_datetime(df_copy["TIMESTAMP"], errors="coerce")
-                df_copy.dropna(subset=["TIMESTAMP"], inplace=True)
+            df_copy = df_copy[~df_copy["TIMESTAMP"].astype(str).isin(["TS", "NaN", "nan"])]
+            df_copy.reset_index(drop=True, inplace=True)
+
+            # if 'TIMESTAMP' in df_copy.columns:
+            #     df_copy["TIMESTAMP"] = pd.to_datetime(df_copy["TIMESTAMP"], errors="coerce")
+            #     df_copy.dropna(subset=["TIMESTAMP"], inplace=True)
                 
-                df_copy["Year"] = df_copy["TIMESTAMP"].dt.year
-                df_copy["Month"] = df_copy["TIMESTAMP"].dt.month
-                df_copy["Day"] = df_copy["TIMESTAMP"].dt.day
-                df_copy["Hour"] = df_copy["TIMESTAMP"].dt.hour
-                df_copy["Minute"] = df_copy["TIMESTAMP"].dt.minute
+            #     df_copy["Year"] = df_copy["TIMESTAMP"].dt.year
+            #     df_copy["Month"] = df_copy["TIMESTAMP"].dt.month
+            #     df_copy["Day"] = df_copy["TIMESTAMP"].dt.day
+            #     df_copy["Hour"] = df_copy["TIMESTAMP"].dt.hour
+            #     df_copy["Minute"] = df_copy["TIMESTAMP"].dt.minute
             
             df_copy.drop(columns=[col for col in colonnes_sup if col in df_copy.columns], inplace=True, errors='ignore')
             df_copy.rename(columns=colonnes_renommage, inplace=True)
     
     # Traitement pour le bassin Vea Sissili
     elif bassin == 'VEA_SISSILI':        
-        if station in ['Oualem', 'Nebou', 'Nabugubelle', 'Manyoro', 'Gwosi', 'Doninga', 'Bongo Soe']:
+        if station in ['Oualem', 'Nebou', 'Nabugubulle',  'Gwosi', 'Doninga', 'Bongo Soe']:
             colonnes_renommage = {
                 'Rain_mm_Tot': 'Rain_mm',
                 'AirTC_Avg': 'Air_Temp_Deg_C',
@@ -1047,6 +1146,29 @@ def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.D
                 'Solar_R_W/m^2', 'Wind_Sp_m/sec', 'Wind_Dir_Deg', 'BP_mbar_Avg'
             ]
             df_copy = df_copy[colonnes_finales]
+        
+        elif station == 'Manyoro':
+            colonnes_renommage = {
+                'Rain_01_mm_Tot': 'Rain_01_mm',
+                'Rain_02_mm_Tot': 'Rain_02_mm',
+                'AirTC_Avg': 'Air_Temp_Deg_C',
+                'RH': 'Rel_H_%',
+                'SlrW_Avg': 'Solar_R_W/m^2',
+                'WS_ms_Avg': 'Wind_Sp_m/sec',
+                'WindDir': 'Wind_Dir_Deg',
+            }
+            colonnes_sup = ['SlrkJ_Tot']
+            #colonnes_sup = ['SlrkJ_Tot', 'WS_ms_Avg', 'WindDir', 'Rain_01_mm_Tot', 'Rain_02_mm_Tot']
+
+            
+            df_copy.drop(columns=[col for col in colonnes_sup if col in df_copy.columns], inplace=True, errors='ignore')
+            df_copy.rename(columns=colonnes_renommage, inplace=True)
+            
+            colonnes_finales = [
+                'Date', 'Rain_01_mm', 'Rain_02_mm', 'Air_Temp_Deg_C', 'Rel_H_%', 
+                'Solar_R_W/m^2', 'Wind_Sp_m/sec', 'Wind_Dir_Deg'
+            ]
+            df_copy = df_copy[colonnes_finales]
             
         elif station == 'Aniabiisi':
             colonnes_renommage = {
@@ -1063,7 +1185,7 @@ def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.D
             df_copy.drop(columns=[col for col in colonnes_sup if col in df_copy.columns], inplace=True, errors='ignore')
             df_copy.rename(columns=colonnes_renommage, inplace=True)
     
-        elif station == 'Atampisi':
+        elif station in ['Bongo Atampisi', 'Atampisi']:
             colonnes_renommage = {
                 'Rain_01_mm_Tot': 'Rain_01_mm',
                 'Rain_02_mm_Tot': 'Rain_02_mm',

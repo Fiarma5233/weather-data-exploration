@@ -427,6 +427,8 @@ def get_connection(database: str = None):
 
 from typing import Dict
 
+from typing import Dict
+
 def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
     """Retourne les colonnes attendues pour une station donnée selon le type de traitement"""
     
@@ -438,7 +440,7 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
         # Bassin DANO
         if station in ['Dreyer Foundation', 'Bankandi', 'Wahablé', 'Fafo', 'Yabogane']:
             return {
-                "Datetime": 'timestamp PRIMARY KEY',
+                "Datetime": 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI  JUSTE POUR SE LIMITER A MINUTES
                 'Year': 'integer',
                 'Month': 'integer', 
                 'Day': 'integer',
@@ -447,14 +449,14 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
                 'Rain_01_mm': 'float',
                 'Rain_02_mm': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Solar_R_W/m^2': 'float',
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float'
             }
         elif station in ['Lare', 'Tambiri 2']:
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Year': 'integer',
                 'Month': 'integer', 
                 'Day': 'integer',
@@ -465,7 +467,7 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
             }
         elif station == 'Tambiri 1':
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Year': 'integer',
                 'Month': 'integer', 
                 'Day': 'integer',
@@ -474,14 +476,14 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
                 'Rain_mm': 'float',
                 'BP_mbar_Avg': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float'
             }
         # Bassin DASSARI
         elif station in ['Nagasséga', 'Koundri', 'Koupendri', 'Pouri', 'Fandohoun']:
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Year': 'integer',
                 'Month': 'integer', 
                 'Day': 'integer',
@@ -490,14 +492,14 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
                 'Rain_01_mm': 'float',
                 'Rain_02_mm': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Solar_R_W/m^2': 'float',
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float'
             }
         elif station == 'Ouriyori 1':
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Year': 'integer',
                 'Month': 'integer', 
                 'Day': 'integer',
@@ -506,47 +508,59 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
                 'Rain_01_mm': 'float',
                 'Rain_02_mm': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Solar_R_W/m^2': 'float',
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float'
             }
         # Bassin VEA SISSILI
-        elif station in ['Oualem', 'Nebou', 'Nabugubelle', 'Manyoro', 'Gwosi', 'Doninga', 'Bongo Soe', 'Aniabisi']:
+        elif station in ['Oualem', 'Nebou', 'Nabugubulle', 'Gwosi', 'Doninga', 'Bongo Soe', 'Aniabiisi']:
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
-                'Date': 'date',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
+                'Date': 'date', # Garde Date comme date pure
                 'Rain_mm': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Solar_R_W/m^2': 'float',
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float',
                 'BP_mbar_Avg': 'float'
             }
+
+
+        elif station == 'Manyoro':
+            return {
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
+                'Date': 'date',
+                'Rain_01_mm': 'float',
+                'Rain_02_mm': 'float',
+                'Air_Temp_Deg_C': 'float',
+                'Rel_H_Pct': 'float', 
+                'Solar_R_W/m^2': 'float',
+                'Wind_Sp_m/sec': 'float',
+                'Wind_Dir_Deg': 'float',
+                #'BP_mbar_Avg': 'float'
+            }
         elif station == 'Atampisi':
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Date': 'date',
                 'Rain_01_mm': 'float',
                 'Rain_02_mm': 'float',
                 'Rain_mm': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Solar_R_W/m^2': 'float',
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float'
             }
-        # Aniabisi est listé deux fois, je suppose que la première liste est la bonne
-        # et que la seconde est une faute de frappe ou un cas spécifique qui devrait être géré ailleurs
-        # Pour être sûr, je la modifie aussi ici si elle est un cas unique.
-        elif station == 'Aniabisi': # Cette clause est redondante si déjà dans la liste ci-dessus
+        elif station == 'Aniabisi':
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Date': 'date',
                 'Rain_mm': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Solar_R_W/m^2': 'float',
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float'
@@ -557,7 +571,7 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
         # Bassin DANO
         if station in ['Dreyer Foundation', 'Bankandi', 'Wahablé', 'Fafo', 'Yabogane']:
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Year': 'integer',
                 'Month': 'integer', 
                 'Day': 'integer',
@@ -567,18 +581,18 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
                 'Rain_02_mm': 'float',
                 'Rain_mm': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Solar_R_W/m^2': 'float',
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float',
-                'sunrise_time_utc': 'timestamp',
-                'sunset_time_utc': 'timestamp',
+                'sunrise_time_utc': 'timestamp', # Ces colonnes peuvent rester timestamp (elles ne sont pas forcément à la minute)
+                'sunset_time_utc': 'timestamp',   # ou passer à timestamp(0) si c'est votre exigence pour elles aussi.
                 'Is_Daylight': 'boolean',
                 'Daylight_Duration': 'float'
             }
         elif station in ['Lare', 'Tambiri 2']:
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Year': 'integer',
                 'Month': 'integer', 
                 'Day': 'integer',
@@ -590,7 +604,7 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
             }
         elif station == 'Tambiri 1':
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Year': 'integer',
                 'Month': 'integer', 
                 'Day': 'integer',
@@ -599,14 +613,14 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
                 'Rain_mm': 'float',
                 'BP_mbar_Avg': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float'
             }
         # Bassin DASSARI
         elif station in ['Nagasséga', 'Koundri', 'Koupendri', 'Pouri', 'Fandohoun']:
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Year': 'integer',
                 'Month': 'integer', 
                 'Day': 'integer',
@@ -616,7 +630,7 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
                 'Rain_02_mm': 'float',
                 'Rain_mm': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Solar_R_W/m^2': 'float',
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float',
@@ -627,7 +641,7 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
             }
         elif station == 'Ouriyori 1':
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Year': 'integer',
                 'Month': 'integer', 
                 'Day': 'integer',
@@ -637,7 +651,7 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
                 'Rain_02_mm': 'float',
                 'Rain_mm': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Solar_R_W/m^2': 'float',
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float',
@@ -647,14 +661,14 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
                 'Daylight_Duration': 'float'
             }
         # Bassin VEA SISSILI
-        elif station in ['Oualem', 'Nebou', 'Nabugubelle', 'Manyoro', 'Gwosi', 'Doninga', 'Bongo Soe', 'Aniabisi']:
+        elif station in ['Oualem', 'Nebou', 'Nabugubulle',  'Gwosi', 'Doninga', 'Bongo Soe', 'Aniabiisi']:
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Date': 'date',
                 'Rain_mm': 'float',
-                # 'Rain_mm': 'float', # <--- Cette ligne est un doublon, à supprimer ou corriger si c'est une autre colonne
+                # 'Rain_mm': 'float', # Cette ligne est un doublon, elle devrait être supprimée ou corrigée si c'est une autre colonne.
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Solar_R_W/m^2': 'float',
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float',
@@ -664,15 +678,33 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
                 'Is_Daylight': 'boolean',
                 'Daylight_Duration': 'float'
             }
+
+        elif station == 'Manyoro':
+            return {
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
+                'Date': 'date',
+                'Rain_01_mm': 'float',
+                'Rain_02_mm': 'float',
+                'Air_Temp_Deg_C': 'float',
+                'Rel_H_Pct': 'float', 
+                'Solar_R_W/m^2': 'float',
+                'Wind_Sp_m/sec': 'float',
+                'Wind_Dir_Deg': 'float',
+                #'BP_mbar_Avg': 'float'
+                'sunrise_time_utc': 'timestamp',
+                'sunset_time_utc': 'timestamp',
+                'Is_Daylight': 'boolean',
+                'Daylight_Duration': 'float'
+            }
         elif station == 'Atampisi':
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Date': 'date',
                 'Rain_01_mm': 'float',
                 'Rain_02_mm': 'float',
                 'Rain_mm': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Solar_R_W/m^2': 'float',
                 'Wind_Sp_m/sec': 'float',
                 'Wind_Dir_Deg': 'float',
@@ -684,14 +716,18 @@ def get_station_columns(station: str, processing_type: str) -> Dict[str, str]:
     
         elif station == 'Aniabisi': # Cette clause est également redondante si déjà dans la liste ci-dessus
             return {
-                'Datetime': 'timestamp PRIMARY KEY',
+                'Datetime': 'timestamp(0) PRIMARY KEY', # <--- MODIFIÉ ICI
                 'Date': 'date',
                 'Rain_mm': 'float',
                 'Air_Temp_Deg_C': 'float',
-                'Rel_H_Pct': 'float', # <--- MODIFIÉ ICI
+                'Rel_H_Pct': 'float', 
                 'Solar_R_W/m^2': 'float',
                 'Wind_Sp_m/sec': 'float',
-                'Wind_Dir_Deg': 'float'
+                'Wind_Dir_Deg': 'float',
+                'sunrise_time_utc': 'timestamp',
+                'sunset_time_utc': 'timestamp',
+                'Is_Daylight': 'boolean',
+                'Daylight_Duration': 'float'
             }
     return {}
 
@@ -2140,11 +2176,376 @@ def create_station_table(station: str, processing_type: str = 'before'):
         return False
     
     
-def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'before') -> bool:
+# def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'before') -> bool:
+#     """
+#     Sauvegarde un DataFrame dans la base de données, avec vérifications complètes et journalisation détaillée.
+#     """
+#     conn = None 
+#     try:
+#         # Vérification initiale
+#         if df.empty:
+#             print(f"Warning: DataFrame vide reçu pour la station '{station}' ({processing_type}), aucune donnée à sauvegarder.")
+#             return True
+
+#         # Le nom de la table dans la DB sera exactement le nom de la station
+#         table_name = station.strip()
+
+#         db_name = os.getenv('DB_NAME_BEFORE') if processing_type == 'before' else os.getenv('DB_NAME_AFTER')
+
+#         if not db_name:
+#             raise ValueError(f"Nom de la base de données non configuré pour processing_type '{processing_type}'. Vérifiez .env")
+
+#         # Récupérez la configuration des colonnes attendues (doit déjà inclure 'Rel_H_Pct')
+#         columns_config = get_station_columns(station, processing_type)
+#         if not columns_config:
+#             raise ValueError(f"Configuration des colonnes manquante pour la station '{station}' ({processing_type}). Impossible de sauvegarder.")
+
+#         expected_columns = list(columns_config.keys()) # Ce sont les noms propres attendus (ex: 'Rel_H_Pct')
+
+#         # --- DÉBUT DE LA CORRECTION : Renommage Spécifique de la Colonne `Rel_H_%` dans le DataFrame ---
+#         # Cette étape garantit que le DataFrame a le nom de colonne "propre" ('Rel_H_Pct')
+#         # avant toute autre comparaison ou construction de requête SQL.
+#         df_column_rename_map = {}
+#         for df_col in df.columns:
+#             # Vérifiez si la colonne du DataFrame est 'Rel_H_%' ou une variation (insensible à la casse si besoin)
+#             if df_col == 'Rel_H_%': # Correspondance exacte avec le problème initial
+#                 df_column_rename_map[df_col] = 'Rel_H_Pct'
+#             elif df_col.lower() == 'rel_h': # Si elle arrive parfois sous cette forme
+#                  df_column_rename_map[df_col] = 'Rel_H_Pct'
+#             # ATTENTION : Si d'autres colonnes de vos CSV contiennent des caractères spéciaux problématiques pour mogrify,
+#             # vous devrez ajouter des règles de renommage ici également.
+#             # Cependant, basé sur nos discussions, seul 'Rel_H_%' était le coupable.
+
+#         if df_column_rename_map:
+#             df = df.rename(columns=df_column_rename_map)
+#             print(f"DEBUG: Colonnes du DataFrame renommées: {df_column_rename_map}")
+#         # --- FIN DE LA CORRECTION ---
+
+
+#         # ========== VÉRIFICATION 1: NOMS DE COLONNES ==========
+#         print("\n" + "="*50)
+#         print("VÉRIFICATION DES NOMS DE COLONNES (CASSE ET CORRESPONDANCE)")
+#         print("="*50)
+        
+#         # Normalisation des noms de colonnes du DataFrame (après le renommage explicite ci-dessus)
+#         # La logique de normalisation de casse reste utile pour d'autres colonnes.
+#         column_mapping_expected = {col.lower(): col for col in expected_columns}
+#         new_df_columns = []
+#         for col_df in df.columns:
+#             if col_df in expected_columns: # Le nom est déjà parfait (ex: 'Rel_H_Pct')
+#                 new_df_columns.append(col_df)
+#             elif col_df.lower() in column_mapping_expected: # Gérer les différences de casse
+#                 new_df_columns.append(column_mapping_expected[col_df.lower()])
+#             else: # Conserver les colonnes non reconnues pour l'instant (seront supprimées plus tard si extra)
+#                 new_df_columns.append(col_df)
+        
+#         df.columns = new_df_columns
+
+#         # Journalisation des résultats
+#         df_cols_after_norm = df.columns.tolist()
+#         missing_in_df = set(expected_columns) - set(df_cols_after_norm)
+#         extra_in_df = set(df_cols_after_norm) - set(expected_columns)
+        
+#         print(f"\nColonnes attendues par la DB: {expected_columns}")
+#         print(f"Colonnes du DataFrame (après normalisation): {df_cols_after_norm}")
+
+#         if missing_in_df:
+#             print(f"\n⚠️ ATTENTION: Colonnes attendues mais absentes du DataFrame:")
+#             for col in missing_in_df:
+#                 print(f"- {col}")
+#                 df[col] = None  # Ajout des colonnes manquantes avec valeurs NULL
+        
+#         if extra_in_df:
+#             print(f"\nℹ️ INFO: Colonnes supplémentaires dans le DataFrame:")
+#             for col in extra_in_df:
+#                 print(f"- {col}")
+#             df = df.drop(columns=list(extra_in_df))
+
+#         # Vérification finale de correspondance (après le renommage initial et la normalisation)
+#         if not missing_in_df and not extra_in_df and set(expected_columns) == set(df.columns.tolist()):
+#             print("\n✅ Tous les noms de colonnes correspondent exactement")
+#         else:
+#             print("\n❌ Des divergences de noms de colonnes existent")
+
+#         # Réordonnancement des colonnes pour correspondre à l'ordre attendu par la DB
+#         df = df[expected_columns]
+#         print("\nOrdre final des colonnes:", df.columns.tolist())
+#         print("="*50 + "\n")
+
+#         # ========== VÉRIFICATION 2: TYPES DE DONNÉES ==========
+#         print("\n" + "="*50)
+#         print("VÉRIFICATION DES TYPES DE DONNÉES ET VALEURS ANORMALES")
+#         print("="*50)
+        
+#         nan_value_strings = ['NaN', 'NAN', 'nan', '', ' ', '#VALUE!', '-', 'NULL', 'null', 'N/A', 'NA', 'None', 'NONE', 'NV', 'N.V.', '#DIV/0!']
+        
+#         for col, pg_type_str in columns_config.items():
+#             if col not in df.columns:
+#                 print(f"\n⚠️ Colonne '{col}' non trouvée - ignorée")
+#                 continue
+
+#             original_dtype = str(df[col].dtype)
+#             pg_base_type = pg_type_str.split()[0].lower()
+            
+#             print(f"\nColonne: {col}")
+#             print(f"- Type Pandas original: {original_dtype}")
+#             print(f"- Type PostgreSQL attendu: {pg_base_type}")
+            
+#             try:
+#                 # Nettoyage des valeurs
+#                 df[col] = df[col].replace(nan_value_strings, np.nan)
+                
+#                 # Conversion des types
+#                 if pg_base_type in ['timestamp', 'date']:
+#                     df[col] = pd.to_datetime(df[col], errors='coerce')
+#                     print("- Converti en datetime")
+#                 elif pg_base_type in ['float', 'integer']:
+#                     df[col] = pd.to_numeric(df[col], errors='coerce')
+#                     print("- Converti en numérique")
+                
+#                 # Statistiques après conversion
+#                 null_count = df[col].isna().sum()
+#                 print(f"- Valeurs NULL après conversion: {null_count}/{len(df)} ({null_count/len(df)*100:.2f}%)")
+                
+#                 if null_count > 0:
+#                     sample_null = df[df[col].isna()].head(3)
+#                     print("- Exemple de lignes avec NULL:", sample_null[[col]].to_string())
+                    
+#             except Exception as e:
+#                 print(f"\n❌ ERREUR DE CONVERSION pour '{col}': {str(e)}")
+#                 problematic_vals = df[col][~df[col].isna() & pd.to_numeric(df[col], errors='coerce').isna()]
+#                 if not problematic_vals.empty:
+#                     print("- Valeurs problématiques:", problematic_vals.unique()[:5])
+#                 traceback.print_exc()
+
+#         print("\nRésumé des types après conversion:")
+#         print(df.dtypes)
+#         print("="*50 + "\n")
+
+#         # ========== PRÉPARATION DES DONNÉES ==========
+#         print("\n" + "="*50)
+#         print("PRÉPARATION DES DONNÉES POUR INSERTION")
+#         print("="*50)
+        
+#         data_to_insert = []
+#         type_converters = []
+        
+#         # Création des convertisseurs de type
+#         for col in expected_columns: # Utilise les expected_columns (qui incluent 'Rel_H_Pct')
+#             pg_type_str = columns_config.get(col, 'text')
+#             pg_base_type = pg_type_str.split()[0].lower()
+
+#             if pg_base_type == 'timestamp':
+#                 #type_converters.append(lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) else None)
+#                 type_converters.append(lambda x: x.strftime('%Y-%m-%d %H:%M') if pd.notna(x) else None)
+#             elif pg_base_type == 'date':
+#                 type_converters.append(lambda x: x.strftime('%Y-%m-%d') if pd.notna(x) else None)
+#             elif pg_base_type == 'float':
+#                 type_converters.append(lambda x: float(x) if pd.notna(x) else None)
+#             elif pg_base_type == 'integer':
+#                 type_converters.append(lambda x: int(x) if pd.notna(x) and x == int(x) else None)
+#             else:
+#                 type_converters.append(lambda x: str(x) if pd.notna(x) else None)
+
+#         # Conversion des lignes
+#         for idx, row in df.iterrows():
+#             try:
+#                 row_values = [type_converters[i](row[col]) for i, col in enumerate(expected_columns)]
+#                 data_to_insert.append(tuple(row_values))
+                
+#                 # Journalisation pour les premières lignes
+#                 if idx < 2:
+#                     print(f"\nExemple ligne {idx}:")
+#                     for i, col in enumerate(expected_columns):
+#                         val = row_values[i]
+#                         print(f"- {col}: {val} ({type(val).__name__ if val is not None else 'NULL'})")
+                        
+#             except Exception as e:
+#                 print(f"\n❌ ERREUR ligne {idx}: {str(e)}")
+#                 print("Valeurs:", row.to_dict())
+#                 traceback.print_exc()
+#                 continue
+
+#         print(f"\nTotal lignes préparées: {len(data_to_insert)}")
+#         print("="*50 + "\n")
+
+#         # ========== CONNEXION À LA BASE ==========
+#         conn = get_connection(db_name)
+#         if not conn:
+#             raise ConnectionError(f"Impossible de se connecter à la base '{db_name}'")
+
+#         with conn.cursor() as cursor:
+#             # Vérification de l'existence de la table (avec le nom de table original)
+#             cursor.execute("""
+#                 SELECT EXISTS (
+#                     SELECT FROM information_schema.tables
+#                     WHERE table_schema = 'public' AND table_name = %s
+#                 )
+#             """, (table_name,))
+#             table_exists = cursor.fetchone()[0]
+            
+#             if not table_exists:
+#                 print(f"\nℹ️ La table '{table_name}' n'existe pas, création...")
+#                 # Appel de create_station_table avec le nom de station original
+#                 if not create_station_table(station, processing_type):
+#                     raise Exception(f"Échec de la création de la table '{table_name}'")
+#                 print("✅ Table créée avec succès")
+
+#             # ========== NOUVELLE VÉRIFICATION ROBUSTE DE CLÉ PRIMAIRE ==========
+#             pk_col = None
+#             try:
+#                 # Méthode 1: Utilisation de information_schema (plus fiable)
+#                 cursor.execute("""
+#                     SELECT kcu.column_name
+#                     FROM information_schema.table_constraints tc
+#                     JOIN information_schema.key_column_usage kcu
+#                         ON tc.constraint_name = kcu.constraint_name
+#                         AND tc.table_schema = kcu.table_schema
+#                     WHERE tc.table_name = %s
+#                     AND tc.constraint_type = 'PRIMARY KEY'
+#                     LIMIT 1
+#                 """, (table_name,))
+#                 pk_info = cursor.fetchone()
+                
+#                 # Méthode 2: Fallback avec pg_index (pour les cas complexes)
+#                 if not pk_info:
+#                     print("ℹ️ Essai méthode alternative de détection de clé primaire...")
+#                     try:
+#                         cursor.execute(f"""
+#                             SELECT a.attname
+#                             FROM pg_index i
+#                             JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+#                             WHERE i.indrelid = %s::regclass AND i.indisprimary
+#                         """, (f'"{table_name}"',))
+#                         pk_info = cursor.fetchone()
+#                     except Exception as e:
+#                         print(f"⚠️ Échec méthode alternative: {str(e)}")
+#                         pk_info = None
+                
+#                 if pk_info:
+#                     pk_col = pk_info[0]
+#                     print(f"✅ Clé primaire détectée: {pk_col}")
+#                 else:
+#                     print("ℹ️ Aucune clé primaire détectée")
+                    
+#             except Exception as e:
+#                 print(f"⚠️ Erreur lors de la détection de la clé primaire: {str(e)}")
+#                 if 'Datetime' in expected_columns:
+#                     pk_col = 'Datetime'
+#                     print("ℹ️ Utilisation de 'Datetime' comme clé primaire par défaut")
+#                 traceback.print_exc()
+
+#             # Construction de la requête SQL (utilisant le nom de table original et les noms de colonnes attendus)
+#             cols_sql = ', '.join([f'"{col}"' for col in expected_columns])
+#             placeholders = ', '.join(['%s'] * len(expected_columns))
+            
+#             if pk_col:
+#                 query = f"""
+#                     INSERT INTO "{table_name}" ({cols_sql})
+#                     VALUES ({placeholders})
+#                     ON CONFLICT ("{pk_col}") DO NOTHING
+#                 """
+#                 print("ℹ️ Utilisation de ON CONFLICT avec la clé primaire")
+#             else:
+#                 query = f"""
+#                     INSERT INTO "{table_name}" ({cols_sql})
+#                     VALUES ({placeholders})
+#                 """
+#                 print("ℹ️ Insertion simple (aucune clé primaire détectée)")
+
+#             print("\nRequête SQL générée:")
+#             print(query)
+
+#             # ========== VÉRIFICATION FINALE AVANT INSERTION ==========
+#             print("\n" + "="*50)
+#             print("VÉRIFICATION FINALE AVANT INSERTION")
+#             print("="*50)
+            
+#             print(f"\nNombre de colonnes attendues: {len(expected_columns)}")
+#             print(f"Nombre de colonnes préparées (dans DataFrame): {len(df.columns)}") # Vérification supplémentaire
+            
+#             if len(expected_columns) != len(df.columns):
+#                 print("\n❌ ERREUR: Nombre de colonnes incompatible entre expected_columns et le DataFrame final!")
+#                 print("Colonnes attendues:", expected_columns)
+#                 print("Colonnes DataFrame:", df.columns.tolist())
+#                 raise ValueError("Incompatibilité de colonnes après préparation") # Relancer pour un échec clair
+
+#             if data_to_insert:
+#                 first_row = data_to_insert[0]
+#                 print(f"\nPremière ligne de données ({len(first_row)} valeurs):")
+#                 for val, col in zip(first_row, expected_columns):
+#                     print(f"- {col}: {val} ({type(val).__name__ if val is not None else 'NULL'})")
+                
+#                 # Test de mogrify (AVEC LE NOM DE COLONNE CORRIGÉ)
+#                 try:
+#                     mogrified = cursor.mogrify(query, first_row).decode('utf-8')
+#                     print("\n✅ Test mogrify réussi:")
+#                     print(mogrified[:500] + ("..." if len(mogrified) > 500 else ""))
+#                 except Exception as e:
+#                     print("\n❌ ERREUR mogrify:", str(e))
+#                     traceback.print_exc()
+#                     raise # Relancer l'erreur pour arrêter le processus si mogrify échoue
+#             else:
+#                 print("\n⚠️ Aucune donnée à insérer!")
+#                 return False
+
+#             print("="*50 + "\n")
+
+#             # ========== INSERTION ==========
+#             batch_size = 10000
+#             inserted_rows = 0
+#             start_time = datetime.now()
+            
+#             print(f"\nDébut de l'insertion de {len(data_to_insert)} lignes par lots de {batch_size}...")
+            
+#             for i in range(0, len(data_to_insert), batch_size):
+#                 batch = data_to_insert[i:i + batch_size]
+#                 try:
+#                     extras.execute_batch(cursor, query, batch)
+#                     conn.commit()
+#                     inserted_rows += len(batch)
+                    
+#                     # Journalisation périodique
+#                     if (i // batch_size) % 10 == 0:
+#                         elapsed = (datetime.now() - start_time).total_seconds()
+#                         rate = inserted_rows / elapsed if elapsed > 0 else 0
+#                         print(f"Lot {i//batch_size + 1}: {inserted_rows} lignes ({rate:.1f} lignes/sec)")
+                        
+#                 except Exception as e:
+#                     conn.rollback()
+#                     print(f"\n❌ ERREUR lot {i//batch_size + 1}: {str(e)}")
+#                     if batch:
+#                         print("Exemple de ligne problématique:", batch[0])
+#                     traceback.print_exc()
+#                     raise # Relancer l'erreur pour que la fonction appelante sache qu'il y a eu un échec
+
+#             total_time = (datetime.now() - start_time).total_seconds()
+#             print(f"\n✅ Insertion terminée: {inserted_rows} lignes en {total_time:.2f} secondes ({inserted_rows/max(total_time,1):.1f} lignes/sec)")
+#             return True
+
+#     except Exception as e:
+#         print(f"\n❌❌❌ ERREUR CRITIQUE: {str(e)}")
+#         traceback.print_exc()
+        
+#         if 'df' in locals():
+#             print("\nÉtat du DataFrame au moment de l'erreur:")
+#             print(f"Shape: {df.shape}")
+#             print("5 premières lignes:")
+#             print(df.head().to_string())
+            
+#         return False
+        
+#     finally:
+#         if conn:
+#             conn.close()
+#             print("\nConnexion à la base de données fermée")
+
+
+def save_to_database(df: pd.DataFrame, station: str, conn, processing_type: str = 'before') -> bool:
     """
     Sauvegarde un DataFrame dans la base de données, avec vérifications complètes et journalisation détaillée.
+    La connexion à la base de données est passée en argument.
     """
-    conn = None 
     try:
         # Vérification initiale
         if df.empty:
@@ -2156,29 +2557,24 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
 
         db_name = os.getenv('DB_NAME_BEFORE') if processing_type == 'before' else os.getenv('DB_NAME_AFTER')
 
-        if not db_name:
-            raise ValueError(f"Nom de la base de données non configuré pour processing_type '{processing_type}'. Vérifiez .env")
+        # La connexion est maintenant passée en argument, donc plus besoin de la créer ici
+        if not conn: # Vérification au cas où la connexion passée est nulle
+            raise ConnectionError(f"Connexion à la base de données non fournie ou nulle pour '{db_name}'")
 
         # Récupérez la configuration des colonnes attendues (doit déjà inclure 'Rel_H_Pct')
         columns_config = get_station_columns(station, processing_type)
         if not columns_config:
             raise ValueError(f"Configuration des colonnes manquante pour la station '{station}' ({processing_type}). Impossible de sauvegarder.")
 
-        expected_columns = list(columns_config.keys()) # Ce sont les noms propres attendus (ex: 'Rel_H_Pct')
+        expected_columns = list(columns_config.keys())
 
         # --- DÉBUT DE LA CORRECTION : Renommage Spécifique de la Colonne `Rel_H_%` dans le DataFrame ---
-        # Cette étape garantit que le DataFrame a le nom de colonne "propre" ('Rel_H_Pct')
-        # avant toute autre comparaison ou construction de requête SQL.
         df_column_rename_map = {}
         for df_col in df.columns:
-            # Vérifiez si la colonne du DataFrame est 'Rel_H_%' ou une variation (insensible à la casse si besoin)
-            if df_col == 'Rel_H_%': # Correspondance exacte avec le problème initial
+            if df_col == 'Rel_H_%':
                 df_column_rename_map[df_col] = 'Rel_H_Pct'
-            elif df_col.lower() == 'rel_h': # Si elle arrive parfois sous cette forme
+            elif df_col.lower() == 'rel_h': 
                  df_column_rename_map[df_col] = 'Rel_H_Pct'
-            # ATTENTION : Si d'autres colonnes de vos CSV contiennent des caractères spéciaux problématiques pour mogrify,
-            # vous devrez ajouter des règles de renommage ici également.
-            # Cependant, basé sur nos discussions, seul 'Rel_H_%' était le coupable.
 
         if df_column_rename_map:
             df = df.rename(columns=df_column_rename_map)
@@ -2191,21 +2587,18 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
         print("VÉRIFICATION DES NOMS DE COLONNES (CASSE ET CORRESPONDANCE)")
         print("="*50)
         
-        # Normalisation des noms de colonnes du DataFrame (après le renommage explicite ci-dessus)
-        # La logique de normalisation de casse reste utile pour d'autres colonnes.
         column_mapping_expected = {col.lower(): col for col in expected_columns}
         new_df_columns = []
         for col_df in df.columns:
-            if col_df in expected_columns: # Le nom est déjà parfait (ex: 'Rel_H_Pct')
+            if col_df in expected_columns: 
                 new_df_columns.append(col_df)
-            elif col_df.lower() in column_mapping_expected: # Gérer les différences de casse
+            elif col_df.lower() in column_mapping_expected: 
                 new_df_columns.append(column_mapping_expected[col_df.lower()])
-            else: # Conserver les colonnes non reconnues pour l'instant (seront supprimées plus tard si extra)
+            else: 
                 new_df_columns.append(col_df)
         
         df.columns = new_df_columns
 
-        # Journalisation des résultats
         df_cols_after_norm = df.columns.tolist()
         missing_in_df = set(expected_columns) - set(df_cols_after_norm)
         extra_in_df = set(df_cols_after_norm) - set(expected_columns)
@@ -2217,7 +2610,7 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
             print(f"\n⚠️ ATTENTION: Colonnes attendues mais absentes du DataFrame:")
             for col in missing_in_df:
                 print(f"- {col}")
-                df[col] = None  # Ajout des colonnes manquantes avec valeurs NULL
+                df[col] = None 
         
         if extra_in_df:
             print(f"\nℹ️ INFO: Colonnes supplémentaires dans le DataFrame:")
@@ -2225,13 +2618,11 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
                 print(f"- {col}")
             df = df.drop(columns=list(extra_in_df))
 
-        # Vérification finale de correspondance (après le renommage initial et la normalisation)
         if not missing_in_df and not extra_in_df and set(expected_columns) == set(df.columns.tolist()):
             print("\n✅ Tous les noms de colonnes correspondent exactement")
         else:
             print("\n❌ Des divergences de noms de colonnes existent")
 
-        # Réordonnancement des colonnes pour correspondre à l'ordre attendu par la DB
         df = df[expected_columns]
         print("\nOrdre final des colonnes:", df.columns.tolist())
         print("="*50 + "\n")
@@ -2256,10 +2647,8 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
             print(f"- Type PostgreSQL attendu: {pg_base_type}")
             
             try:
-                # Nettoyage des valeurs
                 df[col] = df[col].replace(nan_value_strings, np.nan)
                 
-                # Conversion des types
                 if pg_base_type in ['timestamp', 'date']:
                     df[col] = pd.to_datetime(df[col], errors='coerce')
                     print("- Converti en datetime")
@@ -2267,7 +2656,6 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
                     df[col] = pd.to_numeric(df[col], errors='coerce')
                     print("- Converti en numérique")
                 
-                # Statistiques après conversion
                 null_count = df[col].isna().sum()
                 print(f"- Valeurs NULL après conversion: {null_count}/{len(df)} ({null_count/len(df)*100:.2f}%)")
                 
@@ -2294,14 +2682,12 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
         data_to_insert = []
         type_converters = []
         
-        # Création des convertisseurs de type
-        for col in expected_columns: # Utilise les expected_columns (qui incluent 'Rel_H_Pct')
+        for col in expected_columns:
             pg_type_str = columns_config.get(col, 'text')
             pg_base_type = pg_type_str.split()[0].lower()
 
             if pg_base_type == 'timestamp':
-                #type_converters.append(lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) else None)
-                type_converters.append(lambda x: x.strftime('%Y-%m-%d %H:%M') if pd.notna(x) else None)
+                type_converters.append(lambda x: x.strftime('%Y-%m-%d %H:%M') if pd.notna(x) else None) # <-- MODIFIÉ ICI
             elif pg_base_type == 'date':
                 type_converters.append(lambda x: x.strftime('%Y-%m-%d') if pd.notna(x) else None)
             elif pg_base_type == 'float':
@@ -2311,13 +2697,11 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
             else:
                 type_converters.append(lambda x: str(x) if pd.notna(x) else None)
 
-        # Conversion des lignes
         for idx, row in df.iterrows():
             try:
                 row_values = [type_converters[i](row[col]) for i, col in enumerate(expected_columns)]
                 data_to_insert.append(tuple(row_values))
                 
-                # Journalisation pour les premières lignes
                 if idx < 2:
                     print(f"\nExemple ligne {idx}:")
                     for i, col in enumerate(expected_columns):
@@ -2334,9 +2718,10 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
         print("="*50 + "\n")
 
         # ========== CONNEXION À LA BASE ==========
-        conn = get_connection(db_name)
-        if not conn:
-            raise ConnectionError(f"Impossible de se connecter à la base '{db_name}'")
+        # La connexion est passée en argument `conn` ici.
+        # Plus besoin de get_connection(db_name) ou de vérifier `if not conn:`
+        # directement après un appel à get_connection().
+        conn.autocommit = True # Assurez-vous que la connexion passée est en autocommit
 
         with conn.cursor() as cursor:
             # Vérification de l'existence de la table (avec le nom de table original)
@@ -2351,14 +2736,15 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
             if not table_exists:
                 print(f"\nℹ️ La table '{table_name}' n'existe pas, création...")
                 # Appel de create_station_table avec le nom de station original
-                if not create_station_table(station, processing_type):
+                # create_station_table doit pouvoir utiliser une connexion interne ou être adapté pour en prendre une
+                # Pour l'instant, create_station_table garde son propre get_connection, ce qui est acceptable ici.
+                if not create_station_table(station, processing_type): # <-- create_station_table n'a pas besoin de la connexion passée
                     raise Exception(f"Échec de la création de la table '{table_name}'")
                 print("✅ Table créée avec succès")
 
             # ========== NOUVELLE VÉRIFICATION ROBUSTE DE CLÉ PRIMAIRE ==========
             pk_col = None
             try:
-                # Méthode 1: Utilisation de information_schema (plus fiable)
                 cursor.execute("""
                     SELECT kcu.column_name
                     FROM information_schema.table_constraints tc
@@ -2371,7 +2757,6 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
                 """, (table_name,))
                 pk_info = cursor.fetchone()
                 
-                # Méthode 2: Fallback avec pg_index (pour les cas complexes)
                 if not pk_info:
                     print("ℹ️ Essai méthode alternative de détection de clé primaire...")
                     try:
@@ -2399,7 +2784,6 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
                     print("ℹ️ Utilisation de 'Datetime' comme clé primaire par défaut")
                 traceback.print_exc()
 
-            # Construction de la requête SQL (utilisant le nom de table original et les noms de colonnes attendus)
             cols_sql = ', '.join([f'"{col}"' for col in expected_columns])
             placeholders = ', '.join(['%s'] * len(expected_columns))
             
@@ -2426,13 +2810,13 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
             print("="*50)
             
             print(f"\nNombre de colonnes attendues: {len(expected_columns)}")
-            print(f"Nombre de colonnes préparées (dans DataFrame): {len(df.columns)}") # Vérification supplémentaire
+            print(f"Nombre de colonnes préparées (dans DataFrame): {len(df.columns)}") 
             
             if len(expected_columns) != len(df.columns):
                 print("\n❌ ERREUR: Nombre de colonnes incompatible entre expected_columns et le DataFrame final!")
                 print("Colonnes attendues:", expected_columns)
                 print("Colonnes DataFrame:", df.columns.tolist())
-                raise ValueError("Incompatibilité de colonnes après préparation") # Relancer pour un échec clair
+                raise ValueError("Incompatibilité de colonnes après préparation") 
 
             if data_to_insert:
                 first_row = data_to_insert[0]
@@ -2440,7 +2824,6 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
                 for val, col in zip(first_row, expected_columns):
                     print(f"- {col}: {val} ({type(val).__name__ if val is not None else 'NULL'})")
                 
-                # Test de mogrify (AVEC LE NOM DE COLONNE CORRIGÉ)
                 try:
                     mogrified = cursor.mogrify(query, first_row).decode('utf-8')
                     print("\n✅ Test mogrify réussi:")
@@ -2448,7 +2831,7 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
                 except Exception as e:
                     print("\n❌ ERREUR mogrify:", str(e))
                     traceback.print_exc()
-                    raise # Relancer l'erreur pour arrêter le processus si mogrify échoue
+                    raise 
             else:
                 print("\n⚠️ Aucune donnée à insérer!")
                 return False
@@ -2457,7 +2840,7 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
 
             # ========== INSERTION ==========
             batch_size = 10000
-            inserted_rows = 0
+            # inserted_rows = 0 # Nous ne compterons plus les tentatives d'insertion ici pour éviter la confusion
             start_time = datetime.now()
             
             print(f"\nDébut de l'insertion de {len(data_to_insert)} lignes par lots de {batch_size}...")
@@ -2466,14 +2849,21 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
                 batch = data_to_insert[i:i + batch_size]
                 try:
                     extras.execute_batch(cursor, query, batch)
-                    conn.commit()
-                    inserted_rows += len(batch)
+                    # La connexion sera commitée par Flask à la fin du traitement global du lot de fichiers
+                    # ou automatiquement si autocommit est activé et que chaque requête est une transaction
+                    # Sinon, il faudrait faire un conn.commit() ici après chaque batch
+                    # Cependant, pour execute_batch, la documentation de psycopg2 recommande execute_batch
+                    # avec un autocommit ou un commit manuel après tous les batchs.
+                    # Pour être sûr que chaque lot est enregistré, ajoutons conn.commit()
+                    conn.commit() # <-- Ajouté ici pour commiter chaque lot
+                    
+                    # inserted_rows += len(batch) # Non utilisé pour le compte final, peut être retiré
                     
                     # Journalisation périodique
                     if (i // batch_size) % 10 == 0:
                         elapsed = (datetime.now() - start_time).total_seconds()
-                        rate = inserted_rows / elapsed if elapsed > 0 else 0
-                        print(f"Lot {i//batch_size + 1}: {inserted_rows} lignes ({rate:.1f} lignes/sec)")
+                        # rate = inserted_rows / elapsed if elapsed > 0 else 0 # Retiré car inserted_rows ne reflète pas le réel
+                        print(f"Lot {i//batch_size + 1}: {len(batch)} lignes traitées...")
                         
                 except Exception as e:
                     conn.rollback()
@@ -2481,14 +2871,15 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
                     if batch:
                         print("Exemple de ligne problématique:", batch[0])
                     traceback.print_exc()
-                    raise # Relancer l'erreur pour que la fonction appelante sache qu'il y a eu un échec
+                    raise 
 
             total_time = (datetime.now() - start_time).total_seconds()
-            print(f"\n✅ Insertion terminée: {inserted_rows} lignes en {total_time:.2f} secondes ({inserted_rows/max(total_time,1):.1f} lignes/sec)")
+            print(f"\n✅ Traitement d'insertion terminé pour '{station}': {len(data_to_insert)} lignes préparées en {total_time:.2f} secondes.")
+            print("Note: Le nombre exact de lignes insérées peut différer en raison de la clause ON CONFLICT.")
             return True
 
     except Exception as e:
-        print(f"\n❌❌❌ ERREUR CRITIQUE: {str(e)}")
+        print(f"\n❌❌❌ ERREUR CRITIQUE lors de la sauvegarde pour '{station}': {str(e)}")
         traceback.print_exc()
         
         if 'df' in locals():
@@ -2498,446 +2889,3 @@ def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'bef
             print(df.head().to_string())
             
         return False
-        
-    finally:
-        if conn:
-            conn.close()
-            print("\nConnexion à la base de données fermée")
-
-################ Gemini ###################
-
-# def save_to_database(df: pd.DataFrame, station: str, processing_type: str = 'before') -> bool:
-#     """
-#     Sauvegarde un DataFrame dans la base de données, avec vérifications complètes et journalisation détaillée.
-
-#     Args:
-#         df (pd.DataFrame): Le DataFrame à sauvegarder.
-#         station (str): Le nom de la station (utilisé comme nom de table).
-#         processing_type (str): 'before' ou 'after', pour choisir la base de données et la configuration des colonnes.
-
-#     Returns:
-#         bool: True si la sauvegarde est réussie, False sinon.
-#     """
-#     conn = None
-#     try:
-#         # Vérification initiale: DataFrame vide
-#         if df.empty:
-#             print(f"Warning: DataFrame vide reçu pour la station '{station}' ({processing_type}), aucune donnée à sauvegarder.")
-#             return True
-
-#         station = station.strip()
-#         table_name = station
-#         # Détermine la base de données cible en fonction du type de traitement
-#         db_name = os.getenv('DB_NAME_BEFORE') if processing_type == 'before' else os.getenv('DB_NAME_AFTER')
-
-#         if not db_name:
-#             raise ValueError(f"Nom de la base de données non configuré pour processing_type '{processing_type}'. Vérifiez .env")
-
-#         # Récupère la configuration des colonnes attendues pour la station
-#         columns_config = get_station_columns(station, processing_type)
-#         if not columns_config:
-#             raise ValueError(f"Configuration des colonnes manquante pour la station '{station}' ({processing_type}). Impossible de sauvegarder.")
-
-#         expected_columns = list(columns_config.keys())
-
-#         # ========== VÉRIFICATION 1: NOMS DE COLONNES ==========
-#         print("\n" + "="*50)
-#         print("VÉRIFICATION DES NOMS DE COLONNES (CASSE ET CORRESPONDANCE)")
-#         print("="*50)
-        
-#         # Normalisation des noms de colonnes du DataFrame pour correspondre aux noms attendus
-#         column_mapping = {col.lower(): col for col in expected_columns}
-#         new_df_columns = []
-#         for col_df in df.columns:
-#             if col_df in expected_columns:
-#                 new_df_columns.append(col_df)
-#             elif col_df.lower() in column_mapping:
-#                 new_df_columns.append(column_mapping[col_df.lower()])
-#             else:
-#                 new_df_columns.append(col_df) # Conserve les colonnes non reconnues pour l'instant
-        
-#         df.columns = new_df_columns
-
-#         # Journalisation des résultats des comparaisons de colonnes
-#         df_cols_after_norm = df.columns.tolist()
-#         missing_in_df = set(expected_columns) - set(df_cols_after_norm)
-#         extra_in_df = set(df_cols_after_norm) - set(expected_columns)
-        
-#         print(f"\nColonnes attendues par la DB: {expected_columns}")
-#         print(f"Colonnes du DataFrame (après normalisation): {df_cols_after_norm}")
-
-#         if missing_in_df:
-#             print(f"\n⚠️ ATTENTION: Colonnes attendues mais absentes du DataFrame:")
-#             for col in missing_in_df:
-#                 print(f"- {col}")
-#                 df[col] = None  # Ajout des colonnes manquantes avec valeurs NULL
-        
-#         if extra_in_df:
-#             print(f"\nℹ️ INFO: Colonnes supplémentaires dans le DataFrame:")
-#             for col in extra_in_df:
-#                 print(f"- {col}")
-#             df = df.drop(columns=list(extra_in_df)) # Supprime les colonnes supplémentaires
-
-#         # Vérification finale de la correspondance des colonnes après ajustements
-#         if not missing_in_df and not extra_in_df and set(expected_columns) == set(df.columns.tolist()):
-#             print("\n✅ Tous les noms de colonnes correspondent exactement")
-#         else:
-#             print("\n❌ Des divergences de noms de colonnes existent après ajustement.")
-
-#         # Réordonnancement des colonnes du DataFrame pour correspondre à l'ordre attendu par la DB
-#         df = df[expected_columns]
-#         print("\nOrdre final des colonnes du DataFrame:", df.columns.tolist())
-#         print("="*50 + "\n")
-
-#         # ========== VÉRIFICATION 2: TYPES DE DONNÉES ==========
-#         print("\n" + "="*50)
-#         print("VÉRIFICATION DES TYPES DE DONNÉES ET VALEURS ANORMALES")
-#         print("="*50)
-        
-#         # Liste des chaînes de caractères à traiter comme des valeurs manquantes (NaN)
-#         nan_value_strings = ['NaN', 'NAN', 'nan', '', ' ', '#VALUE!', '-', 'NULL', 'null', 'N/A', 'NA', 'None', 'NONE', 'NV', 'N.V.', '#DIV/0!']
-        
-#         for col, pg_type_str in columns_config.items():
-#             if col not in df.columns:
-#                 print(f"\n⚠️ Colonne '{col}' non trouvée dans le DataFrame - ignorée pour la conversion de type.")
-#                 continue
-
-#             original_dtype = str(df[col].dtype)
-#             pg_base_type = pg_type_str.split()[0].lower() # Extrait le type de base (ex: 'timestamp' de 'TIMESTAMP WITHOUT TIME ZONE')
-            
-#             print(f"\nColonne: {col}")
-#             print(f"- Type Pandas original: {original_dtype}")
-#             print(f"- Type PostgreSQL attendu: {pg_base_type}")
-            
-#             try:
-#                 # Nettoyage des valeurs: remplacement des chaînes NaN par de vrais NaN Pandas
-#                 df[col] = df[col].replace(nan_value_strings, np.nan)
-                
-#                 # Conversion des types en fonction du type PostgreSQL attendu
-#                 if pg_base_type in ['timestamp', 'date']:
-#                     df[col] = pd.to_datetime(df[col], errors='coerce') # 'coerce' transforme les erreurs en NaT
-#                     print("- Converti en datetime")
-#                 elif pg_base_type in ['float', 'double precision', 'numeric']:
-#                     df[col] = pd.to_numeric(df[col], errors='coerce') # 'coerce' transforme les erreurs en NaN
-#                     print("- Converti en numérique (float)")
-#                 elif pg_base_type in ['integer', 'int', 'smallint', 'bigint']:
-#                     df[col] = pd.to_numeric(df[col], errors='coerce')
-#                     # Utilise le type Int64 de Pandas pour supporter les valeurs NaN dans les colonnes entières
-#                     df[col] = df[col].astype('Int64', errors='ignore') 
-#                     print("- Converti en entier (nullable Int64)")
-#                 # Pour les autres types (text, boolean, etc.), Pandas gère souvent bien par défaut
-                
-#                 # Statistiques sur les valeurs NULL après conversion
-#                 null_count = df[col].isna().sum()
-#                 print(f"- Valeurs NULL après conversion: {null_count}/{len(df)} ({null_count/len(df)*100:.2f}%)")
-                
-#                 if null_count > 0:
-#                     sample_null = df[df[col].isna()].head(3)
-#                     print("- Exemple de lignes avec NULL:", sample_null[[col]].to_string())
-                    
-#             except Exception as e:
-#                 print(f"\n❌ ERREUR DE CONVERSION pour la colonne '{col}': {str(e)}")
-#                 # Tente d'identifier les valeurs problématiques
-#                 problematic_vals = df[col][~df[col].isna() & pd.to_numeric(df[col], errors='coerce').isna()]
-#                 if not problematic_vals.empty:
-#                     print("- Valeurs problématiques (jusqu'à 5 uniques):", problematic_vals.unique()[:5])
-#                 traceback.print_exc()
-
-#         print("\nRésumé des types du DataFrame après conversion:")
-#         print(df.dtypes)
-#         print("="*50 + "\n")
-
-#         # ========== PRÉPARATION DES DONNÉES POUR INSERTION ==========
-#         print("\n" + "="*50)
-#         print("PRÉPARATION DES DONNÉES POUR INSERTION")
-#         print("="*50)
-        
-#         data_to_insert = []
-#         type_converters = []
-        
-#         # Création des fonctions de conversion de type spécifiques pour chaque colonne
-#         for col in expected_columns:
-#             pg_type_str = columns_config.get(col, 'text')
-#             pg_base_type = pg_type_str.split()[0].lower()
-
-#             if pg_base_type == 'timestamp':
-#                 type_converters.append(lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) else None)
-#             elif pg_base_type == 'date':
-#                 type_converters.append(lambda x: x.strftime('%Y-%m-%d') if pd.notna(x) else None)
-#             elif pg_base_type in ['float', 'double precision', 'numeric']:
-#                 type_converters.append(lambda x: float(x) if pd.notna(x) else None)
-#             elif pg_base_type in ['integer', 'int', 'smallint', 'bigint']:
-#                 # Convertit en int seulement si ce n'est pas NaN et si la conversion est propre (ex: pas 3.1)
-#                 type_converters.append(lambda x: int(x) if pd.notna(x) and (isinstance(x, (int, float)) and x == int(x)) else None)
-#             else:
-#                 type_converters.append(lambda x: str(x) if pd.notna(x) else None)
-
-#         # Itération sur les lignes du DataFrame pour préparer les données pour l'insertion
-#         for idx, row in df.iterrows():
-#             try:
-#                 row_values = [type_converters[i](row[col]) for i, col in enumerate(expected_columns)]
-#                 data_to_insert.append(tuple(row_values))
-                
-#                 # Journalisation des premières lignes pour vérification
-#                 if idx < 2:
-#                     print(f"\nExemple ligne {idx} (après préparation):")
-#                     for i, col in enumerate(expected_columns):
-#                         val = row_values[i]
-#                         print(f"- {col}: {val} (Type Python: {type(val).__name__ if val is not None else 'NULL'})")
-                        
-#             except Exception as e:
-#                 print(f"\n❌ ERREUR lors de la préparation de la ligne {idx}: {str(e)}")
-#                 print("Valeurs brutes de la ligne:", row.to_dict())
-#                 traceback.print_exc()
-#                 raise # Re-lève l'exception pour arrêter si la préparation d'une ligne échoue
-
-#         print(f"\nTotal lignes préparées pour insertion: {len(data_to_insert)}")
-#         print("="*50 + "\n")
-
-#         # ========== CONNEXION À LA BASE DE DONNÉES ==========
-#         conn = get_connection(db_name)
-#         if not conn:
-#             raise ConnectionError(f"Impossible de se connecter à la base '{db_name}'")
-
-#         with conn.cursor() as cursor:
-#             # Vérification de l'existence de la table
-#             cursor.execute("""
-#                 SELECT EXISTS (
-#                     SELECT FROM information_schema.tables
-#                     WHERE table_schema = 'public' AND table_name = %s
-#                 )
-#             """, (table_name,))
-#             table_exists = cursor.fetchone()[0]
-            
-#             if not table_exists:
-#                 print(f"\nℹ️ La table '{table_name}' n'existe pas, tentative de création...")
-#                 if not create_station_table(station, processing_type):
-#                     raise Exception(f"Échec de la création de la table '{table_name}'")
-#                 print("✅ Table créée avec succès")
-
-#             # ========== DÉTECTION ROBUSTE DE LA CLÉ PRIMAIRE ==========
-#             pk_col = None
-#             try:
-#                 # Méthode 1: Utilisation de information_schema (plus fiable et standard)
-#                 cursor.execute("""
-#                     SELECT kcu.column_name
-#                     FROM information_schema.table_constraints tc
-#                     JOIN information_schema.key_column_usage kcu
-#                         ON tc.constraint_name = kcu.constraint_name
-#                         AND tc.table_schema = kcu.table_schema
-#                     WHERE tc.table_name = %s
-#                     AND tc.constraint_type = 'PRIMARY KEY'
-#                     LIMIT 1
-#                 """, (table_name,))
-#                 pk_info = cursor.fetchone()
-                
-#                 # Méthode 2: Fallback avec pg_index (pour les cas où information_schema ne suffit pas)
-#                 if not pk_info:
-#                     print("ℹ️ Aucune clé primaire trouvée via information_schema. Essai méthode alternative (pg_index)...")
-#                     try:
-#                         # Note: 'regclass' nécessite un nom de table qualifié ou entre guillemets
-#                         cursor.execute(f"""
-#                             SELECT a.attname
-#                             FROM pg_index i
-#                             JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
-#                             WHERE i.indrelid = '{table_name}'::regclass AND i.indisprimary
-#                         """)
-#                         pk_info = cursor.fetchone()
-#                     except Exception as e:
-#                         print(f"⚠️ Échec de la méthode alternative de détection de clé primaire: {str(e)}")
-#                         pk_info = None
-                
-#                 if pk_info:
-#                     pk_col = pk_info[0]
-#                     print(f"✅ Clé primaire détectée: {pk_col}")
-#                 else:
-#                     print("ℹ️ Aucune clé primaire détectée pour la table.")
-                    
-#             except Exception as e:
-#                 print(f"⚠️ Erreur générale lors de la détection de la clé primaire: {str(e)}")
-#                 # Fallback à 'Datetime' si une erreur se produit et 'Datetime' est une colonne attendue
-#                 if 'Datetime' in expected_columns:
-#                     pk_col = 'Datetime'
-#                     print("ℹ️ Utilisation de 'Datetime' comme clé primaire par défaut suite à une erreur de détection.")
-#                 traceback.print_exc()
-
-#             # Construction de la requête SQL d'insertion
-#             cols_sql = ', '.join([f'"{col}"' for col in expected_columns])
-#             placeholders = ', '.join(['%s'] * len(expected_columns)) # Crée un %s pour chaque colonne
-            
-#             if pk_col:
-#                 # Utilise ON CONFLICT pour éviter les doublons si une clé primaire est définie
-#                 query = f"""
-#                     INSERT INTO "{table_name}" ({cols_sql})
-#                     VALUES ({placeholders})
-#                     ON CONFLICT ("{pk_col}") DO NOTHING
-#                 """
-#                 print("ℹ️ Requête d'insertion avec ON CONFLICT générée.")
-#             else:
-#                 # Insertion simple si aucune clé primaire n'est détectée
-#                 query = f"""
-#                     INSERT INTO "{table_name}" ({cols_sql})
-#                     VALUES ({placeholders})
-#                 """
-#                 print("ℹ️ Requête d'insertion simple générée (aucune clé primaire détectée).")
-
-#             print("\nRequête SQL générée:")
-#             print(query)
-
-#             # ========== VÉRIFICATION FINALE AVANT INSERTION ==========
-#             print("\n" + "="*50)
-#             print("VÉRIFICATION FINALE AVANT INSERTION")
-#             print("="*50)
-            
-#             print(f"\nNombre de colonnes attendues: {len(expected_columns)}")
-#             print(f"Nombre de colonnes préparées dans le DataFrame: {len(df.columns)}")
-            
-#             if len(expected_columns) != len(df.columns):
-#                 print("\n❌ ERREUR: Nombre de colonnes incompatible entre les colonnes attendues et celles du DataFrame!")
-#                 print("Colonnes attendues:", expected_columns)
-#                 print("Colonnes du DataFrame:", df.columns.tolist())
-#                 raise ValueError("Column count mismatch before final insertion. This should have been resolved earlier.")
-
-#             if data_to_insert:
-#                 first_row = data_to_insert[0]
-#                 print(f"\nPremière ligne de données préparée pour insertion ({len(first_row)} valeurs):")
-#                 for val, col in zip(first_row, expected_columns):
-#                     print(f"- {col}: {val} (Type Python: {type(val).__name__ if val is not None else 'NULL'})")
-                
-#                 # --- DÉBOGAGE DE L'ERREUR MOGRIFY ---
-#                 # Ces prints sont cruciaux pour diagnostiquer l'IndexError
-#                 num_placeholders_in_query = query.count('%s')
-#                 len_first_row_for_mogrify = len(first_row)
-#                 print(f"\nDEBUG MOGRIFY: Nombre de placeholders ('%s') dans la requête SQL: {num_placeholders_in_query}")
-#                 print(f"DEBUG MOGRIFY: Longueur de la première ligne de données (pour mogrify): {len_first_row_for_mogrify}")
-                
-#                 if num_placeholders_in_query != len_first_row_for_mogrify:
-#                     print("\nDEBUG MOGRIFY: ❌❌❌ DÉSÉQUILIBRE DÉTECTÉ! C'est la cause probable de l'IndexError.")
-#                     print(f"DEBUG MOGRIFY: Début de la requête SQL: {query[:200]}...")
-#                     print(f"DEBUG MOGRIFY: Contenu de la première ligne de données: {first_row}")
-#                     raise ValueError(f"Mismatch for mogrify: Query has {num_placeholders_in_query} placeholders, but first_row has {len_first_row_for_mogrify} values.")
-#                 # --- FIN DU DÉBOGAGE MOGRIFY ---
-
-#                 # Test de mogrify pour validation et journalisation
-#                 try:
-#                     mogrified = cursor.mogrify(query, first_row).decode('utf-8')
-#                     print("\nTest mogrify réussi (aperçu de la requête formatée):")
-#                     print(mogrified[:500] + ("..." if len(mogrified) > 500 else ""))
-#                 except Exception as e:
-#                     print("\n❌ ERREUR mogrify (test de formatage):", str(e))
-#                     print(f"Requête SQL complète (pour inspection): {query}")
-#                     print(f"Première ligne de données complète (pour inspection): {first_row}")
-#                     traceback.print_exc()
-#                     raise # Re-lève l'exception car ce test est un indicateur critique de problème
-#             else:
-#                 print("\n⚠️ Aucune donnée à insérer après préparation!")
-#                 return False
-
-#             print("="*50 + "\n")
-
-#             # ========== DÉBUT DE L'INSERTION BATCH ==========
-#             batch_size = 1000 # Taille des lots pour l'insertion
-#             inserted_rows = 0
-#             start_time = datetime.now()
-            
-#             print(f"\nDébut de l'insertion de {len(data_to_insert)} lignes par lots de {batch_size}...")
-            
-#             for i in range(0, len(data_to_insert), batch_size):
-#                 batch = data_to_insert[i:i + batch_size]
-#                 try:
-#                     # Utilisation de execute_batch pour une insertion efficace de plusieurs lignes
-#                     extras.execute_batch(cursor, query, batch)
-#                     conn.commit() # Valide la transaction après chaque lot
-#                     inserted_rows += len(batch)
-                    
-#                     # Journalisation périodique de la progression
-#                     if (i // batch_size) % 10 == 0 or (i + batch_size) >= len(data_to_insert):
-#                         elapsed = (datetime.now() - start_time).total_seconds()
-#                         rate = inserted_rows / elapsed if elapsed > 0 else 0
-#                         print(f"Lot {i//batch_size + 1}: {inserted_rows} lignes insérées au total ({rate:.1f} lignes/sec)")
-                        
-#                 except Exception as e:
-#                     conn.rollback() # Annule la transaction en cas d'erreur sur un lot
-#                     print(f"\n❌ ERREUR lors de l'insertion du lot {i//batch_size + 1}: {str(e)}")
-#                     if batch:
-#                         print("Exemple de ligne problématique dans le lot:", batch[0])
-#                     traceback.print_exc()
-#                     raise # Re-lève l'exception pour arrêter le processus en cas d'échec d'insertion
-
-#             total_time = (datetime.now() - start_time).total_seconds()
-#             print(f"\n✅ Insertion terminée: {inserted_rows} lignes insérées en {total_time:.2f} secondes ({inserted_rows/max(total_time,1):.1f} lignes/sec)")
-#             return True
-
-#     except Exception as e:
-#         print(f"\n❌❌❌ ERREUR CRITIQUE DANS save_to_database: {str(e)}")
-#         traceback.print_exc()
-        
-#         # Affiche l'état du DataFrame au moment de l'erreur si disponible
-#         if 'df' in locals():
-#             print("\nÉtat du DataFrame au moment de l'erreur:")
-#             print(f"Shape: {df.shape}")
-#             print("5 premières lignes:")
-#             print(df.head().to_string())
-            
-#         return False
-        
-#     finally:
-#         # Assure que la connexion à la base de données est toujours fermée
-#         if conn:
-#             conn.close()
-#             print("\nConnexion à la base de données fermée")
-
-# def create_station_table(station, processing_type):
-#     """
-#     Crée la table pour une station donnée si elle n'existe pas.
-#     Utilise la configuration des colonnes pour définir le schéma.
-#     """
-#     print(f"Executing table creation query for '{station}':")
-#     columns_config = get_station_columns(station, processing_type)
-#     if not columns_config:
-#         print(f"Error: No column configuration found for station '{station}' to create table.")
-#         return False
-
-#     cols_sql_def = []
-#     pk_col = None
-#     # Détermine la clé primaire. Assumons 'Datetime' si présente.
-#     if 'Datetime' in columns_config:
-#         pk_col = 'Datetime'
-
-#     for col, pg_type in columns_config.items():
-#         # Encapsule les noms de colonnes avec des guillemets pour gérer les caractères spéciaux (ex: %)
-#         col_def = f'"{col}" {pg_type}'
-#         cols_sql_def.append(col_def)
-
-#     # Construit la requête CREATE TABLE
-#     create_table_query = f"""
-#         CREATE TABLE "{station}" (
-#             {', '.join(cols_sql_def)}
-#             {f', PRIMARY KEY ("{pk_col}")' if pk_col else ''}
-#         )
-#     """
-#     print(create_table_query)
-
-#     conn = None
-#     try:
-#         db_name = os.getenv('DB_NAME_BEFORE') if processing_type == 'before' else os.getenv('DB_NAME_AFTER')
-#         conn = get_connection(db_name)
-#         if not conn:
-#             raise ConnectionError(f"Failed to get connection for table creation: {db_name}")
-
-#         with conn.cursor() as cursor:
-#             cursor.execute(create_table_query)
-#         conn.commit()
-#         print(f"Table '{station}' created successfully")
-#         return True
-#     except Exception as e:
-#         print(f"Error creating table '{station}': {e}")
-#         traceback.print_exc()
-#         return False
-#     finally:
-#         if conn:
-#             conn.close()
-
-
-# import psycopg2.extras as extras # Assuming this is the 'extras' module used
-# import psycopg2 # Import psycopg2 for connection

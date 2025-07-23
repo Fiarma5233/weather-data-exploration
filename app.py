@@ -36,7 +36,7 @@ from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTE
 
 # Importations de la base de données
 from db import (
-    initialize_database, save_to_database, get_stations_list, 
+    initialize_database, save_to_database, get_stations_list, get_connection,
     get_station_data, delete_station_data, reset_processed_data)
 
 from dotenv import load_dotenv
@@ -267,6 +267,88 @@ def select_stations():
     return render_template('select_stations.html', stations=stations)
 
 
+# @app.route('/upload', methods=['POST'])
+# def upload_file():
+#     """Gère l'upload et le stockage des fichiers de données brutes"""
+#     if not request.files:
+#         flash(_('Aucun fichier reçu.'), 'error')
+#         return redirect(url_for('index'))
+
+#     uploaded_files = request.files.getlist('file[]')
+#     stations = []
+    
+#     for i in range(len(uploaded_files)):
+#         station_name = request.form.get(f'station_{i}')
+#         if station_name:
+#             stations.append(station_name)
+#         else:
+#             flash(_('Veuillez sélectionner une station pour chaque fichier.'), 'error')
+#             return redirect(url_for('index'))
+
+#     if len(uploaded_files) != len(stations):
+#         flash(_('Nombre de fichiers et de stations incompatible.'), 'error')
+#         return redirect(url_for('index'))
+
+#     for file, station in zip(uploaded_files, stations):
+#         if not file or file.filename == '':
+#             flash(_("Fichier vide reçu."), 'error')
+#             continue
+
+#         if not allowed_file(file.filename):
+#             flash(_("Type de fichier non autorisé pour '%s'.") % file.filename, 'error')
+#             continue
+
+#         try:
+#             # Sauvegarde temporaire
+#             filename = secure_filename(file.filename)
+#             temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#             file.save(temp_path)
+#             app.logger.info(f"Fichier {filename} sauvegardé temporairement")
+
+#             # Lecture du fichier
+#             try:
+#                 if filename.lower().endswith('.csv'):
+#                     df = pd.read_csv(temp_path, encoding_errors='replace', low_memory=False)
+#                 else:  # Fichier Excel
+#                     df = pd.read_excel(temp_path)
+
+#                 if df.empty:
+#                     flash(_("Le fichier '%s' est vide ou corrompu.") % filename, 'error')
+#                     os.unlink(temp_path)
+#                     continue
+
+#                 # Prétraitement spécifique
+#                 df = apply_station_specific_preprocessing(df, station)
+
+#                 # Vérification finale
+#                 app.logger.info(f"Colonnes avant sauvegarde pour {station}: {df.columns.tolist()}")
+#                 app.logger.info(f"Premières lignes:\n{df.head(2)}")
+
+#                 # Sauvegarde en base
+#                 try:
+#                     success = save_to_database(df, station, 'before')
+#                     if success:
+#                         flash(_("Données pour %s sauvegardées avec succès!") % station, 'success')
+#                     else:
+#                         flash(_("Échec partiel de sauvegarde pour %s") % station, 'warning')
+#                 except Exception as e:
+#                     app.logger.error(f"Erreur sauvegarde {station}: {str(e)}", exc_info=True)
+#                     flash(_("Erreur base de données pour %s: %s") % (station, str(e)), 'error')
+
+#             except Exception as e:
+#                 app.logger.error(f"Erreur lecture fichier {filename}: {str(e)}", exc_info=True)
+#                 flash(_("Erreur de lecture du fichier '%s': %s") % (filename, str(e)), 'error')
+#             finally:
+#                 if os.path.exists(temp_path):
+#                     os.unlink(temp_path)
+
+#         except Exception as e:
+#             app.logger.error(f"Erreur globale traitement {filename}: {str(e)}", exc_info=True)
+#             flash(_("Erreur traitement fichier '%s'") % file.filename, 'error')
+#         return render_template('select_stations.html')
+
+
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Gère l'upload et le stockage des fichiers de données brutes"""
@@ -289,63 +371,87 @@ def upload_file():
         flash(_('Nombre de fichiers et de stations incompatible.'), 'error')
         return redirect(url_for('index'))
 
-    for file, station in zip(uploaded_files, stations):
-        if not file or file.filename == '':
-            flash(_("Fichier vide reçu."), 'error')
-            continue
+    processing_type = request.form.get('processing_type', 'before')
+    db_name = os.getenv('DB_NAME_BEFORE') if processing_type == 'before' else os.getenv('DB_NAME_AFTER')
 
-        if not allowed_file(file.filename):
-            flash(_("Type de fichier non autorisé pour '%s'.") % file.filename, 'error')
-            continue
+    conn = None # Initialise la connexion à None
+    try:
+        conn = get_connection(db_name) # Ouvre la connexion une seule fois pour toutes les stations
+        if not conn:
+            flash(_(f'Erreur: Impossible de se connecter à la base de données {db_name}'), 'error')
+            return redirect(url_for('index'))
 
-        try:
-            # Sauvegarde temporaire
-            filename = secure_filename(file.filename)
-            temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(temp_path)
-            app.logger.info(f"Fichier {filename} sauvegardé temporairement")
+        for file, station in zip(uploaded_files, stations):
+            if not file or file.filename == '':
+                flash(_("Fichier vide reçu."), 'error')
+                continue
 
-            # Lecture du fichier
+            if not allowed_file(file.filename):
+                flash(_("Type de fichier non autorisé pour '%s'.") % file.filename, 'error')
+                continue
+
+            temp_path = None # Assurez-vous que temp_path est défini même en cas d'erreur de fichier
             try:
-                if filename.lower().endswith('.csv'):
-                    df = pd.read_csv(temp_path, encoding_errors='replace', low_memory=False)
-                else:  # Fichier Excel
-                    df = pd.read_excel(temp_path)
+                # Sauvegarde temporaire
+                filename = secure_filename(file.filename)
+                temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(temp_path)
+                app.logger.info(f"Fichier {filename} sauvegardé temporairement")
 
-                if df.empty:
-                    flash(_("Le fichier '%s' est vide ou corrompu.") % filename, 'error')
-                    os.unlink(temp_path)
-                    continue
-
-                # Prétraitement spécifique
-                df = apply_station_specific_preprocessing(df, station)
-
-                # Vérification finale
-                app.logger.info(f"Colonnes avant sauvegarde pour {station}: {df.columns.tolist()}")
-                app.logger.info(f"Premières lignes:\n{df.head(2)}")
-
-                # Sauvegarde en base
+                # Lecture du fichier
                 try:
-                    success = save_to_database(df, station, 'before')
-                    if success:
-                        flash(_("Données pour %s sauvegardées avec succès!") % station, 'success')
-                    else:
-                        flash(_("Échec partiel de sauvegarde pour %s") % station, 'warning')
+                    if filename.lower().endswith('.csv'):
+                        df = pd.read_csv(temp_path, encoding_errors='replace', low_memory=False)
+                    else:  # Fichier Excel
+                        df = pd.read_excel(temp_path)
+
+                    if df.empty:
+                        flash(_("Le fichier '%s' est vide ou corrompu.") % filename, 'error')
+                        os.unlink(temp_path)
+                        continue
+
+                    # Prétraitement spécifique
+                    df = apply_station_specific_preprocessing(df, station)
+
+                    # Vérification finale
+                    app.logger.info(f"Colonnes avant sauvegarde pour {station}: {df.columns.tolist()}")
+                    app.logger.info(f"Premières lignes:\n{df.head(2).to_string()}") # .to_string() pour un meilleur affichage
+
+                    print(f"\n--- Traitement de la station : {station} ({len(df)} lignes à insérer) ---") # Nouvelle ligne de log
+                    # Sauvegarde en base
+                    try:
+                        # Passe la connexion à save_to_database
+                        success = save_to_database(df, station, conn, processing_type) # <-- Modifié ici
+                        if success:
+                            flash(_("Données pour %s sauvegardées avec succès!") % station, 'success')
+                        else:
+                            flash(_("Échec partiel de sauvegarde pour %s") % station, 'warning')
+                    except Exception as e:
+                        app.logger.error(f"Erreur sauvegarde {station}: {str(e)}", exc_info=True)
+                        flash(_("Erreur base de données pour %s: %s") % (station, str(e)), 'error')
+
                 except Exception as e:
-                    app.logger.error(f"Erreur sauvegarde {station}: {str(e)}", exc_info=True)
-                    flash(_("Erreur base de données pour %s: %s") % (station, str(e)), 'error')
+                    app.logger.error(f"Erreur lecture fichier {filename}: {str(e)}", exc_info=True)
+                    flash(_("Erreur de lecture du fichier '%s': %s") % (filename, str(e)), 'error')
+                finally:
+                    if temp_path and os.path.exists(temp_path):
+                        os.unlink(temp_path)
 
             except Exception as e:
-                app.logger.error(f"Erreur lecture fichier {filename}: {str(e)}", exc_info=True)
-                flash(_("Erreur de lecture du fichier '%s': %s") % (filename, str(e)), 'error')
-            finally:
-                if os.path.exists(temp_path):
+                app.logger.error(f"Erreur globale traitement {filename}: {str(e)}", exc_info=True)
+                flash(_("Erreur traitement fichier '%s'") % file.filename, 'error')
+                if temp_path and os.path.exists(temp_path): # Assurer le nettoyage même ici
                     os.unlink(temp_path)
+        
+    except Exception as e:
+        flash(_(f'Une erreur inattendue est survenue lors du traitement global: {str(e)}'), 'error')
+        traceback.print_exc()
+    finally:
+        if conn:
+            conn.close() # Ferme la connexion une seule fois à la fin
+            app.logger.info("Connexion à la base de données fermée après traitement de toutes les stations.")
 
-        except Exception as e:
-            app.logger.error(f"Erreur globale traitement {filename}: {str(e)}", exc_info=True)
-            flash(_("Erreur traitement fichier '%s'") % file.filename, 'error')
-        return render_template('select_stations.html')
+    return render_template('select_stations.html')
 
 
 @app.route('/process_stations', methods=['POST'])

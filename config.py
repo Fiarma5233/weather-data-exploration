@@ -349,8 +349,8 @@ STATIONS_BY_BASSIN = {
     'DASSARI': ['Pouri (Fandohoun)', 'Nagasséga', 'Koundri', 'Koupendri',
                 'Ouriyori 2', 'Ouriyori 1', 'Wantéhoun', 'Pouri', 'Fandohoun'],
     'VEA_SISSILI': ['Kayoro EC', 'Doninga ', 'Bongo Soe', 'Nabugubulle ', 'Gwosi',
-                    'Bongo Atampisi', 'Manyoro', 'Aniabisi', 'Nazinga EC', 'Oualem ',
-                    'Nebou', 'Tabou ', 'Nazinga']
+                    'Bongo Atampisi', 'Manyoro', 'Aniabiisi', 'Nazinga EC', 'Oualem ',
+                    'Nebou', 'Tabou ', 'Nazinga', 'Atampisi']
 }
 
 # Dictionnaire des limites pour chaque variable météorologique
