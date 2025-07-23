@@ -1,0 +1,13 @@
+
+pour le route upload, tu sciende en 2 fonctions,, une chargee de stocker les donnees  brutes des datasets directement soumis . et la fonction qui sera chargee de traiter ces donnees dans la base de donnees brutes et maintenant les charger dans la base de donnees apres traitement
+
+en fait l'idee est que a la page d'accueil (route index), on a soit renseigner des datasets  soit visualiser les donnees brutes deja stocker dans la base de donnees.
+Maintenant si l'utilisateur choisit de renseigner les datasets , on recupere ces donnees brutes qu'on enregistre dans la base de donnees. 
+Il faudra donc verifier qu'il ya pas de doublons pour les donnees brutes qui seront enregistrees car l'utilisateur peut ne pas savoir que ces donnees existaient deja dans la base de donnees brutes mais Si ce sont de nouvelles donnees on les ajoute tout simplement.
+Puis on le redirige vers une page ou il ya la liste des stations (tables dans la base de donnees) disponibles dans la base de donnees et c'est ce sont ces stations cochees qu'on recupere, on traite maintenant leurs donnees puis on les stocke dans la base de donnees apres traitement.  
+Et ce sont ces donnees traitees qu'on va utilsier pour les differentes visualisations.
+S'il choisit d'utiliser les donnees  brutes deja dans la base de donnees, il clique sur le bouton et on le redirige vers  une autre page  ou il yaura la liste de toutes les stations (tables dans la base de donnees) disponibles dans la base de donnees.
+Il coche les stations qu'il veut utiliser pour la  suite de son travail et c'est ce sont ces stations cochees qu'on recupere, on traite maintenant leurs donnees puis on les stocke dans la base de donnees apres traitement.  
+Et ce sont ces donnees traitees qu'on va utilsier pour les differentes visualisations.
+Maintenant quand, on clique sur le bouton Renitialiser, on suppime toutes les donnees traitees qui sont stockees dans la base de donnees apres traitement. 
+Ce qui va permettre encore lors de la selection des stations a utiliser, on refasse le meme traitement car on va toujours faire des graphiques de comparaison des donnees brutes et des donnees apres traitement

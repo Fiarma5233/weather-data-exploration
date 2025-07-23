@@ -30,24 +30,894 @@ from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, PALETTE_COUL
 from flask_babel import lazy_gettext as _l, get_locale
 #from flask_babel import Babel, _, lazy_gettext as _l, get_locale as get_current_locale
 
+# def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.DataFrame:
+#     """
+#     Prétraite les données d'une station spécifique en fonction de son nom.
+#     Applique les renommages de colonnes et les sélections spécifiques.
+    
+#     Args:
+#         df (pd.DataFrame): DataFrame brut à traiter
+#         station (str): Nom de la station
+        
+#     Returns:
+#         pd.DataFrame: DataFrame prétraité avec les colonnes standardisées
+#     """
+#     # Dictionnaire de mapping des stations aux bassins
+#     STATION_TO_BASIN = {
+#         # Stations Dano
+#         'Tambiri 1': 'DANO',
+#         # Stations Dassari
+#         'Ouriyori 1': 'DASSARI',
+#         # Stations Vea Sissili
+#         'Oualem': 'VEA_SISSILI',
+#         'Nebou': 'VEA_SISSILI',
+#         'Nabugubelle': 'VEA_SISSILI',
+#         'Manyoro': 'VEA_SISSILI',
+#         'Gwosi': 'VEA_SISSILI',
+#         'Doninga': 'VEA_SISSILI',
+#         'Bongo Soe': 'VEA_SISSILI',
+#         'Aniabisi': 'VEA_SISSILI',
+#         'Atampisi': 'VEA_SISSILI'
+#     }
+    
+#     # Déterminer le bassin à partir de la station
+#     bassin = STATION_TO_BASIN.get(station)
+    
+#     if not bassin:
+#         # Traduction de l'avertissement
+#         warnings.warn(_l("Station %s non reconnue dans aucun bassin. Prétraitement standard appliqué.") % station)
+#         return df
+    
+#     df_copy = df.copy()
+    
+#     # Traitement pour le bassin Dano
+#     if bassin == 'DANO':
+#         if station == 'Tambiri 1':
+#             colonnes_select = ['Year', 'Month', 'Day', 'Hour', 'Minute', 'AirTC_Avg', 'RH', 
+#                              'WS_ms_S_WVT', 'WindDir_D1_WVT', 'Rain_mm_Tot', 'BP_mbar_Avg', 'Station']
+#             colonnes_renommage = {
+#                 'AirTC_Avg': 'Air_Temp_Deg_C', 
+#                 'RH': 'Rel_H_%', 
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec', 
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg', 
+#                 'Rain_mm_Tot': 'Rain_mm'
+#             }
+#             df_copy = df_copy[colonnes_select]
+#             df_copy.rename(columns=colonnes_renommage, inplace=True, errors='ignore')
+    
+#     # Traitement pour le bassin Dassari
+#     elif bassin == 'DASSARI':
+#         if station == 'Ouriyori 1':
+#             colonnes_sup = ['TIMESTAMP', 'RECORD', 'WSDiag', 'Intensity_RT_Avg', 'Acc_RT_NRT_Tot', 
+#                           'Pluvio_Status', 'BP_mbar_Avg', 'SR01Up_Avg', 'SR01Dn_Avg', 'IR01Up_Avg', 
+#                           'IR01Dn_Avg', 'NR01TC_Avg', 'IR01UpCo_Avg', 'IR01DnCo_Avg',
+#                           'Acc_NRT_Tot', 'Acc_totNRT', 'Bucket_RT_Avg', 'Bucket_NRT',
+#                           'Temp_load_cell_Avg', 'Heater_Status']
+            
+#             colonnes_renommage = {
+#                 'Rain_mm_Tot': 'Rain_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg'
+#             }
+            
+#             if 'TIMESTAMP' in df_copy.columns:
+#                 df_copy["TIMESTAMP"] = pd.to_datetime(df_copy["TIMESTAMP"], errors="coerce")
+#                 df_copy.dropna(subset=["TIMESTAMP"], inplace=True)
+                
+#                 df_copy["Year"] = df_copy["TIMESTAMP"].dt.year
+#                 df_copy["Month"] = df_copy["TIMESTAMP"].dt.month
+#                 df_copy["Day"] = df_copy["TIMESTAMP"].dt.day
+#                 df_copy["Hour"] = df_copy["TIMESTAMP"].dt.hour
+#                 df_copy["Minute"] = df_copy["TIMESTAMP"].dt.minute
+            
+#             df_copy.drop(columns=colonnes_sup, inplace=True, errors='ignore')
+#             df_copy.rename(columns=colonnes_renommage, inplace=True, errors='ignore')
+    
+#     # Traitement pour le bassin Vea Sissili
+#     elif bassin == 'VEA_SISSILI':
+#         stations_vea_a_9_variables = ['Oualem', 'Nebou', 'Nabugubelle', 'Manyoro', 'Gwosi', 'Doninga', 'Bongo Soe']
+        
+#         if station in stations_vea_a_9_variables:
+#             colonnes_renommage = {
+#                 'Rain_mm_Tot': 'Rain_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg',
+#                 'Date': 'Datetime'
+#             }
+#             colonnes_sup = ['SlrkJ_Tot', 'WS_ms_Avg', 'WindDir', 'Rain_01_mm_Tot', 'Rain_02_mm_Tot']
+            
+#         elif station == 'Aniabisi':
+#             colonnes_renommage = {
+#                 'Rain_mm_Tot': 'Rain_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg',
+#                 'Date': 'Datetime'
+#             }
+#             colonnes_sup = ['Intensity_RT_Avg', 'Acc_NRT_Tot', 'Acc_RT_NRT_Tot', 'SR01Up_Avg', 
+#                           'SR01Dn_Avg', 'IR01Up_Avg', 'IR01Dn_Avg', 'IR01UpCo_Avg', 'IR01DnCo_Avg']
+            
+#         elif station == 'Atampisi':
+#             colonnes_renommage = {
+#                 'Rain_01_mm_Tot': 'Rain_01_mm',
+#                 'Rain_02_mm_Tot': 'Rain_02_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_Avg': 'Wind_Sp_m/sec',
+#                 'WindDir': 'Wind_Dir_Deg',
+#                 'Date': 'Datetime'
+#             }
+#             colonnes_sup = []
+        
+#         if 'Date' in df_copy.columns:
+#             df_copy["Date"] = pd.to_datetime(df_copy["Date"], errors="coerce")
+#             df_copy.dropna(subset=["Date"], inplace=True)
+            
+#             df_copy["Year"] = df_copy["Date"].dt.year
+#             df_copy["Month"] = df_copy["Date"].dt.month
+#             df_copy["Day"] = df_copy["Date"].dt.day
+#             df_copy["Hour"] = df_copy["Date"].dt.hour
+#             df_copy["Minute"] = df_copy["Date"].dt.minute
+        
+#         if colonnes_sup:
+#             df_copy.drop(columns=colonnes_sup, inplace=True, errors='ignore')
+        
+#         df_copy.rename(columns=colonnes_renommage, inplace=True, errors='ignore')
+    
+#     return df_copy
+
+
+
+# def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.DataFrame:
+#     """
+#     Prétraite les données d'une station spécifique en fonction de son nom.
+#     Applique les renommages de colonnes et les sélections spécifiques.
+    
+#     Args:
+#         df (pd.DataFrame): DataFrame brut à traiter
+#         station (str): Nom de la station
+        
+#     Returns:
+#         pd.DataFrame: DataFrame prétraité avec les colonnes standardisées
+#     """
+#     # Dictionnaire de mapping des stations aux bassins
+#     # STATION_TO_BASIN = {
+#     #     # Stations Dano
+#     #     'Tambiri 1': 'DANO',
+#     #     # Stations Dassari
+#     #     'Ouriyori 1': 'DASSARI',
+#     #     # Stations Vea Sissili
+#     #     'Oualem': 'VEA_SISSILI',
+#     #     'Nebou': 'VEA_SISSILI',
+#     #     'Nabugubelle': 'VEA_SISSILI',
+#     #     'Manyoro': 'VEA_SISSILI',
+#     #     'Gwosi': 'VEA_SISSILI',
+#     #     'Doninga': 'VEA_SISSILI',
+#     #     'Bongo Soe': 'VEA_SISSILI',
+#     #     'Aniabisi': 'VEA_SISSILI',
+#     #     'Atampisi': 'VEA_SISSILI'
+#     # }
+    
+
+#     STATION_TO_BASIN = {
+#     # Stations Dano
+#     'Dreyer Foundation': 'DANO',
+#     'Bankandi': 'DANO',
+#     'Wahablé': 'DANO',
+#     'Fafo': 'DANO',
+#     'Yabogane': 'DANO',
+#     'Lare': 'DANO',
+#     'Tambiri 2': 'DANO',
+#     'Tambiri 1': 'DANO',
+
+#     # Stations Dassari
+#     'Nagasséga': 'DASSARI',
+#     'Koundri': 'DASSARI',
+#     'Koupendri': 'DASSARI',
+#     'Pouri': 'DASSARI',
+#     'Fandohoun': 'DASSARI',
+#     'Ouriyori 1': 'DASSARI',
+
+#     # Stations Vea Sissili
+#     'Oualem': 'VEA_SISSILI',
+#     'Nebou': 'VEA_SISSILI',
+#     'Nabugubelle': 'VEA_SISSILI',
+#     'Manyoro': 'VEA_SISSILI',
+#     'Gwosi': 'Gwosi', # Correction: devrait être VEA_SISSILI
+#     'Doninga': 'VEA_SISSILI',
+#     'Bongo Soe': 'VEA_SISSILI',
+#     'Aniabisi': 'VEA_SISSILI',
+#     'Atampisi': 'VEA_SISSILI' # Ajout de Atampisi
+# }
+
+#     # Déterminer le bassin à partir de la station
+#     bassin = STATION_TO_BASIN.get(station)
+    
+#     if not bassin:
+#         # Traduction de l'avertissement
+#         warnings.warn(_l("Station %s non reconnue dans aucun bassin. Prétraitement standard appliqué.") % station)
+#         return df
+    
+#     df_copy = df.copy()
+    
+#     # Traitement pour le bassin Dano
+#     if bassin == 'DANO':
+#         if station in ['Dreyer Foundation', 'Bankandi', 'Wahablé', 'Fafo', 'Yabogane']:
+#             # Colonnes attendues telles que fournies :
+#             colonnes_attendues = [
+#                 'Year', 'Month', 'Day', 'Hour', 'Minute', 'Rain_01_mm', 'Rain_02_mm',
+#                 'Air_Temp_Deg_C', 'Rel_H_%', 'Solar_R_W/m^2', 'Wind_Sp_m/sec', 'Wind_Dir_Deg'
+#             ] 
+
+#             missing_cols = [col for col in colonnes_attendues if col not in df_copy.columns]
+#             if missing_cols:
+#                 warnings.warn(f"Attention: Les colonnes suivantes sont manquantes pour la station {station}: {missing_cols}. Elles seront ajoutées avec des valeurs NaN.")
+#                 for col in missing_cols:
+#                     df_copy[col] = np.nan
+            
+#             # Sélectionnez uniquement les colonnes spécifiées, dans l'ordre spécifié
+#             df_copy = df_copy[colonnes_attendues]
+
+#         elif station in ['Lare', 'Tambiri 2']:
+#             # Colonnes attendues telles que fournies :
+#             colonnes_attendues = [
+#                 'Year', 'Month', 'Day', 'Hour', 'Minute', 'Rain_01_mm', 'Rain_02_mm'
+#             ]
+#             missing_cols = [col for col in colonnes_attendues if col not in df_copy.columns]
+#             if missing_cols:
+#                 warnings.warn(f"Attention: Les colonnes suivantes sont manquantes pour la station {station}: {missing_cols}. Elles seront ajoutées avec des valeurs NaN.")
+#                 for col in missing_cols:
+#                     df_copy[col] = np.nan
+#             # Sélectionnez uniquement les colonnes spécifiées, dans l'ordre spécifié
+#             df_copy = df_copy[colonnes_attendues]
+
+#         elif station == 'Tambiri 1':
+#             colonnes_select = ['Year', 'Month', 'Day', 'Hour', 'Minute', 'AirTC_Avg', 'RH', 
+#                              'WS_ms_S_WVT', 'WindDir_D1_WVT', 'Rain_mm_Tot', 'BP_mbar_Avg', 'Station']
+#             colonnes_renommage = {
+#                 'AirTC_Avg': 'Air_Temp_Deg_C', 
+#                 'RH': 'Rel_H_%', 
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec', 
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg', 
+#                 'Rain_mm_Tot': 'Rain_mm'
+#             }
+#             df_copy = df_copy[colonnes_select]
+#             df_copy.rename(columns=colonnes_renommage, inplace=True, errors='ignore')
+    
+#     # Traitement pour le bassin Dassari
+#     elif bassin == 'DASSARI':
+#         if station in ['Nagasséga', 'Koundri', 'Koupendri', 'Pouri', 'Fandohoun']:
+#             # Colonnes attendues telles que fournies :
+#             colonnes_attendues = [
+#                 'Year', 'Month', 'Day', 'Hour', 'Minute', 'Rain_01_mm', 'Rain_02_mm',
+#                 'Air_Temp_Deg_C', 'Rel_H_%', 'Solar_R_W/m^2', 'Wind_Sp_m/sec', 'Wind_Dir_Deg'
+#             ]
+
+#             missing_cols = [col for col in colonnes_attendues if col not in df_copy.columns]
+#             if missing_cols:
+#                 warnings.warn(f"Attention: Les colonnes suivantes sont manquantes pour la station {station}: {missing_cols}. Elles seront ajoutées avec des valeurs NaN.")
+#                 for col in missing_cols:
+#                     df_copy[col] = np.nan
+#             # Sélectionnez uniquement les colonnes spécifiées, dans l'ordre spécifié
+#             df_copy = df_copy[colonnes_attendues]
+
+#         elif station == 'Ouriyori 1':
+#             colonnes_sup = ['TIMESTAMP', 'RECORD', 'WSDiag', 'Intensity_RT_Avg', 'Acc_RT_NRT_Tot', 
+#                           'Pluvio_Status', 'BP_mbar_Avg', 'SR01Up_Avg', 'SR01Dn_Avg', 'IR01Up_Avg', 
+#                           'IR01Dn_Avg', 'NR01TC_Avg', 'IR01UpCo_Avg', 'IR01DnCo_Avg',
+#                           'Acc_NRT_Tot', 'Acc_totNRT', 'Bucket_RT_Avg', 'Bucket_NRT',
+#                           'Temp_load_cell_Avg', 'Heater_Status']
+            
+#             colonnes_renommage = {
+#                 'Rain_mm_Tot': 'Rain_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg'
+#             }
+            
+#             if 'TIMESTAMP' in df_copy.columns:
+#                 df_copy["TIMESTAMP"] = pd.to_datetime(df_copy["TIMESTAMP"], errors="coerce")
+#                 df_copy.dropna(subset=["TIMESTAMP"], inplace=True)
+                
+#                 df_copy["Year"] = df_copy["TIMESTAMP"].dt.year
+#                 df_copy["Month"] = df_copy["TIMESTAMP"].dt.month
+#                 df_copy["Day"] = df_copy["TIMESTAMP"].dt.day
+#                 df_copy["Hour"] = df_copy["TIMESTAMP"].dt.hour
+#                 df_copy["Minute"] = df_copy["TIMESTAMP"].dt.minute
+            
+#             df_copy.drop(columns=colonnes_sup, inplace=True, errors='ignore')
+#             df_copy.rename(columns=colonnes_renommage, inplace=True, errors='ignore')
+    
+#     # Traitement pour le bassin Vea Sissili
+#     elif bassin == 'VEA_SISSILI':
+#         stations_vea_a_9_variables = ['Oualem', 'Nebou', 'Nabugubelle', 'Manyoro', 'Gwosi', 'Doninga', 'Bongo Soe']
+        
+#         if station in stations_vea_a_9_variables:
+#             colonnes_renommage = {
+#                 'Rain_mm_Tot': 'Rain_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg',
+#                 'Date': 'Datetime'
+#             }
+#             colonnes_sup = ['SlrkJ_Tot', 'WS_ms_Avg', 'WindDir', 'Rain_01_mm_Tot', 'Rain_02_mm_Tot']
+            
+#         elif station == 'Aniabisi':
+#             colonnes_renommage = {
+#                 'Rain_mm_Tot': 'Rain_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg',
+#                 'Date': 'Datetime'
+#             }
+#             colonnes_sup = ['Intensity_RT_Avg', 'Acc_NRT_Tot', 'Acc_RT_NRT_Tot', 'SR01Up_Avg', 
+#                           'SR01Dn_Avg', 'IR01Up_Avg', 'IR01Dn_Avg', 'IR01UpCo_Avg', 'IR01DnCo_Avg']
+            
+#         elif station == 'Atampisi':
+#             colonnes_renommage = {
+#                 'Rain_01_mm_Tot': 'Rain_01_mm',
+#                 'Rain_02_mm_Tot': 'Rain_02_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_Avg': 'Wind_Sp_m/sec',
+#                 'WindDir': 'Wind_Dir_Deg',
+#                 'Date': 'Datetime'
+#             }
+#             colonnes_sup = []
+        
+#         # if 'Date' in df_copy.columns:
+#         #     df_copy["Date"] = pd.to_datetime(df_copy["Date"], errors="coerce")
+#         #     df_copy.dropna(subset=["Date"], inplace=True)
+            
+#         #     df_copy["Year"] = df_copy["Date"].dt.year
+#         #     df_copy["Month"] = df_copy["Date"].dt.month
+#         #     df_copy["Day"] = df_copy["Date"].dt.day
+#         #     df_copy["Hour"] = df_copy["Date"].dt.hour
+#         #     df_copy["Minute"] = df_copy["Date"].dt.minute
+        
+#         if colonnes_sup:
+#             df_copy.drop(columns=colonnes_sup, inplace=True, errors='ignore')
+        
+#         df_copy.rename(columns=colonnes_renommage, inplace=True, errors='ignore')
+    
+#     return df_copy
+
+
+import pandas as pd
+import numpy as np
+import warnings
+from flask_babel import lazy_gettext as _l
+
+
+########### fonction pour filtrer les donnees des stations de Vea
+def filter_colonnes(df, renamed_columns, delete_columns=None):
+    
+    #Supprimer la colonne TIMESTAMP (or other columns in delete_columns list)
+    # Add a check to only drop columns if delete_columns is not None
+    if delete_columns is not None:
+        # Add errors='ignore' to handle cases where columns in the list do not exist
+        df.drop(columns=delete_columns, inplace=True, errors='ignore')
+
+    #Renommer les colonnes
+    # Use errors='ignore' here too, in case a column to be renamed doesn't exist
+    df.rename(columns=renamed_columns, inplace=True, errors='ignore')
+
+  
+    return df
+
+# def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.DataFrame:
+#     """
+#     Prétraite les données d'une station spécifique en fonction de son nom.
+#     Applique les renommages de colonnes et les sélections spécifiques.
+#     """
+#     STATION_TO_BASIN = {
+#         # Stations Dano
+#         'Dreyer Foundation': 'DANO',
+#         'Bankandi': 'DANO',
+#         'Wahablé': 'DANO',
+#         'Fafo': 'DANO',
+#         'Yabogane': 'DANO',
+#         'Lare': 'DANO',
+#         'Tambiri 2': 'DANO',
+#         'Tambiri 1': 'DANO',
+
+#         # Stations Dassari
+#         'Nagasséga': 'DASSARI',
+#         'Koundri': 'DASSARI',
+#         'Koupendri': 'DASSARI',
+#         'Pouri': 'DASSARI',
+#         'Fandohoun': 'DASSARI',
+#         'Ouriyori 1': 'DASSARI',
+
+#         # Stations Vea Sissili
+#         'Oualem': 'VEA_SISSILI',
+#         'Nebou': 'VEA_SISSILI',
+#         'Nabugubelle': 'VEA_SISSILI',
+#         'Manyoro': 'VEA_SISSILI',
+#         'Gwosi': 'VEA_SISSILI',
+#         'Doninga': 'VEA_SISSILI',
+#         'Bongo Soe': 'VEA_SISSILI',
+#         'Aniabiisi': 'VEA_SISSILI',
+#         'Atampisi': 'VEA_SISSILI'
+#     }
+
+#     # Déterminer le bassin à partir de la station
+#     bassin = STATION_TO_BASIN.get(station)
+    
+#     if not bassin:
+#         warnings.warn(_l("Station %s non reconnue dans aucun bassin. Prétraitement standard appliqué.") % station)
+#         return df
+    
+#     df_copy = df.copy()
+    
+#     # Traitement pour le bassin Dano
+#     if bassin == 'DANO':
+#         if station in ['Dreyer Foundation', 'Bankandi', 'Wahablé', 'Fafo', 'Yabogane']:
+#             colonnes_attendues = [
+#                 'Year', 'Month', 'Day', 'Hour', 'Minute', 'Rain_01_mm', 'Rain_02_mm',
+#                 'Air_Temp_Deg_C', 'Rel_H_%', 'Solar_R_W/m^2', 'Wind_Sp_m/sec', 'Wind_Dir_Deg'
+#             ]
+            
+#             # Gestion des colonnes manquantes
+#             for col in colonnes_attendues:
+#                 if col not in df_copy.columns:
+#                     df_copy[col] = np.nan
+            
+#             # Sélection des colonnes dans l'ordre attendu
+#             df_copy = df_copy[colonnes_attendues]
+
+#         elif station in ['Lare', 'Tambiri 2']:
+#             colonnes_attendues = [
+#                 'Year', 'Month', 'Day', 'Hour', 'Minute', 'Rain_01_mm', 'Rain_02_mm'
+#             ]
+            
+#             for col in colonnes_attendues:
+#                 if col not in df_copy.columns:
+#                     df_copy[col] = np.nan
+            
+#             df_copy = df_copy[colonnes_attendues]
+
+#         elif station == 'Tambiri 1':
+#             colonnes_select = ['Year', 'Month', 'Day', 'Hour', 'Minute', 'AirTC_Avg', 'RH', 
+#                              'WS_ms_S_WVT', 'WindDir_D1_WVT', 'Rain_mm_Tot', 'BP_mbar_Avg']
+#             colonnes_renommage = {
+#                 'AirTC_Avg': 'Air_Temp_Deg_C', 
+#                 'RH': 'Rel_H_%', 
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec', 
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg', 
+#                 'Rain_mm_Tot': 'Rain_mm'
+#             }
+            
+#             # Gestion des colonnes manquantes
+#             for col in colonnes_select:
+#                 if col not in df_copy.columns:
+#                     df_copy[col] = np.nan
+            
+#             df_copy = df_copy[colonnes_select]
+#             df_copy.rename(columns=colonnes_renommage, inplace=True)
+    
+#     # Traitement pour le bassin Dassari
+#     elif bassin == 'DASSARI':
+#         if station in ['Nagasséga', 'Koundri', 'Koupendri', 'Pouri', 'Fandohoun']:
+#             colonnes_attendues = [
+#                 'Year', 'Month', 'Day', 'Hour', 'Minute', 'Rain_01_mm', 'Rain_02_mm',
+#                 'Air_Temp_Deg_C', 'Rel_H_%', 'Solar_R_W/m^2', 'Wind_Sp_m/sec', 'Wind_Dir_Deg'
+#             ]
+            
+#             for col in colonnes_attendues:
+#                 if col not in df_copy.columns:
+#                     df_copy[col] = np.nan
+            
+#             df_copy = df_copy[colonnes_attendues]
+
+#         elif station == 'Ouriyori 1':
+#             colonnes_sup = ['TIMESTAMP', 'RECORD', 'WSDiag', 'Intensity_RT_Avg', 'Acc_RT_NRT_Tot', 
+#                           'Pluvio_Status', 'BP_mbar_Avg', 'SR01Up_Avg', 'SR01Dn_Avg', 'IR01Up_Avg', 
+#                           'IR01Dn_Avg', 'NR01TC_Avg', 'IR01UpCo_Avg', 'IR01DnCo_Avg',
+#                           'Acc_NRT_Tot', 'Acc_totNRT', 'Bucket_RT_Avg', 'Bucket_NRT',
+#                           'Temp_load_cell_Avg', 'Heater_Status']
+            
+#             colonnes_renommage = {
+#                 'Rain_mm_Tot': 'Rain_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg'
+#             }
+            
+#             if 'TIMESTAMP' in df_copy.columns:
+#                 df_copy["TIMESTAMP"] = pd.to_datetime(df_copy["TIMESTAMP"], errors="coerce")
+#                 df_copy.dropna(subset=["TIMESTAMP"], inplace=True)
+                
+#                 df_copy["Year"] = df_copy["TIMESTAMP"].dt.year
+#                 df_copy["Month"] = df_copy["TIMESTAMP"].dt.month
+#                 df_copy["Day"] = df_copy["TIMESTAMP"].dt.day
+#                 df_copy["Hour"] = df_copy["TIMESTAMP"].dt.hour
+#                 df_copy["Minute"] = df_copy["TIMESTAMP"].dt.minute
+            
+#             df_copy.drop(columns=colonnes_sup, inplace=True, errors='ignore')
+#             df_copy.rename(columns=colonnes_renommage, inplace=True)
+    
+#     # Traitement pour le bassin Vea Sissili
+#     elif bassin == 'VEA_SISSILI':
+#         #stations_vea_a_9_variables = ['Oualem', 'Nebou', 'Nabugubelle', 'Manyoro', 'Gwosi', 'Doninga', 'Bongo Soe']
+        
+#         if station in ['Oualem', 'Nebou', 'Nabugubelle', 'Manyoro', 'Gwosi', 'Doninga', 'Bongo Soe']:
+#             colonnes_renommage = {
+#                 'Rain_mm_Tot': 'Rain_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg',
+#                 #'Date': 'Datetime'
+#             }
+#             colonnes_sup = ['SlrkJ_Tot', 'WS_ms_Avg', 'WindDir', 'Rain_01_mm_Tot', 'Rain_02_mm_Tot']
+            
+#         elif station == 'Aniabisi':
+#             colonnes_renommage = {
+#                 'Rain_mm_Tot': 'Rain_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg',
+#                 #'Date': 'Datetime'
+#             }
+#             colonnes_sup = ['Intensity_RT_Avg', 'Acc_NRT_Tot', 'Acc_RT_NRT_Tot', 'SR01Up_Avg', 
+#                           'SR01Dn_Avg', 'IR01Up_Avg', 'IR01Dn_Avg', 'IR01UpCo_Avg', 'IR01DnCo_Avg']
+            
+#         elif station == 'Atampisi':
+#             colonnes_renommage = {
+#                 'Rain_01_mm_Tot': 'Rain_01_mm',
+#                 'Rain_02_mm_Tot': 'Rain_02_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_Avg': 'Wind_Sp_m/sec',
+#                 'WindDir': 'Wind_Dir_Deg',
+#                 #'Date': 'Datetime'
+#             }
+#             #colonnes_sup = []
+        
+#         if colonnes_sup:
+#             df_copy.drop(columns=colonnes_sup, inplace=True, errors='ignore')
+        
+#         df_copy.rename(columns=colonnes_renommage, inplace=True)
+    
+#     # Conversion des types de données
+#     for col in df_copy.columns:
+#         if 'Year' in col or 'Month' in col or 'Day' in col or 'Hour' in col or 'Minute' in col:
+#             df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').astype('Int64')
+#         elif 'Rain' in col or 'Temp' in col or 'Rel_H' in col or 'Solar' in col or 'Wind' in col:
+#             df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').astype(float)
+    
+#     return df_copy
+
+
+
+# def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.DataFrame:
+#     """
+#     Prétraite les données d'une station spécifique en fonction de son nom.
+#     Applique les renommages de colonnes et les sélections spécifiques.
+#     """
+
+#      # Nettoyage du nom de la station
+#     station = station.strip()
+
+#     STATION_TO_BASIN = {
+#         # Stations Dano
+#         'Dreyer Foundation': 'DANO',
+#         'Bankandi': 'DANO',
+#         'Wahablé': 'DANO',
+#         'Fafo': 'DANO',
+#         'Yabogane': 'DANO',
+#         'Lare': 'DANO',
+#         'Tambiri 2': 'DANO',
+#         'Tambiri 1': 'DANO',
+
+#         # Stations Dassari
+#         'Nagasséga': 'DASSARI',
+#         'Koundri': 'DASSARI',
+#         'Koupendri': 'DASSARI',
+#         'Pouri': 'DASSARI',
+#         'Fandohoun': 'DASSARI',
+#         'Ouriyori 1': 'DASSARI',
+
+#         # Stations Vea Sissili
+#         'Oualem': 'VEA_SISSILI',
+#         'Nebou': 'VEA_SISSILI',
+#         'Nabugubelle': 'VEA_SISSILI',
+#         'Manyoro': 'VEA_SISSILI',
+#         'Gwosi': 'VEA_SISSILI',
+#         'Doninga': 'VEA_SISSILI',
+#         'Bongo Soe': 'VEA_SISSILI',
+#         'Aniabiisi': 'VEA_SISSILI',
+#         'Atampisi': 'VEA_SISSILI'
+#     }
+
+#     # Déterminer le bassin à partir de la station
+#     bassin = STATION_TO_BASIN.get(station)
+    
+#     if not bassin:
+#         warnings.warn(_l("Station %s non reconnue dans aucun bassin. Prétraitement standard appliqué.") % station)
+#         return df
+    
+#     df_copy = df.copy()
+    
+#     # Traitement pour le bassin Dano
+#     if bassin == 'DANO':
+#         if station in ['Dreyer Foundation', 'Bankandi', 'Wahablé', 'Fafo', 'Yabogane']:
+#             colonnes_attendues = [
+#                 'Year', 'Month', 'Day', 'Hour', 'Minute', 'Rain_01_mm', 'Rain_02_mm',
+#                 'Air_Temp_Deg_C', 'Rel_H_%', 'Solar_R_W/m^2', 'Wind_Sp_m/sec', 'Wind_Dir_Deg'
+#             ]
+            
+#             # Gestion des colonnes manquantes
+#             for col in colonnes_attendues:
+#                 if col not in df_copy.columns:
+#                     df_copy[col] = np.nan
+            
+#             # Sélection des colonnes dans l'ordre attendu
+#             df_copy = df_copy[colonnes_attendues]
+
+#         elif station in ['Lare', 'Tambiri 2']:
+#             colonnes_attendues = [
+#                 'Year', 'Month', 'Day', 'Hour', 'Minute', 'Rain_01_mm', 'Rain_02_mm'
+#             ]
+            
+#             for col in colonnes_attendues:
+#                 if col not in df_copy.columns:
+#                     df_copy[col] = np.nan
+            
+#             df_copy = df_copy[colonnes_attendues]
+
+#         elif station == 'Tambiri 1':
+#             colonnes_select = ['Year', 'Month', 'Day', 'Hour', 'Minute', 'AirTC_Avg', 'RH', 
+#                              'WS_ms_S_WVT', 'WindDir_D1_WVT', 'Rain_mm_Tot', 'BP_mbar_Avg']
+#             colonnes_renommage = {
+#                 'AirTC_Avg': 'Air_Temp_Deg_C', 
+#                 'RH': 'Rel_H_%', 
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec', 
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg', 
+#                 'Rain_mm_Tot': 'Rain_mm'
+#             }
+            
+#             # Gestion des colonnes manquantes
+#             for col in colonnes_select:
+#                 if col not in df_copy.columns:
+#                     df_copy[col] = np.nan
+            
+#             df_copy = df_copy[colonnes_select]
+#             df_copy.rename(columns=colonnes_renommage, inplace=True)
+    
+#     # Traitement pour le bassin Dassari
+#     elif bassin == 'DASSARI':
+#         if station in ['Nagasséga', 'Koundri', 'Koupendri', 'Pouri', 'Fandohoun']:
+#             colonnes_attendues = [
+#                 'Year', 'Month', 'Day', 'Hour', 'Minute', 'Rain_01_mm', 'Rain_02_mm',
+#                 'Air_Temp_Deg_C', 'Rel_H_%', 'Solar_R_W/m^2', 'Wind_Sp_m/sec', 'Wind_Dir_Deg'
+#             ]
+            
+#             for col in colonnes_attendues:
+#                 if col not in df_copy.columns:
+#                     df_copy[col] = np.nan
+            
+#             df_copy = df_copy[colonnes_attendues]
+
+#         elif station == 'Ouriyori 1':
+#             colonnes_sup = ['TIMESTAMP', 'RECORD', 'WSDiag', 'Intensity_RT_Avg', 'Acc_RT_NRT_Tot', 
+#                           'Pluvio_Status', 'BP_mbar_Avg', 'SR01Up_Avg', 'SR01Dn_Avg', 'IR01Up_Avg', 
+#                           'IR01Dn_Avg', 'NR01TC_Avg', 'IR01UpCo_Avg', 'IR01DnCo_Avg',
+#                           'Acc_NRT_Tot', 'Acc_totNRT', 'Bucket_RT_Avg', 'Bucket_NRT',
+#                           'Temp_load_cell_Avg', 'Heater_Status']
+            
+#             colonnes_renommage = {
+#                 'Rain_mm_Tot': 'Rain_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg'
+#             }
+            
+#             if 'TIMESTAMP' in df_copy.columns:
+#                 df_copy["TIMESTAMP"] = pd.to_datetime(df_copy["TIMESTAMP"], errors="coerce")
+#                 df_copy.dropna(subset=["TIMESTAMP"], inplace=True)
+                
+#                 df_copy["Year"] = df_copy["TIMESTAMP"].dt.year
+#                 df_copy["Month"] = df_copy["TIMESTAMP"].dt.month
+#                 df_copy["Day"] = df_copy["TIMESTAMP"].dt.day
+#                 df_copy["Hour"] = df_copy["TIMESTAMP"].dt.hour
+#                 df_copy["Minute"] = df_copy["TIMESTAMP"].dt.minute
+            
+#             #df_copy.drop(columns=colonnes_sup, inplace=True, errors='ignore')
+#              # Suppression des colonnes inutiles
+#             df_copy.drop(columns=[col for col in colonnes_sup if col in df_copy.columns], inplace=True, errors='ignore')
+#             # Renommage des colonnes
+#             df_copy.rename(columns=colonnes_renommage, inplace=True)
+    
+#     # Traitement pour le bassin Vea Sissili
+#     elif bassin == 'VEA_SISSILI':
+#         #stations_vea_a_9_variables = ['Oualem', 'Nebou', 'Nabugubelle', 'Manyoro', 'Gwosi', 'Doninga', 'Bongo Soe']
+        
+#         if station in ['Oualem', 'Nebou', 'Nabugubelle', 'Manyoro', 'Gwosi', 'Doninga', 'Bongo Soe']:
+#             colonnes_renommage = {
+#                 'Rain_mm_Tot': 'Rain_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg',
+#             }
+#             colonnes_sup = ['SlrkJ_Tot', 'WS_ms_Avg', 'WindDir', 'Rain_01_mm_Tot', 'Rain_02_mm_Tot']
+            
+#             df_copy.drop(columns=[col for col in colonnes_sup if col in df_copy.columns], inplace=True, errors='ignore')
+#             df_copy.rename(columns=colonnes_renommage, inplace=True)
+            
+#             # FORCER L'ORDRE DES COLONNES SELON CE QUI EST ATTENDU EN BASE
+#             colonnes_finales = [
+#                 'Date', 'Rain_mm', 'Air_Temp_Deg_C', 'Rel_H_%', 
+#                 'Solar_R_W/m^2', 'Wind_Sp_m/sec', 'Wind_Dir_Deg', 'BP_mbar_Avg'
+#             ]
+#             df_copy = df_copy[colonnes_finales]
+            
+#         elif station == 'Aniabisi':
+#             colonnes_renommage = {
+#                 'Rain_mm_Tot': 'Rain_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
+#                 'WindDir_D1_WVT': 'Wind_Dir_Deg',
+#                 #'Date': 'Datetime'
+#             }
+#             colonnes_sup = ['Intensity_RT_Avg', 'Acc_NRT_Tot', 'Acc_RT_NRT_Tot', 'SR01Up_Avg', 
+#                           'SR01Dn_Avg', 'IR01Up_Avg', 'IR01Dn_Avg', 'IR01UpCo_Avg', 'IR01DnCo_Avg']
+#              # Suppression des colonnes inutiles
+#             df_copy.drop(columns=[col for col in colonnes_sup if col in df_copy.columns], inplace=True, errors='ignore')
+#             # Renommage des colonnes
+#             df_copy.rename(columns=colonnes_renommage, inplace=True)
+    
+#         elif station == 'Atampisi':
+#             colonnes_renommage = {
+#                 'Rain_01_mm_Tot': 'Rain_01_mm',
+#                 'Rain_02_mm_Tot': 'Rain_02_mm',
+#                 'AirTC_Avg': 'Air_Temp_Deg_C',
+#                 'RH': 'Rel_H_%',
+#                 'SlrW_Avg': 'Solar_R_W/m^2',
+#                 'WS_ms_Avg': 'Wind_Sp_m/sec',
+#                 'WindDir': 'Wind_Dir_Deg',
+#                 #'Date': 'Datetime'
+#             }
+#             #colonnes_sup = []
+#             df_copy.rename(columns=colonnes_renommage, inplace=True)
+
+#         # if colonnes_sup:
+#         #     df_copy.drop(columns=colonnes_sup, inplace=True, errors='ignore')
+        
+#         # df_copy.rename(columns=colonnes_renommage, inplace=True)
+    
+#     # Conversion des types de données
+#     for col in df_copy.columns:
+#         if 'Year' in col or 'Month' in col or 'Day' in col or 'Hour' in col or 'Minute' in col:
+#             df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').astype('Int64')
+#         elif 'Rain' in col or 'Temp' in col or 'Rel_H' in col or 'Solar' in col or 'Wind' in col:
+#             df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').astype(float)
+    
+#     return df_copy
+
+
+import pandas as pd
+import numpy as np
+import warnings
+from typing import Dict, List
+
+# def create_datetime_column(df: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Crée une colonne 'Datetime' standardisée à partir des colonnes temporelles disponibles.
+    
+#     Args:
+#         df: DataFrame contenant les données de la station
+        
+#     Returns:
+#         DataFrame avec une colonne 'Datetime' ajoutée
+        
+#     Raises:
+#         ValueError: Si aucun format temporel valide n'est trouvé
+#     """
+#     df = df.copy()
+    
+#     # Cas 1: Colonnes Year/Month/Day/Hour/Minute disponibles
+#     if all(col in df.columns for col in ['Year', 'Month', 'Day']):
+#         # Remplissage des valeurs manquantes
+#         if 'Hour' not in df.columns:
+#             df['Hour'] = 0
+#         if 'Minute' not in df.columns:
+#             df['Minute'] = 0
+            
+#         # Conversion en datetime
+#         df['Datetime'] = pd.to_datetime(
+#             df[['Year', 'Month', 'Day', 'Hour', 'Minute']],
+#             errors='coerce'
+#         )
+        
+#         # Suppression des colonnes temporelles
+#         df.drop(columns=['Year', 'Month', 'Day', 'Hour', 'Minute'], inplace=True, errors='ignore')
+        
+#     # Cas 2: Colonne Date disponible
+#     elif 'Date' in df.columns:
+#         df['Datetime'] = pd.to_datetime(df['Date'], errors='coerce')
+#         df.drop(columns=['Date'], inplace=True)
+        
+#     # Cas 3: TIMESTAMP disponible
+#     elif 'TIMESTAMP' in df.columns:
+#         df['Datetime'] = pd.to_datetime(df['TIMESTAMP'], errors='coerce')
+#         df.drop(columns=['TIMESTAMP'], inplace=True)
+        
+#     else:
+#         raise ValueError("Aucun format temporel reconnu (Year/Month/Day ou Date)")
+    
+#     # Vérification des conversions
+#     if df['Datetime'].isna().any():
+#         failed_count = df['Datetime'].isna().sum()
+#         warnings.warn(f"{failed_count} conversions de datetime ont échoué")
+    
+#     # Déplacer Datetime en première position
+#     cols = ['Datetime'] + [col for col in df.columns if col != 'Datetime']
+#     return df[cols]
+
 def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.DataFrame:
     """
-    Prétraite les données d'une station spécifique en fonction de son nom.
-    Applique les renommages de colonnes et les sélections spécifiques.
+    Prétraite les données d'une station spécifique et crée une colonne Datetime standardisée.
     
     Args:
-        df (pd.DataFrame): DataFrame brut à traiter
-        station (str): Nom de la station
+        df: DataFrame brut contenant les données
+        station: Nom de la station météo
         
     Returns:
-        pd.DataFrame: DataFrame prétraité avec les colonnes standardisées
+        DataFrame prétraité avec colonne Datetime
     """
-    # Dictionnaire de mapping des stations aux bassins
+    # Nettoyage du nom de la station
+    station = station.strip()
+
+    # Mapping des stations vers leurs bassins
     STATION_TO_BASIN = {
         # Stations Dano
+        'Dreyer Foundation': 'DANO',
+        'Bankandi': 'DANO',
+        'Wahablé': 'DANO',
+        'Fafo': 'DANO',
+        'Yabogane': 'DANO',
+        'Lare': 'DANO',
+        'Tambiri 2': 'DANO',
         'Tambiri 1': 'DANO',
+
         # Stations Dassari
+        'Nagasséga': 'DASSARI',
+        'Koundri': 'DASSARI',
+        'Koupendri': 'DASSARI',
+        'Pouri': 'DASSARI',
+        'Fandohoun': 'DASSARI',
         'Ouriyori 1': 'DASSARI',
+
         # Stations Vea Sissili
         'Oualem': 'VEA_SISSILI',
         'Nebou': 'VEA_SISSILI',
@@ -56,25 +926,48 @@ def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.D
         'Gwosi': 'VEA_SISSILI',
         'Doninga': 'VEA_SISSILI',
         'Bongo Soe': 'VEA_SISSILI',
-        'Aniabisi': 'VEA_SISSILI',
+        'Aniabiisi': 'VEA_SISSILI',
         'Atampisi': 'VEA_SISSILI'
     }
-    
-    # Déterminer le bassin à partir de la station
+
+    # Détermination du bassin
     bassin = STATION_TO_BASIN.get(station)
     
     if not bassin:
-        # Traduction de l'avertissement
-        warnings.warn(_l("Station %s non reconnue dans aucun bassin. Prétraitement standard appliqué.") % station)
+        warnings.warn(f"Station {station} non reconnue dans aucun bassin. Prétraitement standard appliqué.")
         return df
     
     df_copy = df.copy()
     
     # Traitement pour le bassin Dano
     if bassin == 'DANO':
-        if station == 'Tambiri 1':
+        if station in ['Dreyer Foundation', 'Bankandi', 'Wahablé', 'Fafo', 'Yabogane']:
+            colonnes_attendues = [
+                'Year', 'Month', 'Day', 'Hour', 'Minute', 'Rain_01_mm', 'Rain_02_mm',
+                'Air_Temp_Deg_C', 'Rel_H_%', 'Solar_R_W/m^2', 'Wind_Sp_m/sec', 'Wind_Dir_Deg'
+            ]
+            
+            # Gestion des colonnes manquantes
+            for col in colonnes_attendues:
+                if col not in df_copy.columns:
+                    df_copy[col] = np.nan
+            
+            df_copy = df_copy[colonnes_attendues]
+
+        elif station in ['Lare', 'Tambiri 2']:
+            colonnes_attendues = [
+                'Year', 'Month', 'Day', 'Hour', 'Minute', 'Rain_01_mm', 'Rain_02_mm'
+            ]
+            
+            for col in colonnes_attendues:
+                if col not in df_copy.columns:
+                    df_copy[col] = np.nan
+            
+            df_copy = df_copy[colonnes_attendues]
+
+        elif station == 'Tambiri 1':
             colonnes_select = ['Year', 'Month', 'Day', 'Hour', 'Minute', 'AirTC_Avg', 'RH', 
-                             'WS_ms_S_WVT', 'WindDir_D1_WVT', 'Rain_mm_Tot', 'BP_mbar_Avg', 'Station']
+                             'WS_ms_S_WVT', 'WindDir_D1_WVT', 'Rain_mm_Tot', 'BP_mbar_Avg']
             colonnes_renommage = {
                 'AirTC_Avg': 'Air_Temp_Deg_C', 
                 'RH': 'Rel_H_%', 
@@ -82,12 +975,29 @@ def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.D
                 'WindDir_D1_WVT': 'Wind_Dir_Deg', 
                 'Rain_mm_Tot': 'Rain_mm'
             }
+            
+            for col in colonnes_select:
+                if col not in df_copy.columns:
+                    df_copy[col] = np.nan
+            
             df_copy = df_copy[colonnes_select]
-            df_copy.rename(columns=colonnes_renommage, inplace=True, errors='ignore')
+            df_copy.rename(columns=colonnes_renommage, inplace=True)
     
     # Traitement pour le bassin Dassari
     elif bassin == 'DASSARI':
-        if station == 'Ouriyori 1':
+        if station in ['Nagasséga', 'Koundri', 'Koupendri', 'Pouri', 'Fandohoun']:
+            colonnes_attendues = [
+                'Year', 'Month', 'Day', 'Hour', 'Minute', 'Rain_01_mm', 'Rain_02_mm',
+                'Air_Temp_Deg_C', 'Rel_H_%', 'Solar_R_W/m^2', 'Wind_Sp_m/sec', 'Wind_Dir_Deg'
+            ]
+            
+            for col in colonnes_attendues:
+                if col not in df_copy.columns:
+                    df_copy[col] = np.nan
+            
+            df_copy = df_copy[colonnes_attendues]
+
+        elif station == 'Ouriyori 1':
             colonnes_sup = ['TIMESTAMP', 'RECORD', 'WSDiag', 'Intensity_RT_Avg', 'Acc_RT_NRT_Tot', 
                           'Pluvio_Status', 'BP_mbar_Avg', 'SR01Up_Avg', 'SR01Dn_Avg', 'IR01Up_Avg', 
                           'IR01Dn_Avg', 'NR01TC_Avg', 'IR01UpCo_Avg', 'IR01DnCo_Avg',
@@ -113,14 +1023,12 @@ def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.D
                 df_copy["Hour"] = df_copy["TIMESTAMP"].dt.hour
                 df_copy["Minute"] = df_copy["TIMESTAMP"].dt.minute
             
-            df_copy.drop(columns=colonnes_sup, inplace=True, errors='ignore')
-            df_copy.rename(columns=colonnes_renommage, inplace=True, errors='ignore')
+            df_copy.drop(columns=[col for col in colonnes_sup if col in df_copy.columns], inplace=True, errors='ignore')
+            df_copy.rename(columns=colonnes_renommage, inplace=True)
     
     # Traitement pour le bassin Vea Sissili
-    elif bassin == 'VEA_SISSILI':
-        stations_vea_a_9_variables = ['Oualem', 'Nebou', 'Nabugubelle', 'Manyoro', 'Gwosi', 'Doninga', 'Bongo Soe']
-        
-        if station in stations_vea_a_9_variables:
+    elif bassin == 'VEA_SISSILI':        
+        if station in ['Oualem', 'Nebou', 'Nabugubelle', 'Manyoro', 'Gwosi', 'Doninga', 'Bongo Soe']:
             colonnes_renommage = {
                 'Rain_mm_Tot': 'Rain_mm',
                 'AirTC_Avg': 'Air_Temp_Deg_C',
@@ -128,11 +1036,19 @@ def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.D
                 'SlrW_Avg': 'Solar_R_W/m^2',
                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
                 'WindDir_D1_WVT': 'Wind_Dir_Deg',
-                'Date': 'Datetime'
             }
             colonnes_sup = ['SlrkJ_Tot', 'WS_ms_Avg', 'WindDir', 'Rain_01_mm_Tot', 'Rain_02_mm_Tot']
             
-        elif station == 'Aniabisi':
+            df_copy.drop(columns=[col for col in colonnes_sup if col in df_copy.columns], inplace=True, errors='ignore')
+            df_copy.rename(columns=colonnes_renommage, inplace=True)
+            
+            colonnes_finales = [
+                'Date', 'Rain_mm', 'Air_Temp_Deg_C', 'Rel_H_%', 
+                'Solar_R_W/m^2', 'Wind_Sp_m/sec', 'Wind_Dir_Deg', 'BP_mbar_Avg'
+            ]
+            df_copy = df_copy[colonnes_finales]
+            
+        elif station == 'Aniabiisi':
             colonnes_renommage = {
                 'Rain_mm_Tot': 'Rain_mm',
                 'AirTC_Avg': 'Air_Temp_Deg_C',
@@ -140,11 +1056,13 @@ def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.D
                 'SlrW_Avg': 'Solar_R_W/m^2',
                 'WS_ms_S_WVT': 'Wind_Sp_m/sec',
                 'WindDir_D1_WVT': 'Wind_Dir_Deg',
-                'Date': 'Datetime'
             }
             colonnes_sup = ['Intensity_RT_Avg', 'Acc_NRT_Tot', 'Acc_RT_NRT_Tot', 'SR01Up_Avg', 
                           'SR01Dn_Avg', 'IR01Up_Avg', 'IR01Dn_Avg', 'IR01UpCo_Avg', 'IR01DnCo_Avg']
             
+            df_copy.drop(columns=[col for col in colonnes_sup if col in df_copy.columns], inplace=True, errors='ignore')
+            df_copy.rename(columns=colonnes_renommage, inplace=True)
+    
         elif station == 'Atampisi':
             colonnes_renommage = {
                 'Rain_01_mm_Tot': 'Rain_01_mm',
@@ -154,25 +1072,212 @@ def apply_station_specific_preprocessing(df: pd.DataFrame, station: str) -> pd.D
                 'SlrW_Avg': 'Solar_R_W/m^2',
                 'WS_ms_Avg': 'Wind_Sp_m/sec',
                 'WindDir': 'Wind_Dir_Deg',
-                'Date': 'Datetime'
             }
-            colonnes_sup = []
+            df_copy.rename(columns=colonnes_renommage, inplace=True)
+
+     # Conversion des types de données
+    for col in df_copy.columns:
+        # 1. Colonnes temporelles séparées (Year, Month, etc.)
+        if any(time_part in col for time_part in ['Year', 'Month', 'Day', 'Hour', 'Minute']):
+            df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').astype('Int64')
         
-        if 'Date' in df_copy.columns:
-            df_copy["Date"] = pd.to_datetime(df_copy["Date"], errors="coerce")
-            df_copy.dropna(subset=["Date"], inplace=True)
+        # 2. Colonnes de données météorologiques
+        elif any(metric in col for metric in ['Rain', 'Temp', 'Rel_H', 'Solar', 'Wind', 'BP_']):
+            df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce').astype(float)
+        
+        # 3. Colonne Date (conversion spéciale)
+        elif col == 'Date':
+            # Conversion en datetime avec gestion des erreurs
+            df_copy[col] = pd.to_datetime(
+                df_copy[col],
+                errors='coerce',
+                format='mixed'  # Gère plusieurs formats automatiquement
+            )
             
-            df_copy["Year"] = df_copy["Date"].dt.year
-            df_copy["Month"] = df_copy["Date"].dt.month
-            df_copy["Day"] = df_copy["Date"].dt.day
-            df_copy["Hour"] = df_copy["Date"].dt.hour
-            df_copy["Minute"] = df_copy["Date"].dt.minute
+            # Comptage des échecs de conversion
+            if df_copy[col].isna().any():
+                nan_count = df_copy[col].isna().sum()
+                sample_errors = df_copy[df_copy[col].isna()][col].head(3).tolist()
+                warnings.warn(
+                    f"{nan_count} erreurs de conversion Date. Exemples : {sample_errors}"
+                )
         
-        if colonnes_sup:
-            df_copy.drop(columns=colonnes_sup, inplace=True, errors='ignore')
+        # 4. Colonne TIMESTAMP (cas particulier)
+        elif col == 'TIMESTAMP':
+            df_copy[col] = pd.to_datetime(df_copy[col], errors='coerce')
         
-        df_copy.rename(columns=colonnes_renommage, inplace=True, errors='ignore')
+         # === AJOUT MODIFIÉ ===
+    # Création de Datetime sans supprimer les colonnes d'origine
+    try:
+        df_copy = create_datetime_column(df_copy)
+    except ValueError as e:
+        warnings.warn(f"Erreur création Datetime pour {station}: {str(e)}")
     
+    
+    return df_copy
+
+
+# def create_datetime_column(df: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Crée une colonne 'Datetime' standardisée SANS supprimer les colonnes temporelles d'origine.
+#     Gère deux cas :
+#     1. Si les colonnes Year/Month/Day/Hour/Minute existent → combine en Datetime
+#     2. Si une colonne Date existe → convertit en Datetime
+    
+#     Args:
+#         df: DataFrame contenant les données de la station
+        
+#     Returns:
+#         DataFrame avec une colonne 'Datetime' ajoutée (sans supprimer les colonnes d'origine)
+        
+#     Raises:
+#         ValueError: Si aucun format temporel valide n'est trouvé
+#     """
+#     df = df.copy()
+    
+#     # Cas 1: Colonnes Year/Month/Day/Hour/Minute disponibles
+#     if all(col in df.columns for col in ['Year', 'Month', 'Day', 'Hour', 'Minute']):
+#         # Remplissage des heures/minutes si manquantes
+#         hour = df['Hour'] if 'Hour' in df.columns else 0
+#         minute = df['Minute'] if 'Minute' in df.columns else 0
+        
+#         # Conversion en datetime
+#         df['Datetime'] = pd.to_datetime({
+#             'year': df['Year'],
+#             'month': df['Month'],
+#             'day': df['Day'],
+#             'hour': hour,
+#             'minute': minute
+#         }, errors='coerce')
+        
+#     # Cas 2: Colonne Date disponible
+#     elif 'Date' in df.columns:
+#         df['Datetime'] = pd.to_datetime(df['Date'], errors='coerce')
+        
+#     # Cas 3: TIMESTAMP disponible (ex: Ouriyori 1)
+#     elif 'TIMESTAMP' in df.columns:
+#         df['Datetime'] = pd.to_datetime(df['TIMESTAMP'], errors='coerce')
+        
+#     else:
+#         raise ValueError("Aucun format temporel reconnu (Year/Month/Day ou Date/TIMESTAMP)")
+    
+#     # Vérification des conversions échouées
+#     if df['Datetime'].isna().any():
+#         failed_count = df['Datetime'].isna().sum()
+#         warnings.warn(f"{failed_count} conversions de datetime ont échoué (valeurs mises à NaN)")
+    
+#     # Déplacer Datetime en première position (sans supprimer les autres colonnes)
+#     cols = ['Datetime'] + [col for col in df.columns if col != 'Datetime']
+#     return df[cols]
+
+
+# def create_datetime_column(df: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Crée une colonne 'Datetime' standardisée SANS supprimer les colonnes temporelles d'origine.
+#     Gère trois cas :
+#     1. Si les colonnes Year/Month/Day/Hour/Minute existent → combine en Datetime (toutes obligatoires)
+#     2. Si une colonne Date existe → convertit en Datetime
+#     3. Si une colonne TIMESTAMP existe → convertit en Datetime
+    
+#     Args:
+#         df: DataFrame contenant les données de la station
+        
+#     Returns:
+#         DataFrame avec une colonne 'Datetime' ajoutée (sans supprimer les colonnes d'origine)
+        
+#     Raises:
+#         ValueError: Si les données temporelles sont incomplètes ou invalides
+#     """
+#     df = df.copy()
+    
+#     # Cas 1: Colonnes temporelles individuelles (toutes obligatoires)
+#     if all(col in df.columns for col in ['Year', 'Month', 'Day', 'Hour', 'Minute']):
+#         # Vérifier les valeurs nulles
+#         if df[['Year', 'Month', 'Day', 'Hour', 'Minute']].isnull().any().any():
+#             null_counts = df[['Year', 'Month', 'Day', 'Hour', 'Minute']].isnull().sum()
+#             raise ValueError(f"Valeurs nulles dans les colonnes temporelles:\n{null_counts}")
+        
+#         # Conversion en datetime
+#         df['Datetime'] = pd.to_datetime({
+#             'year': df['Year'],
+#             'month': df['Month'],
+#             'day': df['Day'],
+#             'hour': df['Hour'],
+#             'minute': df['Minute']
+#         }, errors='coerce')
+        
+#     # Cas 2: Colonne Date disponible
+#     elif 'Date' in df.columns:
+#         if df['Date'].isnull().any():
+#             raise ValueError("La colonne Date contient des valeurs nulles")
+        
+#         df['Datetime'] = pd.to_datetime(df['Date'], errors='coerce')
+        
+#     # Cas 3: Colonne TIMESTAMP disponible
+#     elif 'TIMESTAMP' in df.columns:
+#         if df['TIMESTAMP'].isnull().any():
+#             raise ValueError("La colonne TIMESTAMP contient des valeurs nulles")
+        
+#         df['Datetime'] = pd.to_datetime(df['TIMESTAMP'], errors='coerce')
+        
+#     else:
+#         raise ValueError("""
+#         Aucun format temporel reconnu. Doit contenir soit :
+#         - Year, Month, Day, Hour, Minute (tous obligatoires)
+#         - Une colonne Date
+#         - Une colonne TIMESTAMP
+#         """)
+    
+#     # Vérification des conversions
+#     if df['Datetime'].isna().any():
+#         failed_count = df['Datetime'].isna().sum()
+#         failed_samples = df[df['Datetime'].isna()].head(3).to_dict('records')
+#         warnings.warn(
+#             f"{failed_count} conversions ont échoué. "
+#             f"Exemples de données problématiques : {failed_samples}"
+#         )
+#     df['Datetime'] = df['Datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+#     # Réorganisation des colonnes
+#     return df[['Datetime'] + [col for col in df.columns if col != 'Datetime']]
+
+# Cette fonction devrait être dans data_processing.py
+def create_datetime_column(df: pd.DataFrame) -> pd.DataFrame:
+    df_copy = df.copy()
+    datetime_col_created = False
+
+    if all(col in df_copy.columns for col in ['Year', 'Month', 'Day', 'Hour', 'Minute']):
+        for col in ['Year', 'Month', 'Day', 'Hour', 'Minute']:
+            df_copy[col] = pd.to_numeric(df_copy[col], errors='coerce')
+        
+        df_copy.dropna(subset=['Year', 'Month', 'Day', 'Hour', 'Minute'], inplace=True)
+
+        if not df_copy.empty:
+            df_copy['Datetime'] = pd.to_datetime({
+                'year': df_copy['Year'],
+                'month': df_copy['Month'],
+                'day': df_copy['Day'],
+                'hour': df_copy['Hour'],
+                'minute': df_copy['Minute']
+            }, errors='coerce')
+            datetime_col_created = True
+
+    elif not datetime_col_created and 'Date' in df_copy.columns:
+        df_copy['Datetime'] = pd.to_datetime(df_copy['Date'], errors='coerce', format='mixed')
+        datetime_col_created = True
+        
+    elif not datetime_col_created and 'TIMESTAMP' in df_copy.columns:
+        df_copy['Datetime'] = pd.to_datetime(df_copy['TIMESTAMP'], errors='coerce', format='mixed')
+        datetime_col_created = True
+        
+    if not datetime_col_created or df_copy['Datetime'].isnull().all():
+        raise ValueError("Impossible de créer la colonne 'Datetime'. Les informations temporelles sont incomplètes ou invalides.")
+
+    df_copy['Datetime'] = df_copy['Datetime'].apply(lambda x: x.strftime('%Y-%m-%d %H:%M') if pd.notna(x) else None)
+    
+    if 'Datetime' in df_copy.columns:
+        cols_order = ['Datetime'] + [col for col in df_copy.columns if col != 'Datetime']
+        df_copy = df_copy[cols_order]
+
     return df_copy
 
 def create_rain_mm(df: pd.DataFrame) -> pd.DataFrame:

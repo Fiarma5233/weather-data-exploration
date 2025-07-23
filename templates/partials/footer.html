@@ -12,9 +12,9 @@
                 <h4 class="text-lg font-medium mb-4">{{ _('Navigation') }}</h4>
                 <ul class="space-y-2">
                     <li><a href="{{ url_for('index') }}" class="text-gray-400 hover:text-white transition">{{ _('Accueil') }}</a></li>
-                    {% if not GLOBAL_PROCESSED_DATA_DF.empty %}
+                    {% if get_stations_list('after')|length > 0 %}
                     <li><a href="{{ url_for('data_preview') }}" class="text-gray-400 hover:text-white transition">{{ _('Données') }}</a></li>
-                    <li><a href="{{ url_for('visualisations_options') }}" class="text-gray-400 hover:text-white transition">{{ _('Visualisations') }}</a></li>
+                {#<li><a href="{{ url_for('visualisations_options') }}" class="text-gray-400 hover:text-white transition">{{ _('Visualisations') }}</a></li>#}
                     {% endif %}
                 </ul>
             </div>

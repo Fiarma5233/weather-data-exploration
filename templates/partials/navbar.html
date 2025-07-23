@@ -16,27 +16,27 @@
 
                 {% if data_available %}
 
-{#                  
+               {# 
                <a href="{{ url_for('preprocessing') }}" class="py-2 px-3 rounded-md {% if request.path == url_for('preprocessing') %}bg-indigo-900{% endif %}">
                     <i class="fas fa-cogs mr-2"></i> Prétraitement
                 </a>
 
-                #}   
+                #}
 
                 <a href="{{ url_for('data_preview') }}"
                    class="py-2 px-3 rounded-md {% if request.path == url_for('data_preview') %}bg-indigo-900{% else %}hover:bg-indigo-600{% endif %} transition">
                     <i class="fas fa-table mr-1"></i> {{ _('Données') }}
                 </a>
-
+{#}
                 <a href="{{ url_for('visualisations_options') }}"
                    class="py-2 px-3 rounded-md {% if request.path == url_for('visualisations_options') %}bg-indigo-900{% else %}hover:bg-indigo-600{% endif %} transition">
                     <i class="fas fa-chart-line mr-1"></i> {{ _('Visualisations') }}
                 </a>
-
-                <span class="bg-indigo-800 px-3 py-1 rounded-full text-sm">
+#}  
+                {#<span class="bg-indigo-800 px-3 py-1 rounded-full text-sm">
                     <i class="fas fa-database mr-1"></i>
                     {{ GLOBAL_PROCESSED_DATA_DF.shape[0]|number_format }} {{ _('lignes de données') }}
-                </span>
+                </span> #} 
                 {% endif %}
 
                 <!-- Sélecteur de langue -->
@@ -96,24 +96,24 @@
 
             {% if data_available %}
 
-            {# }
+            {#}
             <a href="{{ url_for('preprocessing') }}" class="py-2 px-3 rounded-md {% if request.path == url_for('preprocessing') %}bg-indigo-900{% endif %}">
                     <i class="fas fa-cogs mr-2"></i> Prétraitement
                 </a>
-#}   
+#}  
                 
             <a href="{{ url_for('data_preview') }}" class="py-2 px-3 rounded-md {% if request.path == url_for('data_preview') %}bg-indigo-900{% endif %}">
                 <i class="fas fa-table mr-2"></i> {{ _('Données') }}
             </a>
 
-            <a href="{{ url_for('visualisations_options') }}" class="py-2 px-3 rounded-md {% if request.path == url_for('visualisations_options') %}bg-indigo-900{% endif %}">
+           {# <a href="{{ url_for('visualisations_options') }}" class="py-2 px-3 rounded-md {% if request.path == url_for('visualisations_options') %}bg-indigo-900{% endif %}">
                 <i class="fas fa-chart-line mr-2"></i> {{ _('Visualisations') }}
-            </a>
+            </a> 
 
             <div class="py-2 px-3 text-indigo-200">
                 <i class="fas fa-database mr-2"></i>
                 {{ GLOBAL_PROCESSED_DATA_DF.shape[0]|number_format }} {{ _('lignes de données') }}
-            </div>
+            </div>#}
             {% endif %}
         </div>
     </div>
