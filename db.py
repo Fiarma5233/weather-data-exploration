@@ -2889,3 +2889,83 @@ def save_to_database(df: pd.DataFrame, station: str, conn, processing_type: str 
             print(df.head().to_string())
             
         return False
+    
+################ Jeudi 24 Jui 2025 ##################
+from config import STATIONS_BY_BASSIN
+def get_stations_with_data(processing_type: str = 'before') -> Dict[str, List[str]]:
+    """
+    Récupère un dictionnaire des bassins, avec une liste des stations non vides pour chaque bassin.
+    Une station est considérée "non vide" si sa table correspondante contient des enregistrements.
+    Args:
+        processing_type: 'before' ou 'after' pour choisir la base de données.
+    Returns:
+        Dictionnaire {bassin: [station1, station2, ...]} des stations non vides.
+    """
+    # Importation de STATIONS_BY_BASSIN depuis config.py
+    # Assurez-vous que config.py est dans le PYTHONPATH ou le même dossier
+    from config import STATIONS_BY_BASSIN 
+
+    stations_by_bassin_with_data = {bassin: [] for bassin in STATIONS_BY_BASSIN.keys()}
+    
+    # Détermine le nom de la base de données cible à partir des variables d'environnement
+    target_db_name_env_var = 'DB_NAME_BEFORE' if processing_type == 'before' else 'DB_NAME_AFTER'
+    target_db_name = os.getenv(target_db_name_env_var)
+
+    if not target_db_name:
+        print(f"Erreur: La variable d'environnement '{target_db_name_env_var}' n'est pas définie.")
+        return {}
+
+    conn = None # Initialiser conn à None
+    try:
+        # Utilise la fonction get_connection existante qui prend le nom de la DB en argument
+        conn = get_connection(target_db_name)
+        if not conn:
+            print(f"Erreur: Impossible de se connecter à la base de données '{target_db_name}'")
+            return {}
+
+        cursor = conn.cursor()
+
+        for bassin, stations_in_bassin in STATIONS_BY_BASSIN.items():
+            for station_name in stations_in_bassin:
+                # Le nom de la table dans la DB est le nom exact de la station après strip()
+                table_name_in_db = station_name.strip()
+                
+                try:
+                    # Vérifier l'existence de la table
+                    cursor.execute(sql.SQL("""
+                        SELECT EXISTS (
+                            SELECT 1
+                            FROM information_schema.tables
+                            WHERE table_schema = 'public' AND table_name = {table_name}
+                        );
+                    """).format(table_name=sql.Literal(table_name_in_db)))
+
+                    table_exists = cursor.fetchone()[0]
+
+                    if table_exists:
+                        # Si la table existe, vérifier si elle contient des données
+                        # Utiliser sql.Identifier pour citer le nom de table car il peut contenir espaces/majuscules
+                        count_query = sql.SQL("SELECT COUNT(*) FROM {};").format(sql.Identifier(table_name_in_db))
+                        cursor.execute(count_query)
+                        count = cursor.fetchone()[0]
+
+                        if count > 0:
+                            stations_by_bassin_with_data[bassin].append(station_name)
+                    
+                except psycopg2.Error as e_table:
+                    print(f"Erreur lors de la vérification de la table '{table_name_in_db}': {e_table}")
+                    continue
+
+        for bassin in stations_by_bassin_with_data:
+            stations_by_bassin_with_data[bassin].sort()
+
+    except psycopg2.Error as e:
+        print(f"Erreur PostgreSQL lors de la récupération des stations: {e}")
+    except Exception as e:
+        print(f"Erreur inattendue dans get_stations_with_data: {e}")
+        traceback.print_exc()
+    finally:
+        if conn:
+            conn.close()
+
+    return stations_by_bassin_with_data

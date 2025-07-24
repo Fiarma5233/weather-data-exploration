@@ -1,432 +1,488 @@
-import os
-import pandas as pd
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-import json
-import traceback
-from werkzeug.utils import secure_filename
-from datetime import datetime
+{% extends "base.html" %}
 
-# Importations des fonctions de traitement
-# Assurez-vous que ces fonctions sont correctement définies dans votre module data_processing.py
-from data_processing import (
-    create_datetime,
-    interpolation,
-    _load_and_prepare_gps_data,
-    gestion_doublons,
-    calculate_daily_summary_table,
-    generer_graphique_par_variable_et_periode,
-    generer_graphique_comparatif,
-    generate_multi_variable_station_plot,
-    generate_variable_summary_plots_for_web,
-    apply_station_specific_preprocessing,
-    generate_stats_plots,
-    generate_daily_stats_plot_plotly
-)
+{% block title %}{{ _('Accueil - Analyse Météo') }}{% endblock %}
 
-# Importations de la configuration
-# Assurez-vous que ces variables sont correctement définies dans votre module config.py
-from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTENSIONS, STATIONS_BY_BASSIN, CUSTOM_STATION_COLORS
-
-app = Flask(__name__)
-app.secret_key = 'votre_cle_secrete_ici' # Utilisez une clé secrète forte en production
-app.config['MAX_CONTENT_LENGTH'] = 64 * 1024 * 1024 # Limite de taille des fichiers à 64 Mo
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['STATIC_FOLDER'] = 'static'
-
-# Variables globales pour stocker les DataFrames en mémoire
-GLOBAL_PROCESSED_DATA_DF = pd.DataFrame()
-GLOBAL_GPS_DATA_DF = pd.DataFrame()
-
-# Chargement des données GPS au démarrage de l'application
-with app.app_context():
-    GLOBAL_GPS_DATA_DF = _load_and_prepare_gps_data()
-
-@app.context_processor
-def inject_globals():
-    """Injecte des variables globales dans le contexte de tous les templates."""
-    return {
-        'GLOBAL_PROCESSED_DATA_DF': GLOBAL_PROCESSED_DATA_DF,
-        'GLOBAL_GPS_DATA_DF': GLOBAL_GPS_DATA_DF,
-        'data_available': not GLOBAL_PROCESSED_DATA_DF.empty, # Indique si des données traitées sont chargées
-        'now': datetime.now()
+{% block extra_css %}
+<style>
+    /* Styles pour la flèche ▼ des selects standards */
+    .custom-select-wrapper {
+        position: relative;
+        width: 100%;
     }
 
-@app.template_filter('number_format')
-def number_format(value):
-    """Filtre Jinja pour formater les nombres avec des espaces comme séparateurs de milliers."""
-    try:
-        return "{:,}".format(int(value)).replace(",", " ")
-    except (ValueError, TypeError):
-        return str(value)
+    .custom-select-wrapper select {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        width: 100%;
+        padding: 0.5rem 2.5rem 0.5rem 1rem;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
 
-def allowed_file(filename):
-    """Vérifie si l'extension du fichier est autorisée."""
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    .custom-select-wrapper .select-arrow {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        pointer-events: none;
+        color: #6b7280;
+        font-size: 0.75rem;
+        z-index: 10;
+    }
 
-@app.route('/')
-def index():
-    """Route pour la page d'accueil, affichant le formulaire d'upload."""
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True) # S'assure que le dossier d'upload existe
-    return render_template('index.html',
-                         bassins=sorted(STATIONS_BY_BASSIN.keys()),
-                         stations_by_bassin=STATIONS_BY_BASSIN)
+    /* Styles pour les onglets */
+    .tab-container {
+        display: flex;
+        margin-bottom: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    """Gère l'upload et le traitement des fichiers de données."""
-    global GLOBAL_PROCESSED_DATA_DF
+    .tab-button {
+        padding: 0.75rem 1.5rem;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        font-weight: 500;
+        color: #6b7280;
+        transition: all 0.2s;
+        text-decoration: none; /* Assure qu'il n'y a pas de soulignement par défaut pour le lien */
+    }
 
-    if not request.files:
-        flash('Aucun fichier reçu', 'error')
-        return redirect(url_for('index'))
+    .tab-button.active {
+        color: #4f46e5;
+        border-bottom-color: #4f46e5;
+    }
 
-    uploaded_files = request.files.getlist('file[]')
-    stations = []
-    # Collecter les noms de station pour chaque fichier
-    for i in range(len(uploaded_files)):
-        station_name = request.form.get(f'station_{i}')
-        if station_name:
-            stations.append(station_name)
-        else:
-            flash('Veuillez sélectionner une station pour chaque fichier.', 'error')
-            return redirect(url_for('index'))
+    .tab-button:hover:not(.active) {
+        color: #4b5563;
+        border-bottom-color: #d1d5db;
+    }
 
-    if len(uploaded_files) != len(stations):
-        flash('Nombre de fichiers et de stations incompatible', 'error')
-        return redirect(url_for('index'))
+    .tab-content {
+        display: none;
+    }
 
-    batch_dfs = [] # Liste pour stocker les DataFrames de chaque fichier uploadé
-    
-    for file, station in zip(uploaded_files, stations):
-        if not file or not allowed_file(file.filename):
-            flash(f"Fichier '{file.filename}' invalide ou non autorisé.", 'error')
-            continue # Passe au fichier suivant
+    .tab-content.active {
+        display: block;
+    }
+
+    /* Autres styles existants */
+    .color-indicator {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        margin-right: 10px;
+        flex-shrink: 0;
+    }
+
+    .validation-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+
+    .validation-message.show {
+        display: block;
+    }
+
+    .bg-purple {
+        background-color: #6f42c1;
+    }
+
+    .btn-purple {
+        background-color: #6f42c1;
+        color: white;
+    }
+
+    .btn-purple:hover {
+        background-color: #5a32a3;
+    }
+
+    .card-header {
+        margin: -1rem -1rem 1rem -1rem;
+        padding: 0.75rem 1rem;
+        border-radius: 0.375rem 0.375rem 0 0;
+        color: white;
+    }
+
+    .message {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0.5rem;
+        border-left: 4px solid;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        animation: fadeIn 0.3s ease-out;
+        display: flex;
+        flex-direction: column;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Style pour le bouton d'option */
+    .option-card {
+        transition: all 0.2s;
+        cursor: pointer;
+        border: 2px solid transparent;
+    }
+
+    .option-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .option-card.selected {
+        border-color: #4f46e5;
+    }
+
+    .option-card .icon {
+        font-size: 2rem;
+        color: #4f46e5;
+        margin-bottom: 1rem;
+    }
+
+    /* Styles pour le spinner de chargement */
+    .loader-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000; /* Assure qu'il est au-dessus de tout le reste */
+        display: none; /* Caché par défaut */
+    }
+
+    .loader {
+        border: 8px solid #f3f3f3; /* Light grey */
+        border-top: 8px solid #4f46e5; /* Blue */
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden p-8 my-10 border border-gray-200">
+    <h1 class="text-4xl font-extrabold text-center text-indigo-800 mb-6 pb-3 border-b-2 border-indigo-200 shadow-sm leading-tight">
+        {{ _('Plateforme d\'Analyse Météorologique') }}
+    </h1>
+
+    <div class="tab-container">
+        <button class="tab-button active" onclick="switchTab('upload')">{{ _('Nouveau Dataset') }}</button>
+        {# Le bouton "Données Existantes" est maintenant un lien direct, stylisé comme un bouton d'onglet #}
+        <a href="{{ url_for('select_stations') }}" class="tab-button" id="existing-data-tab-link">
+            {{ _('Données Existantes') }}
+        </a>
+    </div>
+
+    <div id="upload-tab" class="tab-content active">
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-5 rounded-md mb-6 shadow-sm">
+            <div class="flex items-start">
+                <div class="flex-shrink-0 text-blue-500 mt-0.5">
+                    <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="ml-4 flex-grow">
+                    <p class="text-base text-blue-800 font-medium">
+                        {{ _('Utilisez cette section pour télécharger de nouvelles données. Choisissez le bassin, la station, et le fichier correspondant pour chaque dataset.') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <form id="uploadForm" action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+            <div class="text-center">
+                <h2 class="text-xl font-semibold text-gray-900 inline-block">{{ _('Datasets à Charger') }} (<span id="datasetCount" class="text-indigo-600 font-bold">1</span>)</h2> {# Initialisation à 1 #}
+            </div>
+
+            <div id="inputGroupsContainer" class="space-y-4">
+                <div class="input-group bg-gray-50 p-4 rounded-lg border border-gray-200" data-group-id="0">
+                    <div class="flex justify-end mb-4">
+                        <button type="button" onclick="removeGroup(this)" class="remove-btn text-red-600 hover:text-red-800 hidden p-1 rounded-full hover:bg-red-100 transition-colors duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="bassin_0" class="block text-sm font-medium text-gray-700 mb-1">{{ _('Bassin') }}</label>
+                            <div class="custom-select-wrapper">
+                                <select id="bassin_0" name="bassin_0" required onchange="updateStations(this)"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="">{{ _('Sélectionnez un bassin') }}</option>
+                                    {% for bassin in bassins %}
+                                        <option value="{{ bassin }}">{{ bassin }}</option>
+                                    {% endfor %}
+                                </select>
+                                <span class="select-arrow"><i class="fas fa-caret-down"></i></span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="station_0" class="block text-sm font-medium text-gray-700 mb-1">{{ _('Station') }}</label>
+                            <div class="custom-select-wrapper">
+                                <select id="station_0" name="station_0" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="">{{ _('Sélectionnez une station') }}</option>
+                                </select>
+                                <span class="select-arrow"><i class="fas fa-caret-down"></i></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label for="file_0" class="block text-sm font-medium text-gray-700 mb-1">{{ _('Fichier de données') }}</label>
+                        <input id="file_0" name="file[]" type="file" required accept=".csv,.xlsx,.xls"
+                               class="block w-full text-sm text-gray-900 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center mt-6">
+                <button type="button" onclick="addGroup()" class="inline-flex items-center px-5 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
+                    <svg xmlns="http://www.w3.000/svg" class="h-6 w-6 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    {{ _('Ajouter un dataset') }}
+                </button>
+            </div>
             
-        try:
-            filename = secure_filename(file.filename)
-            temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(temp_path) # Sauvegarde temporaire du fichier
+            <!-- <div class="pt-6">
+                <button type="submit" id="submitButton" class="w-full flex justify-center py-3 px-4 border border-blue-600 rounded-md shadow-sm text-base font-medium text-blue-600 bg-white hover:bg-blue-600 hover:text-white transition-colors duration-200">
+                    <svg xmlns="http://www.w3.000/svg" class="h-6 w-6 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                    {{ _('Soumettre les données') }}
+                </button>
+            </div> -->
 
-            # Lire le fichier selon son extension
-            if filename.lower().endswith('.csv'):
-                df = pd.read_csv(temp_path, encoding_errors='replace')
-            else: # Supposons .xlsx ou .xls
-                df = pd.read_excel(temp_path)
-            
-            df['Station'] = station # Ajoute la colonne 'Station'
-            df = apply_station_specific_preprocessing(df, station) # Applique le prétraitement spécifique à la station
-            batch_dfs.append(df) # Ajoute la DataFrame traitée à la liste
-            
-            os.unlink(temp_path) # Supprime le fichier temporaire après lecture et traitement
-            
-        except Exception as e:
-            app.logger.error(f"Erreur traitement fichier {file.filename}: {str(e)}", exc_info=True)
-            flash(f"Erreur traitement fichier '{file.filename}': {str(e)}", 'error')
-            continue
+            <div class="pt-4">
+                <button type="submit" id="submitButton" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                    {{ _('Traiter les données') }}
+                </button>
+            </div>
 
-    if not batch_dfs:
-        flash('Aucune donnée valide traitée. Veuillez vérifier vos fichiers.', 'error')
-        return redirect(url_for('index'))
+        </form>
+    </div>
 
-    try:
-        batch_df = pd.concat(batch_dfs, ignore_index=True) # Concatène toutes les DataFrames du lot
-        batch_df = create_datetime(batch_df) # Crée la colonne Datetime
-        batch_df = gestion_doublons(batch_df) # Gère les doublons
-        batch_df = batch_df.set_index('Datetime').sort_index() # Définit Datetime comme index
+    {# La div "existing-tab" est vide car le lien gère la redirection directe #}
+    <div id="existing-tab" class="tab-content">
+        {# Ce contenu sera rarement visible car la redirection est immédiate #}
+        <p class="text-center text-gray-600">{{ _('Redirection vers la page des données existantes...') }}</p>
+    </div>
+</div>
 
-        # Met à jour GLOBAL_PROCESSED_DATA_DF
-        if GLOBAL_PROCESSED_DATA_DF.empty:
-            GLOBAL_PROCESSED_DATA_DF = batch_df
-        else:
-            # Supprime les données existantes pour les stations mises à jour avant de concaténer
-            stations_to_update = batch_df['Station'].unique()
-            GLOBAL_PROCESSED_DATA_DF = GLOBAL_PROCESSED_DATA_DF[
-                ~GLOBAL_PROCESSED_DATA_DF['Station'].isin(stations_to_update)
-            ]
-            GLOBAL_PROCESSED_DATA_DF = pd.concat(
-                [GLOBAL_PROCESSED_DATA_DF, batch_df]
-            ).sort_index()
-        
-        # Applique l'interpolation et la gestion des limites
-        GLOBAL_PROCESSED_DATA_DF = interpolation(
-            GLOBAL_PROCESSED_DATA_DF,
-            DATA_LIMITS,
-            GLOBAL_GPS_DATA_DF
-        )
-        
-        new_rows = len(batch_df)
-        stations_added = ', '.join(batch_df['Station'].unique())
-        flash(
-            f"{new_rows} nouvelles lignes traitées pour les stations : {stations_added}",
-            'success'
-        )
-        
-        return redirect(url_for('data_preview')) # Redirige vers la prévisualisation des données
-        
-    except Exception as e:
-        app.logger.error(f"Erreur critique lors du traitement global des données: {str(e)}", exc_info=True)
-        flash(f'Erreur critique lors du traitement des données: {str(e)}', 'error')
-        return redirect(url_for('index'))
+<div id="loaderOverlay" class="loader-overlay">
+    <div class="loader"></div>
+</div>
 
-@app.route('/preview')
-def data_preview():
-    """Affiche un aperçu des données chargées."""
-    if GLOBAL_PROCESSED_DATA_DF.empty:
-        flash('Aucune donnée disponible. Veuillez uploader des fichiers d\'abord.', 'error')
-        return redirect(url_for('index'))
-    try:
-        stations = GLOBAL_PROCESSED_DATA_DF['Station'].unique()
-        
-        if len(stations) == 1:
-            preview_df = GLOBAL_PROCESSED_DATA_DF.head(20).reset_index()
-            preview_type = "20 premières lignes"
-        else:
-            preview_dfs = []
-            for station in stations:
-                # Prend les 10 premières lignes par station
-                station_df = GLOBAL_PROCESSED_DATA_DF[GLOBAL_PROCESSED_DATA_DF['Station'] == station].head(10).reset_index()
-                preview_dfs.append(station_df)
-            preview_df = pd.concat(preview_dfs)
-            preview_type = f"10 lignes × {len(stations)} stations"
-        
-        # Convertit la DataFrame en HTML pour l'affichage
-        preview_html = preview_df.to_html(
-            classes='table table-striped table-hover',
-            index=False,
-            border=0,
-            justify='left',
-            na_rep='NaN',
-            max_rows=None
-        )
-        
-        return render_template('preview.html',
-                            preview_table=preview_html,
-                            preview_type=preview_type,
-                            dataset_shape=f"{GLOBAL_PROCESSED_DATA_DF.shape[0]} lignes × {GLOBAL_PROCESSED_DATA_DF.shape[1]} colonnes",
-                            stations_count=len(stations))
-    
-    except Exception as e:
-        app.logger.error(f'Erreur lors de la préparation de l\'aperçu: {str(e)}', exc_info=True)
-        flash(f'Erreur lors de la préparation de l\'aperçu: {str(e)}', 'error')
-        return redirect(url_for('index'))
+{% endblock %}
 
-@app.route('/visualisations_options')
-def visualisations_options():
-    """Affiche les options pour générer des visualisations."""
-    if GLOBAL_PROCESSED_DATA_DF.empty:
-        flash('Veuillez uploader des fichiers d\'abord pour accéder aux visualisations.', 'error')
-        return redirect(url_for('index'))
+{% block extra_js %}
+<script>
+    const stationsData = JSON.parse('{{ stations_by_bassin|tojson }}');
+    // Le compteur de datasets affiché. Il est initialisé à 1 car le premier dataset est inclus.
+    let displayDatasetCount = 1; 
+    // Compteur pour les IDs des nouveaux groupes, il correspond au nombre total de groupes créés.
+    let nextGroupId = 0; 
 
-    # Colonnes à exclure pour les visualisations (non numériques ou non pertinentes)
-    excluded_cols = {'Station', 'Is_Daylight', 'Daylight_Duration',
-                   'Year', 'Month', 'Day', 'Hour', 'Minute', 'Date', 'Rain_01_mm', 'Rain_02_mm'}
-    
-    # Récupère les variables numériques disponibles dans la DataFrame
-    available_vars = [
-        col for col in GLOBAL_PROCESSED_DATA_DF.columns
-        if col not in excluded_cols and pd.api.types.is_numeric_dtype(GLOBAL_PROCESSED_DATA_DF[col])
-    ]
+    // Fonction pour basculer entre les onglets
+    function switchTab(tabId) {
+        // Redirection immédiate si l'onglet "Données Existantes" est cliqué
+        if (tabId === 'existing') {
+            window.location.href = "{{ url_for('select_stations') }}";
+            return; // Arrête l'exécution pour la redirection
+        }
 
-    # Génère le tableau récapitulatif quotidien
-    daily_stats_df = calculate_daily_summary_table(GLOBAL_PROCESSED_DATA_DF)
-    daily_stats_html = daily_stats_df.to_html(classes='table table-striped', index=False)
+        // Sinon, gère le basculement normal des onglets
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        // Assurez-vous que le lien "Données Existantes" n'a pas la classe active
+        document.getElementById('existing-data-tab-link').classList.remove('active'); 
 
-    # Récupère les paramètres de requête pour pré-remplir les champs des formulaires (si redirection)
-    variable_selectionnee = request.args.get('variable')
-    variables_selectionnees = request.args.getlist('variables[]')
-    station_selectionnee = request.args.get('station')
-    periode_selectionnee = request.args.get('periode')
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
 
-    return render_template('visualisations_options.html',
-                        stations=sorted(GLOBAL_PROCESSED_DATA_DF['Station'].unique()),
-                        variables=sorted(available_vars),
-                        METADATA_VARIABLES=METADATA_VARIABLES,
-                        PALETTE_DEFAUT=PALETTE_DEFAUT,
-                        daily_stats_table=daily_stats_html,
-                        variable_selectionnee=variable_selectionnee,
-                        variables_selectionnees=variables_selectionnees,
-                        station_selectionnee=station_selectionnee,
-                        periode_selectionnee=periode_selectionnee)
+        // Active l'onglet "Nouveau Dataset"
+        document.querySelector(`.tab-button[onclick="switchTab('${tabId}')"]`).classList.add('active');
+        document.getElementById(`${tabId}-tab`).classList.add('active');
+    }
 
-@app.route('/generate_plot', methods=['POST'])
-def generate_plot():
-    """Génère un graphique basé sur les sélections de l'utilisateur."""
-    if GLOBAL_PROCESSED_DATA_DF.empty:
-        flash('Aucune donnée disponible. Veuillez uploader des fichiers d\'abord.', 'error')
-        return redirect(url_for('index'))
-    try:
-        is_comparative = 'comparative' in request.form
-        periode = request.form.get('periode')
+    // Fonction pour ajouter un wrapper et une flèche à un <select> standard
+    function wrapSelectWithArrow(selectElement) {
+        if (selectElement && !selectElement.closest('.custom-select-wrapper')) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'custom-select-wrapper';
+            selectElement.parentNode.insertBefore(wrapper, selectElement);
+            wrapper.appendChild(selectElement);
 
-        if not periode:
-            flash('Veuillez sélectionner une période d\'analyse.', 'error')
-            return redirect(url_for('visualisations_options'))
+            const arrowSpan = document.createElement('span');
+            arrowSpan.className = 'select-arrow';
+            const arrowIcon = document.createElement('i');
+            arrowIcon.className = 'fas fa-caret-down'; // Assurez-vous que Font Awesome est lié ou utilisez un SVG
+            arrowSpan.appendChild(arrowIcon);
+            wrapper.appendChild(arrowSpan);
+        }
+    }
 
-        if is_comparative:
-            variable = request.form.get('variable')
-            if not variable:
-                flash('Veuillez sélectionner une variable pour la comparaison.', 'error')
-                return redirect(url_for('visualisations_options'))
+    // Met à jour le compteur affiché de datasets
+    function updateDatasetCount() {
+        document.getElementById('datasetCount').textContent = displayDatasetCount; 
+    }
 
-            fig = generer_graphique_comparatif(
-                df=GLOBAL_PROCESSED_DATA_DF,
-                variable=variable,
-                periode=periode,
-                colors=CUSTOM_STATION_COLORS,
-                metadata=METADATA_VARIABLES
-            )
-            title = f"Comparaison de {METADATA_VARIABLES.get(variable, {}).get('Nom', variable)} ({periode})"
-            
-        else: # Graphique multi-variables pour une station
-            station = request.form.get('station')
-            variables = request.form.getlist('variables[]')
-            
-            if not station:
-                flash('Veuillez sélectionner une station.', 'error')
-                return redirect(url_for('visualisations_options'))
-                
-            if not variables:
-                flash('Veuillez sélectionner au moins une variable à visualiser.', 'error')
-                return redirect(url_for('visualisations_options'))
+    function updateStations(selectElement) {
+        const groupId = selectElement.closest('.input-group').dataset.groupId;
+        const basin = selectElement.value;
+        const stationSelect = document.getElementById(`station_${groupId}`);
 
-            fig = generer_graphique_par_variable_et_periode(
-                df=GLOBAL_PROCESSED_DATA_DF,
-                station=station,
-                variables=variables,
-                periode=periode,
-                colors=PALETTE_DEFAUT,
-                metadata=METADATA_VARIABLES
-            )
-            title = f"Évolution des variables pour {station} ({periode})"
+        stationSelect.innerHTML = `<option value="">{{ _('Sélectionnez une station') }}</option>`;
 
-        # Vérifie si la figure a été générée avec des données
-        if not fig or not fig.data:
-            flash('Aucune donnée disponible pour les critères sélectionnés. Veuillez affiner votre sélection.', 'warning')
-            return redirect(url_for('visualisations_options'))
+        if (basin && stationsData[basin]) {
+            stationsData[basin].forEach(station => {
+                const option = document.createElement('option');
+                option.value = station;
+                option.textContent = station;
+                stationSelect.appendChild(option);
+            });
+        }
+    }
 
-        plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
-        return render_template('plot_display.html',
-                            plot_html=plot_html,
-                            title=title)
+    function addGroup() {
+        displayDatasetCount++; // Incrémente le compteur affiché
+        nextGroupId++; // Incrémente l'ID pour le prochain groupe
+        const newGroupId = nextGroupId;
 
-    except Exception as e:
-        app.logger.error(f"Erreur lors de la génération du graphique: {str(e)}", exc_info=True)
-        flash(f"Erreur lors de la génération du graphique: {str(e)}", 'error')
-        return redirect(url_for('visualisations_options'))
-    
-@app.route('/generate_multi_variable_plot_route', methods=['POST'])
-def generate_multi_variable_plot_route():
-    """Génère un graphique d'analyse multi-variables normalisées."""
-    if GLOBAL_PROCESSED_DATA_DF.empty:
-        flash('Aucune donnée disponible. Veuillez uploader des fichiers d\'abord.', 'error')
-        return redirect(url_for('index'))
-    try:
-        station = request.form['station']
-        variables = request.form.getlist('variables[]')
-        periode = request.form.get('periode', 'Brutes') # Valeur par défaut 'Brutes'
-        
-        if not station or not variables:
-            flash('Veuillez sélectionner une station et au moins une variable pour l\'analyse normalisée.', 'error')
-            return redirect(url_for('visualisations_options'))
+        // Clone le premier groupe initial (ID 0) pour s'assurer qu'il est propre
+        const initialGroup = document.querySelector('.input-group[data-group-id="0"]'); 
+        const template = initialGroup.cloneNode(true);
 
-        fig = generate_multi_variable_station_plot(
-            df=GLOBAL_PROCESSED_DATA_DF,
-            station=station,
-            variables=variables,
-            periode=periode,
-            colors=PALETTE_DEFAUT,
-            metadata=METADATA_VARIABLES
-        )
-        
-        # Vérifie si la figure a été générée avec des données
-        if not fig or not fig.data:
-            flash('Aucune donnée disponible pour les critères sélectionnés. Veuillez affiner votre sélection.', 'warning')
-            return redirect(url_for('visualisations_options'))
+        template.dataset.groupId = newGroupId;
 
-        plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
-        
-        return render_template('plot_display.html',
-                            plot_html=plot_html,
-                            title=f"Analyse Multi-Variables Normalisées - {station} ({periode})")
-    
-    except Exception as e:
-        app.logger.error(f"Erreur lors de la génération du graphique normalisé: {str(e)}", exc_info=True)
-        flash(f"Erreur lors de la génération du graphique normalisé: {str(e)}", 'error')
-        return redirect(url_for('visualisations_options'))
-    
+        // Update IDs and names
+        template.querySelectorAll('[id]').forEach(el => {
+            el.id = el.id.replace(/\d+$/, newGroupId);
+        });
 
-@app.route('/reset_data', methods=['POST'])
-def reset_data():
-    """Réinitialise toutes les données chargées en mémoire et supprime les fichiers temporaires."""
-    global GLOBAL_PROCESSED_DATA_DF
-    try:
-        # 1. Réinitialiser la DataFrame globale en mémoire
-        GLOBAL_PROCESSED_DATA_DF = pd.DataFrame()
+        template.querySelectorAll('[name]').forEach(el => {
+            if (el.name.startsWith('bassin_') || el.name.startsWith('station_')) {
+                el.name = el.name.replace(/\d+$/, newGroupId);
+            } else if (el.type === 'file') {
+                 el.name = `file[]`;
+            }
+        });
 
-        # 2. Nettoyer le dossier d'upload (supprime tout fichier résiduel)
-        for filename in os.listdir(app.config['UPLOAD_FOLDER']):
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path) # Supprime le fichier
-            except Exception as e:
-                # Log l'erreur mais ne bloque pas la réinitialisation principale
-                app.logger.warning(f"Impossible de supprimer le fichier résiduel {file_path}: {e}")
+        // Reset values for the new group
+        template.querySelector('select[name^="bassin"]').value = '';
+        template.querySelector('select[name^="station"]').innerHTML = `<option value="">{{ _('Sélectionnez une station') }}</option>`;
+        template.querySelector('input[type="file"]').value = '';
 
-        # 3. Flasher un message de succès
-        flash('Toutes les données ont été réinitialisées avec succès. Vous pouvez maintenant télécharger de nouveaux datasets.', 'success')
-        
-        # 4. Répondre avec une URL de redirection pour le frontend
-        return jsonify(success=True, redirect_url=url_for('index'))
+        // Show remove button for the new group
+        template.querySelector('.remove-btn').classList.remove('hidden');
 
-    except Exception as e:
-        app.logger.error(f"Erreur critique lors de la réinitialisation des données: {str(e)}", exc_info=True)
-        flash(f'Erreur lors de la réinitialisation des données: {str(e)}', 'error')
-        # En cas d'erreur, tenter quand même de rediriger l'utilisateur vers la page d'accueil
-        return jsonify(success=False, message=f'Erreur interne lors de la réinitialisation: {str(e)}', redirect_url=url_for('index')), 500
-        
+        // Add event listener to the NEW basin select
+        template.querySelector('select[name^="bassin"]').onchange = function() { updateStations(this); };
 
-@app.route('/statistiques', methods=['GET', 'POST'])
-def statistiques():
-    """Affiche des statistiques quotidiennes pour une variable sélectionnée."""
-    if GLOBAL_PROCESSED_DATA_DF.empty:
-        flash('Aucune donnée disponible. Veuillez uploader des fichiers d\'abord.', 'error')
-        return redirect(url_for('index'))
-    try:
-        variable = request.args.get('variable') if request.method == 'GET' else request.form.get('variable')
-        
-        if not variable or variable not in GLOBAL_PROCESSED_DATA_DF.columns:
-            flash('Variable invalide ou non trouvée. Veuillez sélectionner une variable valide.', 'error')
-            return redirect(url_for('visualisations_options'))
+        // Re-wrap the new select elements for the arrow
+        wrapSelectWithArrow(template.querySelector('select[name^="bassin"]'));
+        wrapSelectWithArrow(template.querySelector('select[name^="station"]'));
 
-        fig = generate_daily_stats_plot_plotly(
-            df=GLOBAL_PROCESSED_DATA_DF,
-            variable=variable,
-            station_colors=CUSTOM_STATION_COLORS
-        )
-        
-        # Vérifie si la figure a été générée avec des données
-        if not fig or not fig.data:
-            flash('Aucune statistique disponible pour cette variable. Veuillez affiner votre sélection ou vérifier les données.', 'warning')
-            return redirect(url_for('visualisations_options'))
+        document.getElementById('inputGroupsContainer').appendChild(template);
+        updateRemoveButtons();
+        updateDatasetCount(); // Met à jour le compteur affiché
+    }
 
-        plot_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+    function removeGroup(button) {
+        const groups = document.querySelectorAll('.input-group');
+        // Ne permet de supprimer que si plus d'un groupe est présent
+        if (groups.length > 1) { 
+            button.closest('.input-group').remove();
+            displayDatasetCount--; // Décrémente le compteur affiché
+            updateRemoveButtons();
+            updateDatasetCount(); // Met à jour le compteur affiché
+        }
+    }
 
-        var_meta = METADATA_VARIABLES.get(variable, {'Nom': variable, 'Unite': ''})
-        return render_template('statistiques.html',
-                            variable_name=var_meta.get('Nom', variable),
-                            unit=var_meta.get('Unite', ''),
-                            plot_html=plot_html,
-                            variable_selectionnee=variable)
+    function updateRemoveButtons() {
+        const groups = document.querySelectorAll('.input-group');
+        groups.forEach((group, index) => {
+            const btn = group.querySelector('.remove-btn');
+            if (btn) {
+                // Cache le bouton "Supprimer" si un seul groupe est présent (le groupe initial)
+                btn.classList.toggle('hidden', groups.length === 1);
+            }
+        });
+    }
 
-    except Exception as e:
-        app.logger.error(f"ERREUR dans /statistiques: {str(e)}", exc_info=True)
-        traceback.print_exc() # Affiche la trace complète de l'erreur dans les logs du serveur
-        flash('Erreur technique lors de la génération des statistiques.', 'error')
-        return redirect(url_for('visualisations_options'))
+    // Form validation and spinner display
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        let isValid = true;
+        const groups = document.querySelectorAll('.input-group');
+        const submitButton = document.getElementById('submitButton');
+        const loaderOverlay = document.getElementById('loaderOverlay');
 
-if __name__ == '__main__':
-    app.run(debug=True) # Exécute l'application Flask en mode débogage
+        groups.forEach(group => {
+            const basin = group.querySelector('select[name^="bassin"]');
+            const station = group.querySelector('select[name^="station"]');
+            const file = group.querySelector('input[type="file"]');
+
+            if (!basin.value || !station.value || !file.files.length) {
+                isValid = false;
+                group.classList.add('ring-2', 'ring-red-500'); 
+            } else {
+                group.classList.remove('ring-2', 'ring-red-500');
+            }
+        });
+
+        if (!isValid) {
+            e.preventDefault(); 
+            alert('{{ _("Veuillez remplir tous les champs obligatoires pour chaque dataset.") }}');
+        } else {
+            submitButton.disabled = true;
+            submitButton.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {{ _('Traitement en cours...') }}
+            `;
+            loaderOverlay.style.display = 'flex';
+        }
+    });
+
+    // Initialize on DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', () => {
+        wrapSelectWithArrow(document.getElementById('bassin_0'));
+        wrapSelectWithArrow(document.getElementById('station_0'));
+
+        updateRemoveButtons();
+        // Le compteur est déjà à 1 dans le HTML, pas besoin de l'appeler ici sauf si une logique complexe le modifie au chargement.
+        // updateDatasetCount(); 
+    });
+</script>
+{% endblock %}

@@ -11,3 +11,6 @@ Il coche les stations qu'il veut utiliser pour la  suite de son travail et c'est
 Et ce sont ces donnees traitees qu'on va utilsier pour les differentes visualisations.
 Maintenant quand, on clique sur le bouton Renitialiser, on suppime toutes les donnees traitees qui sont stockees dans la base de donnees apres traitement. 
 Ce qui va permettre encore lors de la selection des stations a utiliser, on refasse le meme traitement car on va toujours faire des graphiques de comparaison des donnees brutes et des donnees apres traitement
+
+
+Les stations selectionnees, on les passes en paramettre de la fonction processed_data:

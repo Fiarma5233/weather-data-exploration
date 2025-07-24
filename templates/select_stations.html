@@ -3,47 +3,95 @@
 {% block title %}{{ _('Sélection des Stations') }}{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6 my-8">
-    <h1 class="text-3xl font-bold text-center text-indigo-700 mb-8">{{ _('Sélection des Stations à Traiter') }}</h1>
+<div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden p-8 my-10 border border-gray-200">
+    {# Mise à jour du titre #}
+    <h1 class="text-4xl font-extrabold text-center text-indigo-800 mb-6 pb-3 border-b-2 border-indigo-200 shadow-sm leading-tight">
+        {{ _('Sélection des Stations à Traiter') }}
+    </h1>
     
-    <form id="processForm" action="{{ url_for('process_stations') }}" method="POST" class="space-y-6">
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+    <form id="processForm" action="{{ url_for('process_selected_data') }}" method="POST" class="space-y-8">
+        {# Reste du contenu du formulaire... #}
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-5 rounded-md mb-6 shadow-sm">
+            <div class="flex items-start">
+                <div class="flex-shrink-0 text-blue-500 mt-0.5">
+                    <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
-                <div class="ml-3">
-                    <p class="text-sm text-blue-700">
-                        {{ _('Sélectionnez les stations que vous souhaitez traiter.') }}
+                <div class="ml-4 flex-grow">
+                    <p class="text-base text-blue-800 font-medium mb-1">
+                        {{ _('Veuillez choisir les stations pour lesquelles vous souhaitez traiter les données. N\'oubliez pas de sélectionner au moins une station pour continuer.') }}
                     </p>
+                    {% if recently_uploaded_stations %}
+                        <p class="text-sm text-blue-700 mt-2">
+                            <span class="font-semibold text-blue-900">{{ _('Stations récemment mises à jour :') }}</span>
+                            <span class="text-blue-700 font-medium">{{ recently_uploaded_stations | join(', ') }}</span>
+                            <span class="text-xs italic text-blue-600"> ({{ _('Marquées avec ') }}<span class="text-green-600 ml-0.5">
+                                <svg class="h-3.5 w-3.5 inline-block align-middle" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                            </span>)</span>
+                        </p>
+                    {% endif %}
                 </div>
             </div>
         </div>
+        
+        <div class="space-y-6">
+            {% if not stations_by_bassin or stations_by_bassin.values()|map('length')|sum == 0 %}
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded-md text-center shadow-sm">
+                    <p class="text-lg font-medium">{{ _('Aucune station avec des données disponible pour le moment.') }}</p>
+                    <p class="text-sm mt-1">{{ _('Veuillez retourner à la page d\'accueil pour télécharger des données.') }}</p>
+                </div>
+            {% else %}
+                {% for bassin, stations_in_bassin in stations_by_bassin.items() %}
+                    {% if stations_in_bassin %}
+                    <div class="bg-gray-50 p-5 rounded-lg shadow-sm border border-gray-200">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2 border-gray-300 text-center">{{ _('Bassin : ') }} {{ bassin }}</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-3 pl-4">
+                            {% for station in stations_in_bassin %}
+                            {% set is_recently_uploaded = station in recently_uploaded_stations %}
+                            {% set station_display_name = station.strip() %}
+                            {% set station_color = custom_station_colors.get(station_display_name, '#6366F1') %}
 
-        <div class="space-y-4">
-            {% for station in stations %}
-            <div class="flex items-center">
-                <input id="station_{{ loop.index }}" name="stations" type="checkbox" value="{{ station }}" 
-                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                <label for="station_{{ loop.index }}" class="ml-3 block text-sm font-medium text-gray-700">
-                    {{ station }}
-                </label>
-            </div>
-            {% endfor %}
+                            <div class="flex items-center group">
+                                <input id="station_{{ station_display_name | replace(' ', '_') | replace('-', '_') | lower }}" 
+                                       name="selected_stations" type="checkbox" value="{{ station_display_name }}" 
+                                       style="accent-color: {{ station_color }};" 
+                                       class="h-5 w-5 border-gray-300 rounded-md cursor-pointer transition duration-150 ease-in-out">
+                                <label for="station_{{ station_display_name | replace(' ', '_') | replace('-', '_') | lower }}" 
+                                       class="ml-3 block text-base font-medium text-gray-700 cursor-pointer 
+                                              hover:text-indigo-700 transition duration-150 ease-in-out">
+                                    {{ station_display_name }}
+                                    {% if is_recently_uploaded %}
+                                        <span class="text-green-600 ml-1" title="{{ _('Récemment mise à jour') }}">
+                                            <svg class="h-4 w-4 inline-block align-middle" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                            </svg>
+                                        </span>
+                                    {% endif %}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
         </div>
 
-        <div class="flex justify-between pt-6">
-            <a href="{{ url_for('index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+        <div class="flex justify-between items-center pt-8 border-t border-gray-200 mt-8">
+            <a href="{{ url_for('index') }}" 
+               class="inline-flex items-center px-6 py-3 border border-blue-600 rounded-md text-base font-medium text-blue-600 bg-white hover:bg-blue-600 hover:text-white transition-colors duration-200">
+                <svg xmlns="http://www.w3.000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
                 </svg>
-                {{ _('Retour') }}
+                {{ _('Retour à l\'Accueil') }}
             </a>
             
-            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <button type="submit" 
+                    class="inline-flex items-center px-6 py-3 border border-blue-600 rounded-md text-base font-medium text-blue-600 bg-white hover:bg-blue-600 hover:text-white transition-colors duration-200">
+                <svg xmlns="http://www.w3.000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
                 </svg>
                 {{ _('Traiter les Stations Sélectionnées') }}
@@ -56,7 +104,7 @@
 {% block extra_js %}
 <script>
     document.getElementById('processForm').addEventListener('submit', function(e) {
-        const checked = document.querySelectorAll('input[name="stations"]:checked');
+        const checked = document.querySelectorAll('input[name="selected_stations"]:checked');
         if (checked.length === 0) {
             e.preventDefault();
             alert('{{ _("Veuillez sélectionner au moins une station.") }}');

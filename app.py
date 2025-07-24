@@ -36,7 +36,7 @@ from config import METADATA_VARIABLES, PALETTE_DEFAUT, DATA_LIMITS, ALLOWED_EXTE
 
 # Importations de la base de données
 from db import (
-    initialize_database, save_to_database, get_stations_list, get_connection,
+    initialize_database, save_to_database, get_stations_list, get_connection,get_stations_with_data,
     get_station_data, delete_station_data, reset_processed_data)
 
 from dotenv import load_dotenv
@@ -66,15 +66,6 @@ load_dotenv()
 initialize_database()
 GLOBAL_GPS_DATA_DF = _load_and_prepare_gps_data()
 
-# Routes
-@app.route('/')
-def index():
-    """Route pour la page d'accueil avec les deux options"""
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    return render_template('index.html',
-                         bassins=sorted(STATIONS_BY_BASSIN.keys()),
-                         stations_by_bassin=STATIONS_BY_BASSIN,
-                         existing_stations=get_stations_list('before'))
 
 @app.route('/set_language/<lang>')
 def set_language(lang):
@@ -257,14 +248,6 @@ def set_language(lang):
 
 #     return redirect(url_for('select_stations'))  
 
-@app.route('/select_stations')
-def select_stations():
-    """Affiche la liste des stations disponibles pour traitement"""
-    stations = get_stations_list('before')
-    if not stations:
-        flash(_('Aucune donnée disponible. Veuillez télécharger des fichiers d\'abord.'), 'error')
-        return redirect(url_for('index'))
-    return render_template('select_stations.html', stations=stations)
 
 
 # @app.route('/upload', methods=['POST'])
@@ -346,6 +329,10 @@ def select_stations():
 #             app.logger.error(f"Erreur globale traitement {filename}: {str(e)}", exc_info=True)
 #             flash(_("Erreur traitement fichier '%s'") % file.filename, 'error')
 #         return render_template('select_stations.html')
+
+
+
+
 
 
 
@@ -455,6 +442,200 @@ def select_stations():
 
 
 
+
+
+
+
+################### Code fonctionnant bien a la date du 23 Jui 2025 ###################
+
+# # Routes
+# @app.route('/')
+# def index():
+#     """Route pour la page d'accueil avec les deux options"""
+#     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+#     return render_template('index.html',
+#                          bassins=sorted(STATIONS_BY_BASSIN.keys()),
+#                          stations_by_bassin=STATIONS_BY_BASSIN,
+#                          existing_stations=get_stations_list('before'))
+
+# @app.route('/select_stations')
+# def select_stations():
+#     """Affiche la liste des stations disponibles pour traitement"""
+#     stations = get_stations_list('before')
+#     if not stations:
+#         flash(_('Aucune donnée disponible. Veuillez télécharger des fichiers d\'abord.'), 'error')
+#         return redirect(url_for('index'))
+#     return render_template('select_stations.html', stations=stations)
+
+# @app.route('/upload', methods=['POST'])
+# def upload_file():
+#     """Gère l'upload et le stockage des fichiers de données brutes"""
+#     if not request.files:
+#         flash(_('Aucun fichier reçu.'), 'error')
+#         return redirect(url_for('index'))
+
+#     uploaded_files = request.files.getlist('file[]')
+#     stations = []
+    
+#     for i in range(len(uploaded_files)):
+#         station_name = request.form.get(f'station_{i}')
+#         if station_name:
+#             stations.append(station_name)
+#         else:
+#             flash(_('Veuillez sélectionner une station pour chaque fichier.'), 'error')
+#             return redirect(url_for('index'))
+
+#     if len(uploaded_files) != len(stations):
+#         flash(_('Nombre de fichiers et de stations incompatible.'), 'error')
+#         return redirect(url_for('index'))
+
+#     processing_type = request.form.get('processing_type', 'before')
+#     db_name = os.getenv('DB_NAME_BEFORE') if processing_type == 'before' else os.getenv('DB_NAME_AFTER')
+
+#     conn = None
+#     try:
+#         conn = get_connection(db_name)
+#         if not conn:
+#             flash(_(f'Erreur: Impossible de se connecter à la base de données {db_name}'), 'error')
+#             return redirect(url_for('index'))
+
+#         for file, station in zip(uploaded_files, stations):
+#             if not file or file.filename == '':
+#                 flash(_("Fichier vide reçu."), 'error')
+#                 continue
+
+#             if not allowed_file(file.filename):
+#                 flash(_("Type de fichier non autorisé pour '%s'.") % file.filename, 'error')
+#                 continue
+
+#             temp_path = None
+#             try:
+#                 filename = secure_filename(file.filename)
+#                 temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#                 file.save(temp_path)
+#                 app.logger.info(f"Fichier {filename} sauvegardé temporairement")
+
+#                 # --- LOGIQUE DE LECTURE CORRIGÉE ICI ---
+#                 file_extension = filename.lower().rsplit('.', 1)[1]
+                
+#                 # Détermine le nombre de lignes à sauter
+#                 # Si c'est Manyoro, on saute 1 ligne, sinon 0 (par défaut)
+#                 skip_rows_count = 1 if station == 'Ouriyori 1' else 0
+
+#                 if file_extension == 'csv':
+#                     df = pd.read_csv(temp_path, encoding_errors='replace', low_memory=False, skiprows=skip_rows_count)
+#                 elif file_extension == 'xlsx':
+#                     df = pd.read_excel(temp_path, skiprows=skip_rows_count)
+#                 else:
+#                     flash(_("Type de fichier non supporté pour '%s'.") % filename, 'error')
+#                     os.unlink(temp_path)
+#                     continue
+#                 # --- FIN LOGIQUE DE LECTURE CORRIGÉE ---
+
+#                 if df.empty:
+#                     flash(_("Le fichier '%s' est vide ou corrompu.") % filename, 'error')
+#                     os.unlink(temp_path)
+#                     continue
+
+#                 # Prétraitement spécifique
+#                 df = apply_station_specific_preprocessing(df, station)
+
+#                 # Vérification finale
+#                 app.logger.info(f"Colonnes avant sauvegarde pour {station}: {df.columns.tolist()}")
+#                 app.logger.info(f"Premières lignes:\n{df.head(2).to_string()}")
+
+#                 print(f"\n--- Traitement de la station : {station} ({len(df)} lignes à insérer) ---")
+#                 try:
+#                     success = save_to_database(df, station, conn, processing_type)
+#                     if success:
+#                         flash(_("Données pour %s sauvegardées avec succès!") % station, 'success')
+#                         return redirect(url_for('select_stations'))
+
+#                     else:
+#                         flash(_("Échec partiel de sauvegarde pour %s") % station, 'warning')
+#                 except Exception as e:
+#                     app.logger.error(f"Erreur sauvegarde {station}: {str(e)}", exc_info=True)
+#                     flash(_("Erreur base de données pour %s: %s") % (station, str(e)), 'error')
+
+#             except Exception as e:
+#                 app.logger.error(f"Erreur lecture fichier {filename}: {str(e)}", exc_info=True)
+#                 flash(_("Erreur de lecture du fichier '%s': %s") % (filename, str(e)), 'error')
+#             finally:
+#                 if temp_path and os.path.exists(temp_path):
+#                     os.unlink(temp_path)
+        
+#     except Exception as e:
+#         flash(_(f'Une erreur inattendue est survenue lors du traitement global: {str(e)}'), 'error')
+#         traceback.print_exc()
+#     finally:
+#         if conn:
+#             conn.close()
+#             app.logger.info("Connexion à la base de données fermée après traitement de toutes les stations.")
+
+#     return render_template('select_stations.html')
+
+############################## Fin du code fonctionnant bien a la date du 23 Jui 2025 ##############################
+
+
+
+
+
+
+
+############################ Jeudi 24 Jui 2025 ############################
+
+@app.route('/')
+def index():
+    """Route pour la page d'accueil avec les deux options"""
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    # Utilisez get_stations_with_data pour obtenir les stations existantes
+    # Cela renverra un dict {bassin: [station1, ...]}
+    stations_with_actual_data_by_bassin = get_stations_with_data('before')
+    
+    return render_template('index.html',
+                         bassins=sorted(STATIONS_BY_BASSIN.keys()),
+                         stations_by_bassin=STATIONS_BY_BASSIN, # Pour le formulaire d'upload
+                         # Adaptez 'existing_stations' pour le template si nécessaire. 
+                         # Pour l'instant, je passe le dict complet et il faudra l'adapter dans le JS du template
+                         existing_stations_by_bassin=stations_with_actual_data_by_bassin) 
+
+# @app.route('/select_stations')
+# def select_stations():
+#     """Affiche la liste des stations disponibles pour traitement"""
+#     # Utilisez get_stations_with_data ici aussi
+#     stations_by_bassin_for_selection = get_stations_with_data('before')
+    
+#     # Flatten la liste des stations pour la vérification si nécessaire
+#     all_available_stations = [station for sublist in stations_by_bassin_for_selection.values() for station in sublist]
+
+#     if not all_available_stations:
+#         flash(_('Aucune donnée disponible. Veuillez télécharger des fichiers d\'abord.'), 'error')
+#         return redirect(url_for('index'))
+    
+#     # Passe le dictionnaire complet au template
+#     return render_template('select_stations.html', stations_by_bassin=stations_by_bassin_for_selection)
+
+
+@app.route('/select_stations')
+def select_stations():
+    """Affiche la liste des stations disponibles pour traitement"""
+    stations_by_bassin_for_selection = get_stations_with_data('before')
+    
+    all_available_stations = [station for sublist in stations_by_bassin_for_selection.values() for station in sublist]
+
+    if not all_available_stations:
+        flash(_('Aucune donnée disponible. Veuillez télécharger des fichiers d\'abord.'), 'error')
+        return redirect(url_for('index'))
+    
+    # Récupérer les stations récemment traitées de la session et vider la session
+    # Utilise .pop() avec une valeur par défaut [] pour vider la clé après lecture
+    recently_uploaded_stations = session.pop('recently_uploaded_stations', []) 
+
+    return render_template('select_stations.html', 
+                           stations_by_bassin=stations_by_bassin_for_selection,
+                           recently_uploaded_stations=recently_uploaded_stations,
+                           custom_station_colors=CUSTOM_STATION_COLORS) # Passer la liste au template
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Gère l'upload et le stockage des fichiers de données brutes"""
@@ -478,13 +659,15 @@ def upload_file():
         return redirect(url_for('index'))
 
     processing_type = request.form.get('processing_type', 'before')
-    db_name = os.getenv('DB_NAME_BEFORE') if processing_type == 'before' else os.getenv('DB_NAME_AFTER')
+    db_name_to_connect = os.getenv('DB_NAME_BEFORE') if processing_type == 'before' else os.getenv('DB_NAME_AFTER')
 
     conn = None
+    successfully_processed_and_uploaded_stations = [] 
+
     try:
-        conn = get_connection(db_name)
+        conn = get_connection(db_name_to_connect)
         if not conn:
-            flash(_(f'Erreur: Impossible de se connecter à la base de données {db_name}'), 'error')
+            flash(_(f'Erreur: Impossible de se connecter à la base de données {db_name_to_connect}'), 'error')
             return redirect(url_for('index'))
 
         for file, station in zip(uploaded_files, stations):
@@ -497,17 +680,17 @@ def upload_file():
                 continue
 
             temp_path = None
+            df = None # Initialise df à None pour s'assurer qu'il est toujours défini
             try:
                 filename = secure_filename(file.filename)
                 temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                 file.save(temp_path)
                 app.logger.info(f"Fichier {filename} sauvegardé temporairement")
 
-                # --- LOGIQUE DE LECTURE CORRIGÉE ICI ---
+                # --- LOGIQUE DE LECTURE CORRIGÉE ICI (réintégrée depuis ta version) ---
                 file_extension = filename.lower().rsplit('.', 1)[1]
                 
                 # Détermine le nombre de lignes à sauter
-                # Si c'est Manyoro, on saute 1 ligne, sinon 0 (par défaut)
                 skip_rows_count = 1 if station == 'Ouriyori 1' else 0
 
                 if file_extension == 'csv':
@@ -517,28 +700,53 @@ def upload_file():
                 else:
                     flash(_("Type de fichier non supporté pour '%s'.") % filename, 'error')
                     os.unlink(temp_path)
-                    continue
+                    # continue; cela continuerait la boucle for et ignorerait le fichier courant
+                    # Mais comme tu retournes une redirection plus bas, ce n'est pas nécessaire.
+                    # Il est crucial que df ne soit pas utilisé après ce point si le type n'est pas supporté.
+                    # On peut ajouter un 'continue' ici pour passer au fichier suivant.
+                    continue 
                 # --- FIN LOGIQUE DE LECTURE CORRIGÉE ---
-
-                if df.empty:
-                    flash(_("Le fichier '%s' est vide ou corrompu.") % filename, 'error')
+                
+                # S'assurer que df a été assigné avant d'être utilisé
+                # Si le type de fichier n'était pas supporté, df serait encore None.
+                if df is None or df.empty: # Vérifie si df est None OU s'il est vide
+                    flash(_("Le fichier '%s' est vide, corrompu ou d'un type non supporté.") % filename, 'error')
                     os.unlink(temp_path)
-                    continue
+                    continue # Passe au fichier suivant
 
                 # Prétraitement spécifique
+                # Assurez-vous que apply_station_specific_preprocessing est importée ou définie
                 df = apply_station_specific_preprocessing(df, station)
+
+                if df.empty:
+                    flash(_("Après prétraitement, le DataFrame pour '%s' est vide. Aucune donnée à sauvegarder.") % station, 'warning')
+                    os.unlink(temp_path)
+                    continue
 
                 # Vérification finale
                 app.logger.info(f"Colonnes avant sauvegarde pour {station}: {df.columns.tolist()}")
                 app.logger.info(f"Premières lignes:\n{df.head(2).to_string()}")
 
                 print(f"\n--- Traitement de la station : {station} ({len(df)} lignes à insérer) ---")
+                
+                # # Créer la table si elle n'existe pas AVANT la sauvegarde pour cette station
+                # if not create_station_table(station, processing_type):
+                #     flash(_(f"Impossible de créer/vérifier la table pour la station {station}."), 'error')
+                #     os.unlink(temp_path)
+                #     continue
+
                 try:
                     success = save_to_database(df, station, conn, processing_type)
                     if success:
                         flash(_("Données pour %s sauvegardées avec succès!") % station, 'success')
+                        # Comme dans ton code original, on redirige après chaque succès.
+                        successfully_processed_and_uploaded_stations.append(station) 
+                        app.logger.info(f"DEBUG: Station '{station}' ajoutée à successfully_processed_and_uploaded_stations. Liste actuelle: {successfully_processed_and_uploaded_stations}")
+
                     else:
-                        flash(_("Échec partiel de sauvegarde pour %s") % station, 'warning')
+                        flash(_("Échec  de sauvegarde pour %s") % station, 'warning')
+                        app.logger.warning(f"DEBUG: save_to_database pour '{station}' a renvoyé False.")
+
                 except Exception as e:
                     app.logger.error(f"Erreur sauvegarde {station}: {str(e)}", exc_info=True)
                     flash(_("Erreur base de données pour %s: %s") % (station, str(e)), 'error')
@@ -557,8 +765,60 @@ def upload_file():
         if conn:
             conn.close()
             app.logger.info("Connexion à la base de données fermée après traitement de toutes les stations.")
+            # --- AJOUTE CE LOG POUR DÉBOGUER ---
+            app.logger.info(f"DEBUG: Contenu final de successfully_processed_and_uploaded_stations avant session: {successfully_processed_and_uploaded_stations}")
+            # ----------------------------------
+            session['recently_uploaded_stations'] = list(set(successfully_processed_and_uploaded_stations))
+            # --- AJOUTE CE LOG POUR DÉBOGUER ---
+            app.logger.info(f"DEBUG: Contenu de 'recently_uploaded_stations' dans la session: {session.get('recently_uploaded_stations')}")
+            # ---
 
-    return render_template('select_stations.html')
+    # Si le code arrive ici, cela signifie qu'aucune redirection n'a eu lieu
+    # (par exemple, si tous les fichiers ont échoué ou s'il n'y avait aucun fichier).
+    # Dans ce cas, nous redirigeons par défaut.
+    return redirect(url_for('select_stations'))
+
+
+
+
+
+@app.route('/process_selected_data', methods=['POST'])
+def process_selected_data():
+    selected_stations = request.form.getlist('selected_stations')
+    
+    if not selected_stations:
+        flash(_("Veuillez sélectionner au moins une station pour l'analyse."), 'warning')
+        return redirect(url_for('select_stations'))
+
+    flash(_(f"Stations sélectionnées pour analyse : {', '.join(selected_stations)}"), 'info')
+    
+    # TODO: Redirigez l'utilisateur vers la page d'analyse ou de visualisation des données.
+    
+    try:
+        for station in selected_stations:
+            processing_type = request.form.get('processing_type', 'before')
+            db_name_to_connect = os.getenv('DB_NAME_BEFORE') if processing_type == 'before' else os.getenv('DB_NAME_AFTER')
+
+            conn = None
+
+    except:
+        flash(_("Une erreur est survenue lors du traitement des stations sélectionnées."), 'error')
+        app.logger.error(f"Erreur lors du traitement des stations sélectionnées: {str(e)}", exc_info=True)
+        return redirect(url_for('select_stations'))
+    
+    return redirect(url_for('index'))
+
+
+
+
+
+
+
+##################### Fin Jeudi 24 Jui 2025 #####################
+
+
+
+
 
 
 @app.route('/process_stations', methods=['POST'])
