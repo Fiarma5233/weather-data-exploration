@@ -48,7 +48,7 @@
         font-weight: 500;
         color: #6b7280;
         transition: all 0.2s;
-        text-decoration: none; /* Assure qu'il n'y a pas de soulignement par défaut pour le lien */
+        text-decoration: none;
     }
 
     .tab-button.active {
@@ -110,72 +110,7 @@
         color: white;
     }
 
-    .message {
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        animation: fadeIn 0.3s ease-out;
-        display: flex;
-        flex-direction: column;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Style pour le bouton d'option */
-    .option-card {
-        transition: all 0.2s;
-        cursor: pointer;
-        border: 2px solid transparent;
-    }
-
-    .option-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    }
-
-    .option-card.selected {
-        border-color: #4f46e5;
-    }
-
-    .option-card .icon {
-        font-size: 2rem;
-        color: #4f46e5;
-        margin-bottom: 1rem;
-    }
-
-    /* Styles pour le spinner de chargement */
-    .loader-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000; /* Assure qu'il est au-dessus de tout le reste */
-        display: none; /* Caché par défaut */
-    }
-
-    .loader {
-        border: 8px solid #f3f3f3; /* Light grey */
-        border-top: 8px solid #4f46e5; /* Blue */
-        border-radius: 50%;
-        width: 60px;
-        height: 60px;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
+    /* Supprimez les styles du loader d'ici - ils sont maintenant dans base.html */
 </style>
 {% endblock %}
 
@@ -187,7 +122,6 @@
 
     <div class="tab-container">
         <button class="tab-button active" onclick="switchTab('upload')">{{ _('Nouveau Dataset') }}</button>
-        {# Le bouton "Données Existantes" est maintenant un lien direct, stylisé comme un bouton d'onglet #}
         <a href="{{ url_for('select_stations') }}" class="tab-button" id="existing-data-tab-link">
             {{ _('Données Existantes') }}
         </a>
@@ -197,7 +131,7 @@
         <div class="bg-blue-50 border-l-4 border-blue-400 p-5 rounded-md mb-6 shadow-sm">
             <div class="flex items-start">
                 <div class="flex-shrink-0 text-blue-500 mt-0.5">
-                    <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg class="h-6 w-6" xmlns="http://www.w3.000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
@@ -211,7 +145,7 @@
 
         <form id="uploadForm" action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
             <div class="text-center">
-                <h2 class="text-xl font-semibold text-gray-900 inline-block">{{ _('Datasets à Charger') }} (<span id="datasetCount" class="text-indigo-600 font-bold">1</span>)</h2> {# Initialisation à 1 #}
+                <h2 class="text-xl font-semibold text-gray-900 inline-block">{{ _('Datasets à Charger') }} (<span id="datasetCount" class="text-indigo-600 font-bold">1</span>)</h2>
             </div>
 
             <div id="inputGroupsContainer" class="space-y-4">
@@ -267,12 +201,11 @@
                     {{ _('Ajouter un dataset') }}
                 </button>
             </div>
-            
-           
+
 
             <div class="pt-4">
                 <button type="submit" id="submitButton" class="w-full flex justify-center py-3 px-4 border border-blue-600 rounded-md shadow-sm text-base font-medium text-blue-600 bg-white hover:bg-blue-600 hover:text-white transition-colors duration-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <svg xmlns="http://www.w3.000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
                     </svg>
                     {{ _('Soumettre les données') }}
@@ -288,20 +221,15 @@
         <p class="text-center text-gray-600">{{ _('Redirection vers la page des données existantes...') }}</p>
     </div>
 </div>
-
-<div id="loaderOverlay" class="loader-overlay">
-    <div class="loader"></div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
     const stationsData = JSON.parse('{{ stations_by_bassin|tojson }}');
     // Le compteur de datasets affiché. Il est initialisé à 1 car le premier dataset est inclus.
-    let displayDatasetCount = 1; 
+    let displayDatasetCount = 1;
     // Compteur pour les IDs des nouveaux groupes, il correspond au nombre total de groupes créés.
-    let nextGroupId = 0; 
+    let nextGroupId = 0;
 
     // Fonction pour basculer entre les onglets
     function switchTab(tabId) {
@@ -316,7 +244,7 @@
             btn.classList.remove('active');
         });
         // Assurez-vous que le lien "Données Existantes" n'a pas la classe active
-        document.getElementById('existing-data-tab-link').classList.remove('active'); 
+        document.getElementById('existing-data-tab-link').classList.remove('active');
 
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
@@ -338,7 +266,7 @@
             const arrowSpan = document.createElement('span');
             arrowSpan.className = 'select-arrow';
             const arrowIcon = document.createElement('i');
-            arrowIcon.className = 'fas fa-caret-down'; // Assurez-vous que Font Awesome est lié ou utilisez un SVG
+            arrowIcon.className = 'fas fa-caret-down';
             arrowSpan.appendChild(arrowIcon);
             wrapper.appendChild(arrowSpan);
         }
@@ -346,7 +274,7 @@
 
     // Met à jour le compteur affiché de datasets
     function updateDatasetCount() {
-        document.getElementById('datasetCount').textContent = displayDatasetCount; 
+        document.getElementById('datasetCount').textContent = displayDatasetCount;
     }
 
     function updateStations(selectElement) {
@@ -367,12 +295,12 @@
     }
 
     function addGroup() {
-        displayDatasetCount++; // Incrémente le compteur affiché
-        nextGroupId++; // Incrémente l'ID pour le prochain groupe
+        displayDatasetCount++;
+        nextGroupId++;
         const newGroupId = nextGroupId;
 
         // Clone le premier groupe initial (ID 0) pour s'assurer qu'il est propre
-        const initialGroup = document.querySelector('.input-group[data-group-id="0"]'); 
+        const initialGroup = document.querySelector('.input-group[data-group-id="0"]');
         const template = initialGroup.cloneNode(true);
 
         template.dataset.groupId = newGroupId;
@@ -407,17 +335,17 @@
 
         document.getElementById('inputGroupsContainer').appendChild(template);
         updateRemoveButtons();
-        updateDatasetCount(); // Met à jour le compteur affiché
+        updateDatasetCount();
     }
 
     function removeGroup(button) {
         const groups = document.querySelectorAll('.input-group');
         // Ne permet de supprimer que si plus d'un groupe est présent
-        if (groups.length > 1) { 
+        if (groups.length > 1) {
             button.closest('.input-group').remove();
-            displayDatasetCount--; // Décrémente le compteur affiché
+            displayDatasetCount--;
             updateRemoveButtons();
-            updateDatasetCount(); // Met à jour le compteur affiché
+            updateDatasetCount();
         }
     }
 
@@ -437,7 +365,7 @@
         let isValid = true;
         const groups = document.querySelectorAll('.input-group');
         const submitButton = document.getElementById('submitButton');
-        const loaderOverlay = document.getElementById('loaderOverlay');
+        const loaderOverlay = document.getElementById('loaderOverlay'); // Ceci ciblera maintenant le loader de base.html
 
         groups.forEach(group => {
             const basin = group.querySelector('select[name^="bassin"]');
@@ -446,25 +374,26 @@
 
             if (!basin.value || !station.value || !file.files.length) {
                 isValid = false;
-                group.classList.add('ring-2', 'ring-red-500'); 
+                group.classList.add('ring-2', 'ring-red-500');
             } else {
                 group.classList.remove('ring-2', 'ring-red-500');
             }
         });
 
         if (!isValid) {
-            e.preventDefault(); 
-            alert('{{ _("Veuillez remplir tous les champs obligatoires pour chaque dataset.") }}');
+            e.preventDefault();
+            // Utilise le MessageSystem pour afficher l'alerte
+            MessageSystem.show('{{ _("Veuillez remplir tous les champs obligatoires pour chaque dataset.") }}', 'warning');
         } else {
             submitButton.disabled = true;
             submitButton.innerHTML = `
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-blue-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 {{ _('Traitement en cours...') }}
             `;
-            loaderOverlay.style.display = 'flex';
+            loaderOverlay.style.display = 'flex'; // Affiche le loader global
         }
     });
 
@@ -474,8 +403,6 @@
         wrapSelectWithArrow(document.getElementById('station_0'));
 
         updateRemoveButtons();
-        // Le compteur est déjà à 1 dans le HTML, pas besoin de l'appeler ici sauf si une logique complexe le modifie au chargement.
-        // updateDatasetCount(); 
     });
 </script>
 {% endblock %}

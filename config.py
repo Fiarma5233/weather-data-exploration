@@ -499,6 +499,34 @@ import pandas as pd
 from flask_babel import lazy_gettext as _l
 
 METADATA_VARIABLES = {
+    
+     'Rain_01_mm': {
+        'Nom': {
+            'fr': _l("Précipitation 1"),
+            'en': _l("Precipitation 1")
+        },
+        'Unite': {
+            'fr': _l("mm"),
+            'en': _l("mm")
+        },
+        'agg_type': 'cumul',
+        'is_rain': True
+    },
+
+     'Rain_02_mm': {
+        'Nom': {
+            'fr': _l("Précipitation 2"),
+            'en': _l("Precipitation 2")
+        },
+        'Unite': {
+            'fr': _l("mm"),
+            'en': _l("mm")
+        },
+        'agg_type': 'cumul',
+        'is_rain': True
+    },
+
+
     'Rain_mm': {
         'Nom': {
             'fr': _l("Précipitation"),

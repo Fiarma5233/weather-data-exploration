@@ -1,287 +1,815 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container my-5"> {# Increased top/bottom margin for more breathing room #}
-    <h2 class="mb-4 text-center text-primary-custom fw-bold display-5">Analyse du Prétraitement des Données</h2> {# Custom primary color, larger font #}
-    
-    <div class="card shadow-lg mb-5 border-0"> {# Added larger shadow #}
-        <div class="card-header bg-white text-dark py-3 d-flex align-items-center justify-content-between"> {# Neutral background, dark text, more padding, flex for alignment #}
-            <h4 class="mb-0 text-dark-heading">Sélection de la Station</h4> {# Custom text color #}
-            <i class="bi bi-geo-alt-fill text-primary-custom fs-4"></i> {# Add an icon for visual interest #}
-        </div>
-        <div class="card-body">
-            <form method="get" class="d-flex align-items-center justify-content-center flex-wrap"> {# Centered and aligned items, allow wrapping #}
-                <div class="form-group d-flex align-items-center my-2"> {# Flex for label and select, add vertical margin #}
-                    <label for="station" class="me-3 fs-5 text-muted-custom">{% trans %}Station:{% endtrans %}</label> {# Increased font size, custom muted color #}
-                    <select name="station" id="station" class="form-select form-select-lg custom-select-focus" onchange="this.form.submit()"> {# Larger select, custom focus style #}
-                        {% for station in stations %}
-                            <option value="{{ station }}" {% if station == station_selected %}selected{% endif %}>
-                                {{ station }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    {# Section for "Before Processing" Data #}
-    <h3 class="mb-4 text-center text-primary-custom fw-bold display-6">Données Avant Traitement</h3>
-    
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm mb-5 border-0">
-                <div class="card-header bg-gradient-primary text-white py-3 d-flex align-items-center justify-content-between"> {# Gradient background #}
-                    <h4 class="mb-0">{% trans %}Données Manquantes{% endtrans %}</h4>
-                    <i class="bi bi-question-circle-fill fs-4"></i> {# Icon #}
-                </div>
-                <div class="card-body p-0">
-                    <div class="chart-responsive-container">
-                        {% if missing_before %}
-                            {{ missing_before|safe }}
-                        {% else %}
-                            <p class="text-center text-muted-custom p-4">{% trans %}Aucune donnée sur les valeurs manquantes avant traitement.{% endtrans %}</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {# Visualisation des Gaps Avant Traitement #}
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm mb-5 border-0">
-                <div class="card-header bg-gradient-primary text-white py-3 d-flex align-items-center justify-content-between">
-                    <h4 class="mb-0">{% trans %}Visualisation des Gaps sur les Séries Temporelles{% endtrans %}</h4>
-                    <i class="bi bi-calendar-x-fill fs-4"></i> {# Icon #}
-                </div>
-                <div class="card-body p-0">
-                    <div class="chart-responsive-container">
-                        {% if gaps_before %}
-                            {{ gaps_before|safe }}
-                        {% else %}
-                            <p class="text-center text-muted-custom p-4">{% trans %}Aucune visualisation des gaps disponible avant traitement.{% endtrans %}</p>
-                        {% endif %}
-                    </div>
-                    <p class="text-center text-info-custom p-4 border-top border-light pt-3">{% trans %}Survolez les zones rouges pour voir les détails des périodes de données manquantes.{% endtrans %}</p> {# Info message with border #}
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm mb-5 border-0">
-                <div class="card-header bg-gradient-primary text-white py-3 d-flex align-items-center justify-content-between">
-                    <h4 class="mb-0">{% trans %}Valeurs Hors Limites{% endtrans %}</h4>
-                    <i class="bi bi-exclamation-triangle-fill fs-4"></i> {# Icon #}
-                </div>
-                <div class="card-body p-0">
-                    <div class="chart-responsive-container">
-                        {% if outliers_before %}
-                            {{ outliers_before|safe }}
-                        {% else %}
-                            <p class="text-center text-muted-custom p-4">{% trans %}Aucune donnée sur les valeurs hors limites avant traitement.{% endtrans %}</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    {# Section for "After Processing" Data #}
-    <h3 class="mb-4 text-center text-success-custom fw-bold display-6 mt-5">Données Après Traitement</h3>
-
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm mb-5 border-0">
-                <div class="card-header bg-gradient-success text-white py-3 d-flex align-items-center justify-content-between">
-                    <h4 class="mb-0">{% trans %}Données Manquantes{% endtrans %}</h4>
-                    <i class="bi bi-check-circle-fill fs-4"></i> {# Icon #}
-                </div>
-                <div class="card-body p-0">
-                    <div class="chart-responsive-container">
-                        {% if missing_after %}
-                            {{ missing_after|safe }}
-                        {% else %}
-                            <p class="text-center text-muted-custom p-4">{% trans %}Aucune donnée sur les valeurs manquantes après traitement.{% endtrans %}</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {# Visualisation des Gaps Après Traitement #}
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm mb-5 border-0">
-                <div class="card-header bg-gradient-success text-white py-3 d-flex align-items-center justify-content-between">
-                    <h4 class="mb-0">{% trans %}Visualisation des Gaps sur les Séries Temporelles{% endtrans %}</h4>
-                    <i class="bi bi-calendar-check-fill fs-4"></i> {# Icon #}
-                </div>
-                <div class="card-body p-0">
-                    <div class="chart-responsive-container">
-                        {% if gaps_after %}
-                            {{ gaps_after|safe }}
-                        {% else %}
-                            <p class="text-center text-muted-custom p-4">{% trans %}Aucune visualisation des gaps disponible après traitement.{% endtrans %}</p>
-                        {% endif %}
-                    </div>
-                    <p class="text-center text-info-custom p-4 border-top border-light pt-3">{% trans %}Note : Si l'interpolation a été réussie, il ne devrait pas y avoir de zones rouges ici.{% endtrans %}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm mb-5 border-0">
-                <div class="card-header bg-gradient-success text-white py-3 d-flex align-items-center justify-content-between">
-                    <h4 class="mb-0">{% trans %}Valeurs Hors Limites{% endtrans %}</h4>
-                    <i class="bi bi-shield-check-fill fs-4"></i> {# Icon #}
-                </div>
-                <div class="card-body p-0">
-                    <div class="chart-responsive-container">
-                        {% if outliers_after %}
-                            {{ outliers_after|safe }}
-                        {% else %}
-                            <p class="text-center text-muted-custom p-4">{% trans %}Aucune donnée sur les valeurs hors limites après traitement.{% endtrans %}</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
+{% block extra_css %}
 <style>
-    /* Custom Color Palette */
     :root {
-        --primary-custom: #2c3e50; /* Dark Blue Gray - Professional, calm */
-        --primary-light: #34495e; /* Slightly lighter for gradients */
-        --success-custom: #27ae60; /* Emerald Green - Clear, positive */
-        --success-light: #2ecc71; /* Slightly lighter for gradients */
-        --text-dark-heading: #34495e; /* Darker heading text */
-        --text-muted-custom: #7f8c8d; /* Muted gray for secondary text */
-        --info-custom: #3498db; /* Clear blue for informative notes */
-        --background-light: #ecf0f1; /* Light background for the page */
-        --card-bg: #ffffff; /* White background for cards */
-        --shadow-color: rgba(44, 62, 80, 0.15); /* Shadow matching primary color */
+        --primary: #6366f1;
+        --primary-hover: #4f46e5;
+        --accent: #22c55e;
+        --bg: #f5f7fa;
+        --card-bg: #ffffff;
+        --radius: 0.75rem;
+        --shadow: 0 6px 16px -4px rgba(99, 102, 241, 0.08);
+        --transition: 0.25s cubic-bezier(.4,.2,.2,1);
+        --text: #1f2d3a;
+        --muted: #6b7280;
+        --border: #e2e8f0;
     }
 
-    /* Global styles for body and typography */
     body {
-        font-family: 'Roboto', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; /* Prioritize Roboto if available */
-        background-color: var(--background-light);
-        color: #343a40; /* General body text color */
+        background: var(--bg);
+        font-family: 'Inter', system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+        color: var(--text);
+        line-height: 1.5;
     }
 
-    h2 {
-        color: var(--primary-custom);
-        font-weight: 700; /* Bolder for main title */
-        padding-top: 1rem; /* Space from top */
+    .container-main {
+        max-width: 1700px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 2rem;
     }
 
-    h3 {
-        color: var(--primary-custom);
-        font-weight: 600; /* Bolder for section titles */
+    .page-header {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        padding: 1rem 1.5rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: var(--shadow);
+        margin-bottom: 1rem;
     }
 
-    h4 {
-        color: inherit; /* Inherit color from parent (card-header) */
-        font-weight: 500; /* Medium bold for card titles */
+    .page-header .title-block {
+        flex: 1;
+        min-width: 220px;
+        text-align: center;
     }
 
-    .text-primary-custom { color: var(--primary-custom) !important; }
-    .text-success-custom { color: var(--success-custom) !important; }
-    .text-dark-heading { color: var(--text-dark-heading) !important; }
-    .text-muted-custom { color: var(--text-muted-custom) !important; }
-    .text-info-custom { color: var(--info-custom) !important; }
+    .page-header h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+    }
 
-    /* Card styling */
+    .page-header .subtle {
+        font-size: 0.875rem;
+        color: var(--muted);
+        margin-top: 4px;
+    }
+
+    .btn-custom {
+        border-radius: 0.5rem;
+        padding: 0.55rem 1rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: var(--transition);
+        font-size: 0.9rem;
+        text-decoration: none;
+    }
+
+    .btn-outline {
+        background: white;
+        color: var(--primary);
+        border-color: var(--primary);
+    }
+
+    .btn-outline:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-hover);
+    }
+
     .card {
-        border-radius: 0.75rem;
-        overflow: hidden;
-        background-color: var(--card-bg);
-        box-shadow: 0 4px 12px var(--shadow-color); /* Lighter default shadow */
-        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out; /* Smoother transition */
-    }
-
-    .card:hover {
-        transform: translateY(-7px); /* More pronounced lift effect on hover */
-        box-shadow: 0 10px 25px var(--shadow-color); /* Deeper shadow on hover */
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: visible;
+        margin-bottom: 1.5rem;
+        border: 1px solid #f0f4f9;
     }
 
     .card-header {
-        border-bottom: none;
-        border-radius: 0.75rem 0.75rem 0 0;
+        padding: 0.75rem 1rem;
         display: flex;
         align-items: center;
-        justify-content: space-between; /* Space out title and icon */
-        padding: 1rem 1.5rem; /* Consistent padding */
-        color: white; /* Text color for headers */
+        justify-content: space-between;
+        background: #f8f9fc;
+        border-bottom: 1px solid #e8edf5;
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
 
-    /* Gradient backgrounds for headers */
-    .bg-gradient-primary {
-        background: linear-gradient(45deg, var(--primary-custom) 0%, var(--primary-light) 100%) !important;
-    }
-
-    .bg-gradient-success {
-        background: linear-gradient(45deg, var(--success-custom) 0%, var(--success-light) 100%) !important;
+    .card-header h3 {
+        font-size: 1rem;
+        margin: 0;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--primary);
+        flex: 1;
+        justify-content: center;
     }
 
     .card-body {
-        padding: 1.5rem; /* Standardize padding inside card body */
+        padding: 1rem;
     }
 
-    /* Form specific styles */
-    .form-select-lg {
+    .form-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.35rem;
+        color: var(--muted);
+    }
+
+    .input-group-custom {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .input-group-text-custom {
+        background: #f1f5fa;
+        padding: 0.6rem 0.8rem;
+        border-radius: 0.375rem;
+        display: flex;
+        align-items: center;
+        border: 1px solid #dfe7f0;
+    }
+
+    .form-select,
+    select {
+        width: 100%;
+        padding: 0.55rem 0.75rem;
+        border: 1px solid #d1d9e6;
         border-radius: 0.5rem;
-        border: 1px solid #ced4da;
-        box-shadow: none; /* Remove default focus glow */
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        background: white;
+        appearance: none;
+        font-size: 0.9rem;
+        line-height: 1.2;
     }
 
-    .form-select-lg:focus {
-        border-color: var(--primary-custom);
-        box-shadow: 0 0 0 0.25rem rgba(44, 62, 80, 0.25); /* Custom focus glow */
-        outline: 0;
-    }
-
-    /* Chart container for responsiveness */
-    .chart-responsive-container {
+    .custom-dropdown {
         position: relative;
         width: 100%;
-        padding-bottom: 65%; /* Adjusted for a slightly wider aspect ratio (closer to 16:9 for charts) */
-        height: 0;
-        overflow: hidden;
-        background-color: var(--card-bg); /* Ensure white background for chart area */
-        border-radius: 0 0 0.75rem 0.75rem; /* Round bottom corners */
+        z-index: 1000;
     }
 
-    .chart-responsive-container > div { /* Target the div containing Plotly chart */
+    .dropdown-toggle-custom {
+        background: white;
+        border: 1px solid #d1d9e6;
+        border-radius: 0.5rem;
+        padding: 0.55rem 0.75rem;
+        width: 100%;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .dropdown-menu-custom {
         position: absolute;
-        top: 0;
+        top: calc(100% + 6px);
         left: 0;
-        width: 100% !important; /* Ensure Plotly chart fills width */
-        height: 100% !important; /* Ensure Plotly chart fills height */
+        right: 0;
+        background: white;
+        border: 1px solid #d1d9e6;
+        border-radius: 0.5rem;
+        max-height: 280px;
+        overflow-y: auto;
+        box-shadow: 0 24px 48px -8px rgba(31, 45, 58, 0.15);
+        padding: 0.25rem 0;
+        display: none;
     }
 
-    /* Ensure Plotly charts fit their containers */
-    .js-plotly-plot {
+    .dropdown-item-custom {
+        padding: 0.55rem 1rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        transition: background var(--transition);
+    }
+
+    .dropdown-item-custom:hover,
+    .dropdown-item-custom.selected {
+        background: #f1f5fa;
+    }
+
+    .color-indicator {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        flex-shrink: 0;
+        border: 1px solid #d1d9e6;
+    }
+
+    .visualization-container {
+        background: #ffffff;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        min-height: 360px;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #e8edf5;
+    }
+
+    .visualization-container > div {
         width: 100% !important;
-        height: 100% !important;
-        /* Important: Plotly itself needs to generate the correct width/height attributes for its SVG/canvas elements */
-        /* If issues persist, you might need to ensure Plotly.react() or Plotly.newPlot() is called
-           with responsive: true in your JS, or update the layout.autosize to true. */
+        min-width: 0;
     }
 
-    /* Footer / Separator styling */
-    .border-top.border-light.pt-3 {
-        border-top-color: rgba(255, 255, 255, 0.5) !important; /* Lighter border for distinction */
+    .chart-wrapper {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        min-height: 320px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .plotly-spinner {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.6);
+        z-index: 10;
+        font-size: 0.75rem;
+        gap: 0.5rem;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        gap: 0.5rem;
+    }
+
+    .table-container {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        overflow: auto;
+        box-shadow: 0 8px 20px -6px rgba(99,102,241,0.06);
+    }
+
+    .table-container table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.85rem;
+        min-width: 600px;
+    }
+
+    .table-container th,
+    .table-container td {
+        padding: 0.75rem 1rem;
+        border: 1px solid #d9e5f0;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    .table-container th {
+        background: #f4f7fb;
+        position: sticky;
+        top: 0;
+        font-weight: 700;
+        color: #374151;
+        text-align: left;
+    }
+
+    .table-container tbody tr:nth-child(odd) {
+        background: #f9fbfe;
+    }
+
+    .table-container tr:hover td {
+        background: #eef4fa;
+    }
+
+    .table-footer {
+        padding: 0.75rem 1rem;
+        font-size: 0.75rem;
+        color: var(--muted);
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .small-label {
+        font-size: 0.7rem;
+        color: var(--muted);
+    }
+
+    .flex-gap {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .view-toggle {
+        display: inline-flex;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        border: 1px solid var(--primary);
+        margin-bottom: 1rem;
+    }
+
+    .view-toggle button {
+        background: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: var(--transition);
+        font-size: 0.9rem;
+    }
+
+    .view-toggle button.active {
+        background: var(--primary);
+        color: white;
+    }
+
+    @media (max-width: 992px) {
+        .page-header {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .card-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .table-container table {
+            min-width: unset;
+        }
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Dropdown variable
+    function setupDropdown(toggleId, menuId, inputId, textId) {
+        const toggle = document.getElementById(toggleId);
+        const menu = document.getElementById(menuId);
+        const input = document.getElementById(inputId);
+        const text = document.getElementById(textId);
+        if (!toggle || !menu || !input) return;
+
+        toggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        });
+
+        document.addEventListener('click', function() {
+            menu.style.display = 'none';
+        });
+
+        const items = menu.querySelectorAll('.dropdown-item-custom:not(.disabled)');
+        items.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const value = this.dataset.value;
+                input.value = value;
+                if (text) text.innerHTML = this.innerHTML;
+
+                const currentDisplay = document.getElementById('currentVariableDisplay');
+                if (currentDisplay) {
+                    currentDisplay.textContent = this.querySelector('span:last-child')?.textContent.trim() || '';
+                }
+
+                items.forEach(i => i.classList.remove('selected'));
+                this.classList.add('selected');
+                menu.style.display = 'none';
+
+                const station = document.getElementById('stationSelector').value;
+                window.location.href = `{{ url_for('visualiser_resultats_pretraitement') }}?station=${station}&variable=${value}`;
+            });
+        });
+
+        // initial selection
+        const initialValue = input.value;
+        if (initialValue) {
+            const sel = menu.querySelector(`.dropdown-item-custom[data-value="${initialValue}"]`);
+            if (sel) sel.classList.add('selected');
+        }
+    }
+
+    setupDropdown('preprocessingVarToggle', 'preprocessingVarDropdown', 'preprocessingVarInput', 'preprocessingVarText');
+
+    // Station selector
+    document.getElementById('stationSelector')?.addEventListener('change', function() {
+        const variable = document.getElementById('preprocessingVarInput').value;
+        window.location.href = `{{ url_for('visualiser_resultats_pretraitement') }}?station=${this.value}&variable=${variable}`;
+    });
+
+    // Download select
+    document.getElementById('downloadSelect')?.addEventListener('change', function() {
+        const val = this.value;
+        if (!val) return;
+        let url = '';
+        if (val === 'csv') {
+            url = "{{ url_for('download_csv') }}";
+        } else if (val === 'excel') {
+            url = "{{ url_for('download_excel') }}";
+        }
+        if (url) window.location.href = url;
+    });
+
+    // View toggle logic
+    const btnCharts = document.getElementById('toggleCharts');
+    const btnTable = document.getElementById('toggleTable');
+    const viewCharts = document.getElementById('view-charts');
+    const viewTable = document.getElementById('view-table');
+
+    function setView(view) {
+        if (view === 'charts') {
+            viewCharts.style.display = '';
+            viewTable.style.display = 'none';
+            btnCharts.classList.add('active');
+            btnTable.classList.remove('active');
+            sessionStorage.setItem('preproc_view', 'charts');
+        } else if (view === 'table') {
+            viewCharts.style.display = 'none';
+            viewTable.style.display = '';
+            btnTable.classList.add('active');
+            btnCharts.classList.remove('active');
+            sessionStorage.setItem('preproc_view', 'table');
+        }
+    }
+
+    const saved = sessionStorage.getItem('preproc_view');
+    if (saved === 'table') {
+        setView('table');
+    } else {
+        setView('charts');
+    }
+
+    btnCharts?.addEventListener('click', () => setView('charts'));
+    btnTable?.addEventListener('click', () => setView('table'));
+
+    // Resize logic for Plotly plots
+    function smartResize(el) {
+        if (!el || !window.Plotly) return;
+        try {
+            Plotly.Plots.resize(el);
+        } catch {}
+        requestAnimationFrame(() => {
+            try { Plotly.Plots.resize(el); } catch {}
+        });
+        setTimeout(() => {
+            try { Plotly.Plots.resize(el); } catch {}
+        }, 120);
+        setTimeout(() => {
+            try { Plotly.Plots.resize(el); } catch {}
+        }, 300);
+    }
+
+    function resizeAll() {
+        ['missingChartWrapper', 'outliersChartWrapper', 'rangesChartWrapper'].forEach(id => {
+            const wrapper = document.getElementById(id);
+            if (!wrapper) return;
+            const plotEl = wrapper.querySelector('.js-plotly-plot') || wrapper;
+            smartResize(plotEl);
+        });
+    }
+
+    ['missingChartWrapper', 'outliersChartWrapper', 'rangesChartWrapper'].forEach(id => {
+        const wrapper = document.getElementById(id);
+        if (!wrapper) return;
+        const ro = new ResizeObserver(() => resizeAll());
+        ro.observe(wrapper);
+    });
+
+    setTimeout(resizeAll, 250);
+    window.addEventListener('resize', resizeAll);
+
+    // Spinner hide logic when plot appears
+    function watchPlotRendered(innerId, wrapperId) {
+        const wrapper = document.getElementById(wrapperId);
+        if (!wrapper) return;
+        const spinner = wrapper.querySelector('.plotly-spinner');
+        const check = () => {
+            const plotEl = wrapper.querySelector('.js-plotly-plot');
+            if (plotEl) {
+                smartResize(plotEl);
+                setTimeout(() => smartResize(plotEl), 150);
+                if (spinner) spinner.style.display = 'none';
+            } else {
+                setTimeout(check, 100);
+            }
+        };
+        check();
+    }
+
+    watchPlotRendered('missingInner', 'missingChartWrapper');
+    watchPlotRendered('outliersInner', 'outliersChartWrapper');
+    watchPlotRendered('rangesInner', 'rangesChartWrapper');
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container-main">
+    <!-- Header -->
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('select_stations') }}" class="btn-custom btn-outline">
+                <i class="fas fa-arrow-left"></i> {{ _('Retour à la sélection') }}
+            </a>
+        </div>
+
+        <div class="title-block">
+            <h2>{{ _('Résultats du prétraitement') }}</h2>
+            <div class="subtle">
+                <i class="fas fa-map-marker-alt me-1"></i> {{ station_selected }}
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('visualisations_options') }}" class="btn-custom btn-outline">
+                <i class="fas fa-chart-line"></i> {{ _('Passer à la visualisation') }}
+            </a>
+        </div>
+    </div>
+
+    <!-- Toggle entre vues -->
+    <div class="view-toggle">
+        <button type="button" id="toggleCharts" class="active">
+            <i class="fas fa-chart-area"></i> {{ _('Visualisations') }}
+        </button>
+        <button type="button" id="toggleTable">
+            <i class="fas fa-table"></i> {{ _('Aperçu des données') }}
+        </button>
+    </div>
+
+    <!-- Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="mb-4">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} d-flex justify-content-between align-items-center" role="alert">
+                        <div>{{ message }}</div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Contrôles -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-cog"></i> {{ _('Paramètres de visualisation') }}</h3>
+        </div>
+        <div class="card-body">
+            <div class="flex-gap">
+                <div style="flex:1; min-width:240px;">
+                    <label class="form-label">{{ _('Station météo') }}</label>
+                    <div class="input-group-custom">
+                        <div class="input-group-text-custom"><i class="fas fa-map-marker-alt"></i></div>
+                        <select id="stationSelector" class="form-select">
+                            {% for station in stations %}
+                                <option value="{{ station }}" {% if station == station_selected %}selected{% endif %}>{{ station }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div style="flex:1; min-width:240px;">
+                    <label class="form-label">{{ _('Variable météorologique') }}</label>
+                    <div class="input-group-custom">
+                        <div class="input-group-text-custom"><i class="fas fa-chart-line"></i></div>
+                        <div class="custom-dropdown" style="flex:1;">
+                            <button class="dropdown-toggle-custom" id="preprocessingVarToggle">
+                                <span id="preprocessingVarText">
+                                    {% if variable_selected %}
+                                        {% set var_color = variable_colors.get(variable_selected) %}
+                                        {% if var_color %}
+                                            <span class="color-indicator" style="background-color: {{ var_color }};"></span>
+                                        {% endif %}
+                                        {{ METADATA_VARIABLES[variable_selected]['Nom'][lang] if lang in METADATA_VARIABLES[variable_selected]['Nom'] else METADATA_VARIABLES[variable_selected]['Nom']['en'] }}
+                                    {% else %}
+                                        {{ _('Choisir une variable') }}
+                                    {% endif %}
+                                </span>
+                            </button>
+                            <div class="dropdown-menu-custom" id="preprocessingVarDropdown">
+                                {% if available_variables %}
+                                    {% for var in available_variables %}
+                                        {% set var_color = variable_colors.get(var) %}
+                                        <div class="dropdown-item-custom" data-value="{{ var }}" {% if var == variable_selected %}selected{% endif %}>
+                                            {% if var_color %}
+                                                <span class="color-indicator" style="background-color: {{ var_color }};"></span>
+                                            {% endif %}
+                                            <span>{{ METADATA_VARIABLES[var]['Nom'][lang] if lang in METADATA_VARIABLES[var]['Nom'] else METADATA_VARIABLES[var]['Nom']['en'] }}</span>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="dropdown-item-custom disabled">{{ _('Aucune variable disponible') }}</div>
+                                {% endif %}
+                            </div>
+                            <input type="hidden" name="variable" id="preprocessingVarInput" value="{{ variable_selected | default('') }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="small-label mt-2 text-center">
+                {{ _('Variable sélectionnée :') }}
+                <strong id="currentVariableDisplay">
+                    {% if variable_selected %}
+                        {{ METADATA_VARIABLES[variable_selected]['Nom'][lang] if lang in METADATA_VARIABLES[variable_selected]['Nom'] else METADATA_VARIABLES[variable_selected]['Nom']['en'] }}
+                    {% else %}
+                        {{ _('N/A') }}
+                    {% endif %}
+                </strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visualisations -->
+    <div id="view-charts">
+        {% if variable_selected %}
+            <div class="row" style="display:flex; gap:1rem; flex-wrap: wrap; margin-bottom:1rem;">
+                <div style="flex:1 1 48%; min-width:300px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-chart-pie"></i> {{ _('Valeurs manquantes') }}</h3>
+                        </div>
+                        <div class="card-body" style="padding:0;">
+                            <div class="visualization-container">
+                                <div class="chart-wrapper" id="missingChartWrapper">
+                                    <div class="plotly-spinner">
+                                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                                        <div>{{ _('Chargement...') }}</div>
+                                    </div>
+                                    {% if missing_data_plot_html %}
+                                        <div class="plotly-container" id="missingInner">
+                                            {{ missing_data_plot_html | safe }}
+                                        </div>
+                                    {% else %}
+                                        <div class="empty-state">
+                                            <i class="fas fa-chart-bar fa-3x opacity-50"></i>
+                                            <p>{{ _('Aucune donnée disponible') }}</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="flex:1 1 48%; min-width:300px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-filter"></i> {{ _('Détection des outliers') }}</h3>
+                        </div>
+                        <div class="card-body" style="padding:0;">
+                            <div class="visualization-container">
+                                <div class="chart-wrapper" id="outliersChartWrapper">
+                                    <div class="plotly-spinner">
+                                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                                        <div>{{ _('Chargement...') }}</div>
+                                    </div>
+                                    {% if outliers_plot_html %}
+                                        <div class="plotly-container" id="outliersInner">
+                                            {{ outliers_plot_html | safe }}
+                                        </div>
+                                    {% else %}
+                                        <div class="empty-state">
+                                            <i class="fas fa-exclamation-triangle fa-3x opacity-50"></i>
+                                            <p>{{ _('Aucun outlier détecté') }}</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row" style="margin-bottom:1rem;">
+                <div style="flex:1;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-calendar-alt"></i> {{ _('Chronologie des lacunes de données') }}</h3>
+                        </div>
+                        <div class="card-body" style="padding:0;">
+                            <div class="visualization-container">
+                                <div class="chart-wrapper" id="rangesChartWrapper" style="min-height: 420px;">
+                                    <div class="plotly-spinner">
+                                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                                        <div>{{ _('Chargement...') }}</div>
+                                    </div>
+                                    {% if missing_ranges_plot_html %}
+                                        <div class="plotly-container" id="rangesInner">
+                                            {{ missing_ranges_plot_html | safe }}
+                                        </div>
+                                    {% else %}
+                                        <div class="empty-state">
+                                            <i class="fas fa-clock fa-3x opacity-50"></i>
+                                            <p>{{ _('Aucune plage manquante détectée') }}</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="card">
+                <div class="card-body">
+                    <div class="empty-state">
+                        <i class="fas fa-chart-line fa-4x text-muted mb-2"></i>
+                        <h4>{{ _('Prêt à explorer les données ?') }}</h4>
+                        <p>{{ _('Veuillez sélectionner une station météo et une variable pour afficher les visualisations.') }}</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Tableau -->
+    <div id="view-table" style="display:none;">
+        {% if variable_selected %}
+            <div class="row">
+                <div style="flex:1;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="d-flex flex-wrap gap-6">
+                                <div class="small-label">
+                                    {{ _('Lignes affichées :') }} <strong>{{ displayed_rows | default(20) }}</strong>
+                                </div>
+                                {#}
+                                <div class="small-label">
+                                    {{ _('Variables affichées :') }} <strong>{{ displayed_cols | default('N/A') }}</strong>
+                                </div>#}
+                                <div class="small-label">
+                                    {{ _('Total enregistrements :') }} <strong>{{ record_count | default('N/A') }}</strong>
+                                </div> 
+                            </div>
+                            <div class="d-flex align-items-center gap-3">
+                                <div>
+                                    <label for="downloadSelect" class="small-label mb-1">{{ _('Télécharger') }}</label>
+                                    <select id="downloadSelect" class="form-select" style="min-width:140px;">
+                                        <option value="">{{ _('Choisir') }}</option>
+                                        <option value="csv">{{ _('CSV') }}</option>
+                                        <option value="excel">{{ _('Excel') }}</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body" style="padding:0;">
+                            {% if df_after_head_html %}
+                                <div class="table-container">
+                                    {{ df_after_head_html | safe }}
+                                </div>
+                            {% else %}
+                                <div class="empty-state" style="padding:2rem;">
+                                    <i class="fas fa-exclamation-circle fa-3x opacity-50"></i>
+                                    <p>{{ _('Aucune donnée disponible') }}</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="table-footer">
+                            <div>{{ _('Affichage des 20 premières lignes') }}</div>
+                            <div>{{ _('Total des enregistrements :') }} <strong>{{ record_count | default('N/A') }}</strong></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}

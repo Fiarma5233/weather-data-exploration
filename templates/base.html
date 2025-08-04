@@ -14,10 +14,10 @@
             top: 1rem;
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1000;
+            z-index: 1000; /* Doit être au-dessus du contenu, mais potentiellement sous le loader */
             width: 100%;
             max-width: 600px;
-            pointer-events: none;
+            pointer-events: none; /* Permet de cliquer à travers pour le contenu en dessous */
         }
 
         .message {
@@ -29,9 +29,9 @@
             animation: fadeIn 0.3s ease-out;
             display: flex;
             flex-direction: column;
-            pointer-events: auto;
-            width: calc(100% - 1rem);
-            box-sizing: border-box;
+            pointer-events: auto; /* Permet d'interagir avec le message (cliquer sur X) */
+            width: calc(100% - 1rem); /* Prend en compte le margin */
+            box-sizing: border-box; /* Inclusion du padding et border dans la largeur */
         }
 
         .message-close {
@@ -67,6 +67,35 @@
             gap: 1rem;
             margin-top: 1rem;
         }
+
+        /* NOUVEAUX STYLES POUR LE LOADER OVERLAY (DOIVENT ÊTRE DANS BASE.HTML) */
+        .loader-overlay {
+            position: fixed; /* ESSENTIEL pour couvrir toute la fenêtre */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Fond semi-transparent */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001; /* Doit être au-dessus de tout, y compris les messages (1000) */
+            display: none; /* Caché par défaut */
+        }
+
+        .loader {
+            border: 8px solid #f3f3f3; /* Gris clair */
+            border-top: 8px solid #4f46e5; /* Bleu */
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -85,6 +114,10 @@
     {% block footer %}
         {% include 'partials/footer.html' %}
     {% endblock %}
+
+    <div id="loaderOverlay" class="loader-overlay">
+        <div class="loader"></div>
+    </div>
 
     <script>
     // Système centralisé de gestion des messages

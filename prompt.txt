@@ -13,4 +13,4 @@ Maintenant quand, on clique sur le bouton Renitialiser, on suppime toutes les do
 Ce qui va permettre encore lors de la selection des stations a utiliser, on refasse le meme traitement car on va toujours faire des graphiques de comparaison des donnees brutes et des donnees apres traitement
 
 
-Les stations selectionnees, on les passes en paramettre de la fonction processed_data:
+Les stations selectionnees, on va les utiliser dans  la fonction process_selected_data:

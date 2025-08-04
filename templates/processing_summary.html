@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Visualisation des Données des Stations{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        /* Votre CSS personnalisé pour les visualisations */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+        .container-fluid { /* Utilisez container-fluid si vous voulez que le contenu prenne toute la largeur */
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background-color: #007bff;
+            color: white;
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+        .card-title {
+            color: #007bff;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .plot-container {
+            width: 100%;
+            height: 400px; /* Hauteur par défaut pour les graphiques */
+            margin-bottom: 20px;
+        }
+        .plot-small {
+            height: 300px; /* Hauteur plus petite pour les diagrammes circulaires/barres */
+        }
+        .variable-section {
+            border-top: 1px dashed #ccc;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+        .no-data-message {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <h1 class="text-center my-4">Visualisation des Données des Stations</h1>
+
+        <div class="row">
+            <div class="col-12 text-center mb-4">
+                <a href="{{ url_for('select_stations') }}" class="btn btn-secondary">Retour à la sélection des stations</a>
+            </div>
+        </div>
+
+        {% if data_for_charts %}
+            {# Convertir la chaîne JSON en objet Python/Jinja2 #}
+            {% set chart_data = data_for_charts | from_json %}
+            
+            {% for station_name in chart_data.station_names %}
+                {% set station_details = chart_data.station_details[station_name] %}
+                <div class="card my-4">
+                    <div class="card-header">
+                        Station: {{ station_name }}
+                    </div>
+                    <div class="card-body">
+                        
+                        <h4 class="card-title">Analyse des Valeurs Manquantes Globales (Brutes)</h4>
+                        {% if station_details.missing_values_pie_chart and station_details.missing_values_pie_chart.data %}
+                            <div id="pieChart_{{ station_name }}" class="plot-container plot-small"></div>
+                        {% else %}
+                            <div class="no-data-message">
+                                Aucune donnée pour le diagramme circulaire des valeurs manquantes brutes pour {{ station_name }}.
+                            </div>
+                        {% endif %}
+
+                        <h4 class="card-title mt-4">Outliers Détectés (Bruts)</h4>
+                        {% if station_details.outliers_bar_chart and station_details.outliers_bar_chart.data %}
+                            <div id="outliersBar_{{ station_name }}" class="plot-container plot-small"></div>
+                        {% else %}
+                            <div class="no-data-message">
+                                Aucune donnée pour le diagramme à barres des outliers pour {{ station_name }}. (Vérifiez si les outliers sont bien stockés en DB et extraits)
+                            </div>
+                        {% endif %}
+
+                        <h4 class="card-title mt-4">Plages de Valeurs Manquantes</h4>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Brutes</h5>
+                                {% if station_details.missing_ranges_raw_gantt and station_details.missing_ranges_raw_gantt.data %}
+                                    <div id="ganttRaw_{{ station_name }}" class="plot-container"></div>
+                                {% else %}
+                                    <div class="no-data-message">
+                                        Aucune plage manquante brute trouvée pour {{ station_name }}.
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Après Traitement (Interpolation)</h5>
+                                {% if station_details.missing_ranges_processed_gantt and station_details.missing_ranges_processed_gantt.data %}
+                                    <div id="ganttProcessed_{{ station_name }}" class="plot-container"></div>
+                                {% else %}
+                                    <div class="no-data-message">
+                                        Aucune plage manquante traitée trouvée pour {{ station_name }}.
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <h4 class="card-title mt-4">Séries Temporelles des Variables (Brut vs Traité)</h4>
+                        {% if station_details.time_series_plots and station_details.time_series_plots|length > 0 %}
+                            {% for variable_name, plot_data in station_details.time_series_plots.items() %}
+                                <div class="variable-section">
+                                    <h6>Variable: {{ variable_name }}</h6>
+                                    <div id="timeSeries_{{ station_name }}_{{ variable_name }}" class="plot-container"></div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="no-data-message">
+                                Aucune série temporelle à visualiser pour {{ station_name }}.
+                            </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+            {% endfor %}
+
+        {% else %}
+            <div class="alert alert-warning text-center" role="alert">
+                Aucune donnée de visualisation disponible. Veuillez sélectionner des stations.
+            </div>
+        {% endif %}
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Récupérer les données passées par Flask (décodées depuis le JSON)
+            // Le filtre | safe est essentiel ici
+            var dataForCharts = {{ data_for_charts | safe }};
+
+            // Itérer sur chaque station sélectionnée
+            Object.keys(dataForCharts.station_details).forEach(function(stationName) {
+                var stationData = dataForCharts.station_details[stationName];
+
+                // Rendre le diagramme circulaire des valeurs manquantes globales
+                var pieChartDivId = 'pieChart_' + stationName;
+                if (stationData.missing_values_pie_chart && stationData.missing_values_pie_chart.data) {
+                    Plotly.newPlot(pieChartDivId, stationData.missing_values_pie_chart.data, stationData.missing_values_pie_chart.layout);
+                }
+
+                // Rendre le diagramme à barres des outliers
+                var outliersBarDivId = 'outliersBar_' + stationName;
+                if (stationData.outliers_bar_chart && stationData.outliers_bar_chart.data) {
+                    Plotly.newPlot(outliersBarDivId, stationData.outliers_bar_chart.data, stationData.outliers_bar_chart.layout);
+                }
+
+                // Rendre le diagramme de Gantt des plages manquantes brutes
+                var ganttRawDivId = 'ganttRaw_' + stationName;
+                if (stationData.missing_ranges_raw_gantt && stationData.missing_ranges_raw_gantt.data) {
+                    Plotly.newPlot(ganttRawDivId, stationData.missing_ranges_raw_gantt.data, stationData.missing_ranges_raw_gantt.layout);
+                }
+
+                // Rendre le diagramme de Gantt des plages manquantes traitées
+                var ganttProcessedDivId = 'ganttProcessed_' + stationName;
+                if (stationData.missing_ranges_processed_gantt && stationData.missing_ranges_processed_gantt.data) {
+                    Plotly.newPlot(ganttProcessedDivId, stationData.missing_ranges_processed_gantt.data, stationData.missing_ranges_processed_gantt.layout);
+                }
+                
+                // Rendre les graphiques de séries temporelles pour chaque variable
+                if (stationData.time_series_plots) {
+                    Object.keys(stationData.time_series_plots).forEach(function(variableName) {
+                        var timeSeriesPlot = stationData.time_series_plots[variableName];
+                        var timeSeriesDivId = 'timeSeries_' + stationName + '_' + variableName;
+                        if (timeSeriesPlot && timeSeriesPlot.data) {
+                             Plotly.newPlot(timeSeriesDivId, timeSeriesPlot.data, timeSeriesPlot.layout);
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+{% endblock %}

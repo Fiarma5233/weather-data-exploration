@@ -1,488 +1,142 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('Accueil - Analyse Météo') }}{% endblock %}
-
-{% block extra_css %}
-<style>
-    /* Styles pour la flèche ▼ des selects standards */
-    .custom-select-wrapper {
-        position: relative;
-        width: 100%;
-    }
-
-    .custom-select-wrapper select {
-        appearance: none;
-        -webkit-appearance: none;
-        -moz-appearance: none;
-        width: 100%;
-        padding: 0.5rem 2.5rem 0.5rem 1rem;
-        background: white;
-        border: 1px solid #d1d5db;
-        border-radius: 0.375rem;
-        cursor: pointer;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    }
-
-    .custom-select-wrapper .select-arrow {
-        position: absolute;
-        right: 0.75rem;
-        top: 50%;
-        transform: translateY(-50%);
-        pointer-events: none;
-        color: #6b7280;
-        font-size: 0.75rem;
-        z-index: 10;
-    }
-
-    /* Styles pour les onglets */
-    .tab-container {
-        display: flex;
-        margin-bottom: 1.5rem;
-        border-bottom: 1px solid #e5e7eb;
-    }
-
-    .tab-button {
-        padding: 0.75rem 1.5rem;
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        font-weight: 500;
-        color: #6b7280;
-        transition: all 0.2s;
-        text-decoration: none; /* Assure qu'il n'y a pas de soulignement par défaut pour le lien */
-    }
-
-    .tab-button.active {
-        color: #4f46e5;
-        border-bottom-color: #4f46e5;
-    }
-
-    .tab-button:hover:not(.active) {
-        color: #4b5563;
-        border-bottom-color: #d1d5db;
-    }
-
-    .tab-content {
-        display: none;
-    }
-
-    .tab-content.active {
-        display: block;
-    }
-
-    /* Autres styles existants */
-    .color-indicator {
-        display: inline-block;
-        width: 16px;
-        height: 16px;
-        border-radius: 4px;
-        margin-right: 10px;
-        flex-shrink: 0;
-    }
-
-    .validation-message {
-        color: #dc3545;
-        font-size: 0.875rem;
-        margin-top: 0.5rem;
-        display: none;
-    }
-
-    .validation-message.show {
-        display: block;
-    }
-
-    .bg-purple {
-        background-color: #6f42c1;
-    }
-
-    .btn-purple {
-        background-color: #6f42c1;
-        color: white;
-    }
-
-    .btn-purple:hover {
-        background-color: #5a32a3;
-    }
-
-    .card-header {
-        margin: -1rem -1rem 1rem -1rem;
-        padding: 0.75rem 1rem;
-        border-radius: 0.375rem 0.375rem 0 0;
-        color: white;
-    }
-
-    .message {
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-radius: 0.5rem;
-        border-left: 4px solid;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        animation: fadeIn 0.3s ease-out;
-        display: flex;
-        flex-direction: column;
-    }
-
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Style pour le bouton d'option */
-    .option-card {
-        transition: all 0.2s;
-        cursor: pointer;
-        border: 2px solid transparent;
-    }
-
-    .option-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    }
-
-    .option-card.selected {
-        border-color: #4f46e5;
-    }
-
-    .option-card .icon {
-        font-size: 2rem;
-        color: #4f46e5;
-        margin-bottom: 1rem;
-    }
-
-    /* Styles pour le spinner de chargement */
-    .loader-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000; /* Assure qu'il est au-dessus de tout le reste */
-        display: none; /* Caché par défaut */
-    }
-
-    .loader {
-        border: 8px solid #f3f3f3; /* Light grey */
-        border-top: 8px solid #4f46e5; /* Blue */
-        border-radius: 50%;
-        width: 60px;
-        height: 60px;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden p-8 my-10 border border-gray-200">
-    <h1 class="text-4xl font-extrabold text-center text-indigo-800 mb-6 pb-3 border-b-2 border-indigo-200 shadow-sm leading-tight">
-        {{ _('Plateforme d\'Analyse Météorologique') }}
-    </h1>
+<div class="container py-4">
+    <h1 class="mb-4">{{ _('Résultats du prétraitement') }}</h1>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="row">
+                <div class="col-md-12">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    {% endwith %}
 
-    <div class="tab-container">
-        <button class="tab-button active" onclick="switchTab('upload')">{{ _('Nouveau Dataset') }}</button>
-        {# Le bouton "Données Existantes" est maintenant un lien direct, stylisé comme un bouton d'onglet #}
-        <a href="{{ url_for('select_stations') }}" class="tab-button" id="existing-data-tab-link">
-            {{ _('Données Existantes') }}
-        </a>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>{{ _('Sélectionnez pour visualiser') }}</h4>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="stationSelector" class="form-label">{{ _('Station météo') }}:</label>
+                    <select id="stationSelector" class="form-select">
+                        {% for station in stations %}
+                            <option value="{{ station }}" {% if station == station_selected %}selected{% endif %}>
+                                {{ station }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="variableSelector" class="form-label">{{ _('Variable') }}:</label>
+                    <select id="variableSelector" class="form-select" {% if not available_variables %}disabled{% endif %}>
+                        {% if available_variables %}
+                            {% for var in available_variables %}
+                                <option value="{{ var }}" {% if var == variable_selected %}selected{% endif %}>
+                                    {{ var }}
+                                </option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="">{{ _('Aucune variable disponible') }}</option>
+                        {% endif %}
+                    </select>
+                </div>
+            </div>
+            <hr class="my-3">
+            <p class="mb-2">
+                {{ _('Station sélectionnée :') }} <strong>{{ station_selected }}</strong>
+            </p>
+            <p class="mb-0">
+                {{ _('Variable sélectionnée :') }} <strong>{{ variable_selected if variable_selected else _('N/A') }}</strong>
+            </p>
+        </div>
     </div>
 
-    <div id="upload-tab" class="tab-content active">
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-5 rounded-md mb-6 shadow-sm">
-            <div class="flex items-start">
-                <div class="flex-shrink-0 text-blue-500 mt-0.5">
-                    <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+    <hr>
+
+    {# Condition pour afficher les graphiques seulement si une variable est sélectionnée #}
+    {% if variable_selected %}
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h3>{{ _('Aperçu des Données Manquantes') }} ({{ variable_selected }})</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                        {% if missing_data_plot_html %}
+                            {{ missing_data_plot_html | safe }}
+                        {% else %}
+                            <p>{{ _('Graphique des données manquantes non disponible pour cette variable.') }}</p>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="ml-4 flex-grow">
-                    <p class="text-base text-blue-800 font-medium">
-                        {{ _('Utilisez cette section pour télécharger de nouvelles données. Choisissez le bassin, la station, et le fichier correspondant pour chaque dataset.') }}
-                    </p>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h3>{{ _('Comparaison des Outliers') }} ({{ variable_selected }})</h3>
+                    </div>
+                    <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                        {% if outliers_plot_html %}
+                            {{ outliers_plot_html | safe }}
+                        {% else %}
+                            <p>{{ _('Graphique des outliers non disponible pour cette variable.') }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>{{ _('Chronologie des Lacunes de Données') }} ({{ variable_selected }})</h3>
+                    </div>
+                    <div class="card-body">
+                        {% if missing_ranges_plot_html %}
+                            {{ missing_ranges_plot_html | safe }}
+                        {% else %}
+                            <p>{{ _('Graphique des plages manquantes non disponible pour cette variable.') }}</p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
-
-        <form id="uploadForm" action="{{ url_for('upload_file') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
-            <div class="text-center">
-                <h2 class="text-xl font-semibold text-gray-900 inline-block">{{ _('Datasets à Charger') }} (<span id="datasetCount" class="text-indigo-600 font-bold">1</span>)</h2> {# Initialisation à 1 #}
-            </div>
-
-            <div id="inputGroupsContainer" class="space-y-4">
-                <div class="input-group bg-gray-50 p-4 rounded-lg border border-gray-200" data-group-id="0">
-                    <div class="flex justify-end mb-4">
-                        <button type="button" onclick="removeGroup(this)" class="remove-btn text-red-600 hover:text-red-800 hidden p-1 rounded-full hover:bg-red-100 transition-colors duration-200">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <div class="grid md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="bassin_0" class="block text-sm font-medium text-gray-700 mb-1">{{ _('Bassin') }}</label>
-                            <div class="custom-select-wrapper">
-                                <select id="bassin_0" name="bassin_0" required onchange="updateStations(this)"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                                    <option value="">{{ _('Sélectionnez un bassin') }}</option>
-                                    {% for bassin in bassins %}
-                                        <option value="{{ bassin }}">{{ bassin }}</option>
-                                    {% endfor %}
-                                </select>
-                                <span class="select-arrow"><i class="fas fa-caret-down"></i></span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="station_0" class="block text-sm font-medium text-gray-700 mb-1">{{ _('Station') }}</label>
-                            <div class="custom-select-wrapper">
-                                <select id="station_0" name="station_0" required
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
-                                    <option value="">{{ _('Sélectionnez une station') }}</option>
-                                </select>
-                                <span class="select-arrow"><i class="fas fa-caret-down"></i></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <label for="file_0" class="block text-sm font-medium text-gray-700 mb-1">{{ _('Fichier de données') }}</label>
-                        <input id="file_0" name="file[]" type="file" required accept=".csv,.xlsx,.xls"
-                               class="block w-full text-sm text-gray-900 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer">
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex justify-center mt-6">
-                <button type="button" onclick="addGroup()" class="inline-flex items-center px-5 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
-                    <svg xmlns="http://www.w3.000/svg" class="h-6 w-6 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                    </svg>
-                    {{ _('Ajouter un dataset') }}
-                </button>
-            </div>
-            
-            <!-- <div class="pt-6">
-                <button type="submit" id="submitButton" class="w-full flex justify-center py-3 px-4 border border-blue-600 rounded-md shadow-sm text-base font-medium text-blue-600 bg-white hover:bg-blue-600 hover:text-white transition-colors duration-200">
-                    <svg xmlns="http://www.w3.000/svg" class="h-6 w-6 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                    {{ _('Soumettre les données') }}
-                </button>
-            </div> -->
-
-            <div class="pt-4">
-                <button type="submit" id="submitButton" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
-                    </svg>
-                    {{ _('Traiter les données') }}
-                </button>
-            </div>
-
-        </form>
-    </div>
-
-    {# La div "existing-tab" est vide car le lien gère la redirection directe #}
-    <div id="existing-tab" class="tab-content">
-        {# Ce contenu sera rarement visible car la redirection est immédiate #}
-        <p class="text-center text-gray-600">{{ _('Redirection vers la page des données existantes...') }}</p>
-    </div>
+    {% else %}
+        <p class="alert alert-info">{{ _('Veuillez sélectionner une station et une variable pour afficher les visualisations.') }}</p>
+    {% endif %}
 </div>
 
-<div id="loaderOverlay" class="loader-overlay">
-    <div class="loader"></div>
-</div>
-
-{% endblock %}
-
-{% block extra_js %}
 <script>
-    const stationsData = JSON.parse('{{ stations_by_bassin|tojson }}');
-    // Le compteur de datasets affiché. Il est initialisé à 1 car le premier dataset est inclus.
-    let displayDatasetCount = 1; 
-    // Compteur pour les IDs des nouveaux groupes, il correspond au nombre total de groupes créés.
-    let nextGroupId = 0; 
+// Script pour gérer les sélecteurs de station et de variable
+document.addEventListener('DOMContentLoaded', function() {
+    var stationSelector = document.getElementById('stationSelector');
+    var variableSelector = document.getElementById('variableSelector');
 
-    // Fonction pour basculer entre les onglets
-    function switchTab(tabId) {
-        // Redirection immédiate si l'onglet "Données Existantes" est cliqué
-        if (tabId === 'existing') {
-            window.location.href = "{{ url_for('select_stations') }}";
-            return; // Arrête l'exécution pour la redirection
-        }
-
-        // Sinon, gère le basculement normal des onglets
-        document.querySelectorAll('.tab-button').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        // Assurez-vous que le lien "Données Existantes" n'a pas la classe active
-        document.getElementById('existing-data-tab-link').classList.remove('active'); 
-
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-
-        // Active l'onglet "Nouveau Dataset"
-        document.querySelector(`.tab-button[onclick="switchTab('${tabId}')"]`).classList.add('active');
-        document.getElementById(`${tabId}-tab`).classList.add('active');
-    }
-
-    // Fonction pour ajouter un wrapper et une flèche à un <select> standard
-    function wrapSelectWithArrow(selectElement) {
-        if (selectElement && !selectElement.closest('.custom-select-wrapper')) {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'custom-select-wrapper';
-            selectElement.parentNode.insertBefore(wrapper, selectElement);
-            wrapper.appendChild(selectElement);
-
-            const arrowSpan = document.createElement('span');
-            arrowSpan.className = 'select-arrow';
-            const arrowIcon = document.createElement('i');
-            arrowIcon.className = 'fas fa-caret-down'; // Assurez-vous que Font Awesome est lié ou utilisez un SVG
-            arrowSpan.appendChild(arrowIcon);
-            wrapper.appendChild(arrowSpan);
-        }
-    }
-
-    // Met à jour le compteur affiché de datasets
-    function updateDatasetCount() {
-        document.getElementById('datasetCount').textContent = displayDatasetCount; 
-    }
-
-    function updateStations(selectElement) {
-        const groupId = selectElement.closest('.input-group').dataset.groupId;
-        const basin = selectElement.value;
-        const stationSelect = document.getElementById(`station_${groupId}`);
-
-        stationSelect.innerHTML = `<option value="">{{ _('Sélectionnez une station') }}</option>`;
-
-        if (basin && stationsData[basin]) {
-            stationsData[basin].forEach(station => {
-                const option = document.createElement('option');
-                option.value = station;
-                option.textContent = station;
-                stationSelect.appendChild(option);
-            });
-        }
-    }
-
-    function addGroup() {
-        displayDatasetCount++; // Incrémente le compteur affiché
-        nextGroupId++; // Incrémente l'ID pour le prochain groupe
-        const newGroupId = nextGroupId;
-
-        // Clone le premier groupe initial (ID 0) pour s'assurer qu'il est propre
-        const initialGroup = document.querySelector('.input-group[data-group-id="0"]'); 
-        const template = initialGroup.cloneNode(true);
-
-        template.dataset.groupId = newGroupId;
-
-        // Update IDs and names
-        template.querySelectorAll('[id]').forEach(el => {
-            el.id = el.id.replace(/\d+$/, newGroupId);
-        });
-
-        template.querySelectorAll('[name]').forEach(el => {
-            if (el.name.startsWith('bassin_') || el.name.startsWith('station_')) {
-                el.name = el.name.replace(/\d+$/, newGroupId);
-            } else if (el.type === 'file') {
-                 el.name = `file[]`;
-            }
-        });
-
-        // Reset values for the new group
-        template.querySelector('select[name^="bassin"]').value = '';
-        template.querySelector('select[name^="station"]').innerHTML = `<option value="">{{ _('Sélectionnez une station') }}</option>`;
-        template.querySelector('input[type="file"]').value = '';
-
-        // Show remove button for the new group
-        template.querySelector('.remove-btn').classList.remove('hidden');
-
-        // Add event listener to the NEW basin select
-        template.querySelector('select[name^="bassin"]').onchange = function() { updateStations(this); };
-
-        // Re-wrap the new select elements for the arrow
-        wrapSelectWithArrow(template.querySelector('select[name^="bassin"]'));
-        wrapSelectWithArrow(template.querySelector('select[name^="station"]'));
-
-        document.getElementById('inputGroupsContainer').appendChild(template);
-        updateRemoveButtons();
-        updateDatasetCount(); // Met à jour le compteur affiché
-    }
-
-    function removeGroup(button) {
-        const groups = document.querySelectorAll('.input-group');
-        // Ne permet de supprimer que si plus d'un groupe est présent
-        if (groups.length > 1) { 
-            button.closest('.input-group').remove();
-            displayDatasetCount--; // Décrémente le compteur affiché
-            updateRemoveButtons();
-            updateDatasetCount(); // Met à jour le compteur affiché
-        }
-    }
-
-    function updateRemoveButtons() {
-        const groups = document.querySelectorAll('.input-group');
-        groups.forEach((group, index) => {
-            const btn = group.querySelector('.remove-btn');
-            if (btn) {
-                // Cache le bouton "Supprimer" si un seul groupe est présent (le groupe initial)
-                btn.classList.toggle('hidden', groups.length === 1);
-            }
-        });
-    }
-
-    // Form validation and spinner display
-    document.getElementById('uploadForm').addEventListener('submit', function(e) {
-        let isValid = true;
-        const groups = document.querySelectorAll('.input-group');
-        const submitButton = document.getElementById('submitButton');
-        const loaderOverlay = document.getElementById('loaderOverlay');
-
-        groups.forEach(group => {
-            const basin = group.querySelector('select[name^="bassin"]');
-            const station = group.querySelector('select[name^="station"]');
-            const file = group.querySelector('input[type="file"]');
-
-            if (!basin.value || !station.value || !file.files.length) {
-                isValid = false;
-                group.classList.add('ring-2', 'ring-red-500'); 
-            } else {
-                group.classList.remove('ring-2', 'ring-red-500');
-            }
-        });
-
-        if (!isValid) {
-            e.preventDefault(); 
-            alert('{{ _("Veuillez remplir tous les champs obligatoires pour chaque dataset.") }}');
-        } else {
-            submitButton.disabled = true;
-            submitButton.innerHTML = `
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                {{ _('Traitement en cours...') }}
-            `;
-            loaderOverlay.style.display = 'flex';
-        }
+    // Écouteur pour le changement de station
+    stationSelector.addEventListener('change', function() {
+        var selectedStation = this.value;
+        // Redirige vers la même route avec la nouvelle station.
+        // La variable sera soit la première disponible, soit celle précédemment sélectionnée si elle existe pour la nouvelle station.
+        window.location.href = `{{ url_for('visualiser_resultats_pretraitement') }}?station=${selectedStation}`;
     });
 
-    // Initialize on DOMContentLoaded
-    document.addEventListener('DOMContentLoaded', () => {
-        wrapSelectWithArrow(document.getElementById('bassin_0'));
-        wrapSelectWithArrow(document.getElementById('station_0'));
-
-        updateRemoveButtons();
-        // Le compteur est déjà à 1 dans le HTML, pas besoin de l'appeler ici sauf si une logique complexe le modifie au chargement.
-        // updateDatasetCount(); 
+    // Écouteur pour le changement de variable
+    variableSelector.addEventListener('change', function() {
+        var selectedStation = stationSelector.value; // Récupère la station actuellement sélectionnée
+        var selectedVariable = this.value;
+        // Redirige vers la même route avec la station et la nouvelle variable
+        window.location.href = `{{ url_for('visualiser_resultats_pretraitement') }}?station=${selectedStation}&variable=${selectedVariable}`;
     });
+
+    // Aucune logique Plotly.newPlot ici car les graphiques sont inclus directement en HTML par Flask.
+    // La bibliothèque Plotly.js est chargée via 'cdn' dans le premier fig.to_html()
+    // et est disponible globalement.
+});
 </script>
 {% endblock %}

@@ -3581,6 +3581,12 @@ def daily_stats(df: pd.DataFrame) -> pd.DataFrame:
 
     return daily_stats_df
 
+
+ EXCLUDED_VARIABLES = [
+        'Datetime', 'Date', 'Year', 'Month', 'Day', 
+        'Hour', 'Minute', 'Is_Daylight', 'sunrise_time_utc',
+        'sunset_time_utc', 'Daylight_Duration'
+    ]
 #N4
 def generate_stats_plots(df: pd.DataFrame, variable: str) -> plt.Figure:
     """

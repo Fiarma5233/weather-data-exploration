@@ -1,0 +1,46 @@
+
+Reference Sivakumar de l'auteur Sivakumar
+
+Date de debut des pluies: De la page 32 a la page 34
+    Selon une etude menee par Benoit en 1977, 
+    Dans cette étude, la
+date du debut des pluies (X) se situe après le ler mai, quand les
+precipitations recueillies en 3 jours consécutifs constituent au
+mains 20 mm et quand aucune période de sécheresse de plus de 7
+jours n'intervient au cours des 30 jours suivants
+
+
+Date de fin des pluies: De la page 32 a la page 34
+    selon Stern et al. en 1981,
+    La première appa-
+rition d'une longue période de sécheresse après une date déter-
+minée pourrait être utilisée comme definition de la fin des pluies
+(Stern et al. 1981). On determine la date de la fin des pluies (Y)
+quand après le ler septemhre il ny a plus de pluies pendant 20
+jours.
+
+
+Duree de la periode de vegetation:
+    La durée de la période de vegetation correspond a la diffe-
+rence (Y-X).
+
+
+On peut aussi calculer  la periode des pluies precoces qui sont les pluies avant la periode definie comme debut de la saison pluvieuse. C'est da dire plus la periode dees pluies precoces est longue, aussi la saison pluvieuse l'est 
+
+
+Dans le document intitule climaticdata de l'INSTAT:
+Debut de la pluie : Page 70-74
+    One more type of definition adds the condition that there should not be a long dry spell in the
+period immediately following the start. An example is as follows:
+• the first occasion with more than 20mm in a 2 day period after 1st April (This is equivalent to the first time after 1st April that the running 2-day total is more than 20mm) and no dry spell of 10 days or more within the following 30 days
+
+.la première fois où plus de 20 mm de pluie ont été enregistrées sur une période de deux jours après le 1er avril(Cela équivaut à la première fois après le 1er avril que le total cumulé sur 2 jours est supérieur à 20 mm), sans période de sécheresse de 10 jours ou plus dans les 30 jours suivants.
+
+
+Determination de la secheresse: Page 
+
+    We usually use a value of just under 1mm and define a day to be dry if
+its value is less than this threshold. The value of 0.85mm avoids rounding problems in both
+mms and inches (it is between 0.03 and 0.04 inches).
+
+    On utilise généralement une valeur légèrement inférieure à 1 mm et on considère qu'une journée est sèche si sa valeur est inférieure à ce seuil. La valeur de 0,85 mm évite les problèmes d'arrondi en mm et en pouces (elle est comprise entre 0,03 et 0,04 pouce). 
